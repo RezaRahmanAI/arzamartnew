@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "export",
   reactStrictMode: true,
-  trailingSlash: true,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
@@ -22,4 +20,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export d
+export default nextConfig;
