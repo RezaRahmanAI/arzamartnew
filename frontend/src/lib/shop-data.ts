@@ -1,0 +1,300 @@
+import heroSummerImg from "@/assets/hero-summer.jpg";
+import heroTeesImg from "@/assets/hero-tees.jpg";
+import bannerOfferImg from "@/assets/banner-offer.jpg";
+import catTshirtImg from "@/assets/cat-tshirt.jpg";
+import catShirtImg from "@/assets/cat-shirt.jpg";
+import catPanjabiImg from "@/assets/cat-panjabi.jpg";
+import catHoodieImg from "@/assets/cat-hoodie.jpg";
+import catTrouserImg from "@/assets/cat-trouser.jpg";
+
+const heroSummer = typeof heroSummerImg === "string" ? heroSummerImg : heroSummerImg.src;
+const heroTees = typeof heroTeesImg === "string" ? heroTeesImg : heroTeesImg.src;
+const bannerOffer = typeof bannerOfferImg === "string" ? bannerOfferImg : bannerOfferImg.src;
+const catTshirt = typeof catTshirtImg === "string" ? catTshirtImg : catTshirtImg.src;
+const catShirt = typeof catShirtImg === "string" ? catShirtImg : catShirtImg.src;
+const catPanjabi = typeof catPanjabiImg === "string" ? catPanjabiImg : catPanjabiImg.src;
+const catHoodie = typeof catHoodieImg === "string" ? catHoodieImg : catHoodieImg.src;
+const catTrouser = typeof catTrouserImg === "string" ? catTrouserImg : catTrouserImg.src;
+
+export type Category = {
+  slug: string;
+  name: string;
+  image: string;
+  blurb: string;
+};
+
+export type Product = {
+  slug: string;
+  name: string;
+  category: string;
+  price: number;
+  compareAt?: number;
+  mrp?: number;
+  image: string;
+  sizes: string[];
+  colors: string[];
+  description: string;
+  badge?: string;
+  purchaseRate: number;
+  sizePrices?: Record<string, number>;
+  videoUrl?: string;
+  returnPolicy?: string;
+  isBundle?: boolean;
+  bundleProducts?: string[];
+  images?: string[];
+  isActive?: boolean;
+};
+
+export const getSizePrice = (product: Product, size: string): number =>
+  product.sizePrices?.[size] ?? product.price;
+
+export const offerBanner = {
+  image: bannerOffer,
+  title: "Eid Bundle",
+  subtitle: "Buy 2, save 20%",
+};
+
+export const categories: Category[] = [
+  { slug: "t-shirts", name: "T-Shirts", image: catTshirt, blurb: "Everyday heavyweight cotton" },
+  { slug: "shirts", name: "Shirts", image: catShirt, blurb: "Linen, oxford & cotton" },
+  { slug: "panjabi", name: "Panjabi", image: catPanjabi, blurb: "Festive & everyday" },
+  { slug: "hoodies", name: "Hoodies", image: catHoodie, blurb: "Winter-ready fleece" },
+  { slug: "trousers", name: "Trousers", image: catTrouser, blurb: "Chinos & joggers" },
+];
+
+const SIZES = ["S", "M", "L", "XL", "XXL"];
+
+export const products: Product[] = [
+  {
+    slug: "midnight-heavy-tee",
+    name: "Midnight Heavyweight Tee",
+    category: "t-shirts",
+    price: 790,
+    compareAt: 990,
+    mrp: 990,
+    image: catTshirt,
+    sizes: SIZES,
+    colors: ["Black", "Off White", "Olive"],
+    description:
+      "A 240 GSM combed cotton tee with a boxy fall, ribbed neck and pre-shrunk finish. Keeps its shape after every wash.",
+    badge: "Best seller",
+    purchaseRate: 450,
+    sizePrices: { S: 790, M: 790, L: 820, XL: 850, XXL: 890 },
+    images: [catShirt, catPanjabi, catHoodie],
+  },
+  {
+    slug: "arza-graphic-tee",
+    name: "Arza Rooftop Graphic Tee",
+    category: "t-shirts",
+    price: 890,
+    mrp: 1090,
+    image: catTshirt,
+    sizes: SIZES,
+    colors: ["Black", "Sand"],
+    description:
+      "Oversized silhouette with a hand-drawn print, screen printed with water-based ink so the graphic stays soft.",
+    purchaseRate: 520,
+    sizePrices: { S: 890, M: 890, L: 920, XL: 950, XXL: 990 },
+    images: [catShirt, catHoodie],
+  },
+  {
+    slug: "cloudlight-linen-shirt",
+    name: "Cloudlight Linen Shirt",
+    category: "shirts",
+    price: 1490,
+    compareAt: 1890,
+    mrp: 1890,
+    image: catShirt,
+    sizes: SIZES,
+    colors: ["Sky", "White", "Sage"],
+    description:
+      "Airy 100% linen weave with a soft collar and coconut buttons. Built for humid afternoons and long commutes.",
+    badge: "New",
+    purchaseRate: 980,
+    sizePrices: { S: 1490, M: 1490, L: 1550, XL: 1590, XXL: 1650 },
+    images: [catTshirt, catTrouser],
+  },
+  {
+    slug: "oxford-everyday-shirt",
+    name: "Everyday Oxford Shirt",
+    category: "shirts",
+    price: 1350,
+    mrp: 1550,
+    image: catShirt,
+    sizes: SIZES,
+    colors: ["Sky", "Charcoal"],
+    description:
+      "Classic oxford cotton with a slightly relaxed fit. Works tucked in for the office and open over a tee.",
+    purchaseRate: 850,
+    sizePrices: { S: 1350, M: 1350, L: 1390, XL: 1450, XXL: 1490 },
+    images: [catTshirt, catTrouser],
+  },
+  {
+    slug: "noor-cotton-panjabi",
+    name: "Noor Cotton Panjabi",
+    category: "panjabi",
+    price: 2390,
+    compareAt: 2790,
+    mrp: 2790,
+    image: catPanjabi,
+    sizes: SIZES,
+    colors: ["Cream", "Ash", "Deep Green"],
+    description:
+      "Fine cotton panjabi with tonal chikan-style embroidery along the placket and cuffs. Festive without the fuss.",
+    badge: "Eid pick",
+    purchaseRate: 1650,
+    sizePrices: { S: 2390, M: 2390, L: 2490, XL: 2590, XXL: 2690 },
+    images: [catShirt, catHoodie],
+  },
+  {
+    slug: "shomoy-panjabi",
+    name: "Shomoy Slim Panjabi",
+    category: "panjabi",
+    price: 1990,
+    mrp: 2290,
+    image: catPanjabi,
+    sizes: SIZES,
+    colors: ["Cream", "Rust"],
+    description:
+      "Slim-cut panjabi in breathable viscose-cotton with a mandarin collar and side vents for easy movement.",
+    purchaseRate: 1300,
+    sizePrices: { S: 1990, M: 1990, L: 2090, XL: 2150, XXL: 2190 },
+    images: [catShirt, catHoodie],
+  },
+  {
+    slug: "winterfold-hoodie",
+    name: "Winterfold Fleece Hoodie",
+    category: "hoodies",
+    price: 1790,
+    compareAt: 2190,
+    mrp: 2190,
+    image: catHoodie,
+    sizes: SIZES,
+    colors: ["Heather Grey", "Black"],
+    description:
+      "Brushed fleece inside, dense knit outside, with a double-layer hood and kangaroo pocket that holds its shape.",
+    purchaseRate: 1150,
+    sizePrices: { S: 1790, M: 1790, L: 1850, XL: 1890, XXL: 1950 },
+    images: [catTshirt, catTrouser],
+  },
+  {
+    slug: "campus-chino",
+    name: "Campus Stretch Chino",
+    category: "trousers",
+    price: 1690,
+    mrp: 1990,
+    image: catTrouser,
+    sizes: ["30", "32", "34", "36", "38"],
+    colors: ["Olive", "Beige", "Navy"],
+    description:
+      "Mid-rise chino in stretch twill with a tapered leg and deep pockets. Holds a crease, survives a rickshaw ride.",
+    badge: "New",
+    purchaseRate: 1050,
+    sizePrices: { "30": 1690, "32": 1690, "34": 1750, "36": 1790, "38": 1850 },
+    images: [catShirt, catTshirt],
+  },
+  {
+    slug: "tshirt-trouser-combo",
+    name: "T-Shirt & Trouser Combo",
+    category: "t-shirts",
+    price: 1290,
+    mrp: 1680,
+    image: catTshirt,
+    sizes: ["Standard"],
+    colors: ["Default"],
+    description: "Pair our bestselling heavyweight tee with the active stretch trousers. A versatile combo.",
+    badge: "Bundle Save",
+    purchaseRate: 800,
+    isBundle: true,
+    bundleProducts: ["midnight-heavy-tee", "campus-chino"],
+    images: [catTrouser],
+  },
+  {
+    slug: "summer-linen-set",
+    name: "Summer Linen Set",
+    category: "shirts",
+    price: 1800,
+    mrp: 2380,
+    image: catShirt,
+    sizes: ["Standard"],
+    colors: ["Default"],
+    description: "Two premium light linen shirts to beat the summer heat.",
+    badge: "Bundle Save",
+    purchaseRate: 1100,
+    isBundle: true,
+    bundleProducts: ["cloudlight-linen-shirt", "cloudlight-linen-shirt"],
+    images: [catShirt],
+  },
+  {
+    slug: "premium-tee-trio",
+    name: "Premium Tee Trio",
+    category: "t-shirts",
+    price: 1350,
+    mrp: 1770,
+    image: catTshirt,
+    sizes: ["Standard"],
+    colors: ["Default"],
+    description: "Get 3 of our premium combed cotton tees in a single package.",
+    badge: "Popular Bundle",
+    purchaseRate: 900,
+    isBundle: true,
+    bundleProducts: ["midnight-heavy-tee", "arza-graphic-tee", "midnight-heavy-tee"],
+    images: [catTshirt],
+  },
+];
+
+export const formatBDT = (amount: number) => `${amount.toLocaleString("en-US")} TK`;
+
+export const getProduct = (slug: string) => products.find((p) => p.slug === slug);
+export const getCategory = (slug: string) => categories.find((c) => c.slug === slug);
+export const productsByCategory = (slug: string) =>
+  products.filter((p) => p.category === slug);
+
+export type ComboOffer = {
+  slug: string;
+  title: string;
+  subtitle: string;
+  items: string[];
+  price: number;
+  compareAt: number;
+  image: string;
+  description: string;
+};
+
+export const comboOffers: ComboOffer[] = [
+  {
+    slug: "summer-2pc",
+    title: "Summer 2-Piece Combo",
+    subtitle: "1 Tee + 1 Linen Shirt",
+    items: ["midnight-heavy-tee", "cloudlight-linen-shirt"],
+    price: 1990,
+    compareAt: 2280,
+    image: catShirt,
+    description:
+      "Pair our bestselling heavyweight tee with the breathable Cloudlight linen shirt. A versatile combo that takes you from a casual day out to an evening meetup.",
+  },
+  {
+    slug: "eid-3pc",
+    title: "Eid 3-Piece Combo",
+    subtitle: "1 Panjabi + 1 Tee + 1 Chino",
+    items: ["noor-cotton-panjabi", "arza-graphic-tee", "campus-chino"],
+    price: 4490,
+    compareAt: 4870,
+    image: catPanjabi,
+    description:
+      "A complete festive look: the Noor cotton panjabi, an oversized graphic tee for layering, and stretch chinos for all-day comfort.",
+  },
+  {
+    slug: "winter-2pc",
+    title: "Winter 2-Piece Combo",
+    subtitle: "1 Hoodie + 1 Chino",
+    items: ["winterfold-hoodie", "campus-chino"],
+    price: 2990,
+    compareAt: 3480,
+    image: catHoodie,
+    description:
+      "Brushed fleece hoodie paired with stretch chinos. Warm, structured, and ready for Dhaka's short winter.",
+  },
+];
+
+export const getComboOffer = (slug: string) => comboOffers.find((c) => c.slug === slug);

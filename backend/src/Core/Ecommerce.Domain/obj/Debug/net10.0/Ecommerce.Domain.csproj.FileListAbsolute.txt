@@ -1,0 +1,11 @@
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\bin\Debug\net10.0\Ecommerce.Domain.deps.json
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\bin\Debug\net10.0\Ecommerce.Domain.dll
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\bin\Debug\net10.0\Ecommerce.Domain.pdb
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\obj\Debug\net10.0\Ecommerce.Domain.GeneratedMSBuildEditorConfig.editorconfig
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\obj\Debug\net10.0\Ecommerce.Domain.AssemblyInfoInputs.cache
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\obj\Debug\net10.0\Ecommerce.Domain.AssemblyInfo.cs
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\obj\Debug\net10.0\Ecommerce.Domain.csproj.CoreCompileInputs.cache
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\obj\Debug\net10.0\Ecommerce.Domain.dll
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\obj\Debug\net10.0\refint\Ecommerce.Domain.dll
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\obj\Debug\net10.0\Ecommerce.Domain.pdb
+D:\Personal\alzeena\backend\src\Core\Ecommerce.Domain\obj\Debug\net10.0\ref\Ecommerce.Domain.dll
