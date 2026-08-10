@@ -2,6 +2,7 @@ using Ecommerce.Application.Common.Interfaces;
 using Ecommerce.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Ecommerce.Api.Controllers;
 
@@ -10,18 +11,30 @@ namespace Ecommerce.Api.Controllers;
 public class BannersController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly IMemoryCache _cache;
+    private const string BANNERS_CACHE_KEY = "banners_list_cache_v1";
 
-    public BannersController(IApplicationDbContext context)
+    public BannersController(IApplicationDbContext context, IMemoryCache cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetBanners()
     {
-        var banners = await _context.Banners
-            .OrderBy(b => b.DisplayOrder)
-            .ToListAsync();
+        if (!_cache.TryGetValue(BANNERS_CACHE_KEY, out List<Banner>? banners) || banners == null)
+        {
+            banners = await _context.Banners
+                .AsNoTracking()
+                .OrderBy(b => b.DisplayOrder)
+                .ToListAsync();
+
+            var cacheOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(10));
+
+            _cache.Set(BANNERS_CACHE_KEY, banners, cacheOptions);
+        }
         return Ok(banners);
     }
 
@@ -38,6 +51,7 @@ public class BannersController : ControllerBase
     {
         _context.Banners.Add(banner);
         await _context.SaveChangesAsync();
+        _cache.Remove(BANNERS_CACHE_KEY);
         return CreatedAtAction(nameof(GetBanner), new { id = banner.Id }, banner);
     }
 
@@ -56,6 +70,7 @@ public class BannersController : ControllerBase
         existing.Position = updated.Position ?? "slider";
 
         await _context.SaveChangesAsync();
+        _cache.Remove(BANNERS_CACHE_KEY);
         return Ok(existing);
     }
 
@@ -67,6 +82,7 @@ public class BannersController : ControllerBase
 
         _context.Banners.Remove(existing);
         await _context.SaveChangesAsync();
+        _cache.Remove(BANNERS_CACHE_KEY);
         return NoContent();
     }
 }

@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  output: "standalone",
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
@@ -16,7 +17,6 @@ const nextConfig: NextConfig = {
       { protocol: "http", hostname: "testapi.arzamart.com" },
       { protocol: "http", hostname: "test.arzamart.com" },
     ],
-    unoptimized: true,
   },
 };
 

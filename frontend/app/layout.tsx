@@ -6,6 +6,21 @@ import { SiteFooter } from "@/components/site-footer";
 import { FloatingActions } from "@/components/floating-actions";
 import { Toaster } from "@/components/ui/sonner";
 import { ScrollToTop } from "@/components/scroll-to-top";
+import { Bricolage_Grotesque, DM_Sans } from "next/font/google";
+
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
 
 export const metadata: Metadata = {
   title: "Arza — Everyday Fashion in Bangladesh",
@@ -28,15 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400&display=swap"
-        />
-      </head>
+    <html lang="en" className={`${bricolage.variable} ${dmSans.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Providers>
           <div className="flex min-h-screen flex-col">
