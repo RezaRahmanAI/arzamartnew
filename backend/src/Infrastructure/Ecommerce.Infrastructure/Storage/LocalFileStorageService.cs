@@ -1,15 +1,35 @@
 using Ecommerce.Application.Common.Interfaces;
+using Microsoft.AspNetCore.Hosting;
 
 namespace Ecommerce.Infrastructure.Storage;
 
 public class LocalFileStorageService : IStorageService
 {
+    private readonly string _webRootPath;
     private readonly string _uploadBasePath;
 
-    public LocalFileStorageService()
+    public LocalFileStorageService(IWebHostEnvironment env)
     {
-        // Target wwwroot/uploads directory in the Web API project
-        _uploadBasePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+        var contentRoot = env.ContentRootPath;
+        if (!string.IsNullOrEmpty(env.WebRootPath) && Directory.Exists(env.WebRootPath))
+        {
+            _webRootPath = env.WebRootPath;
+        }
+        else if (Directory.Exists(Path.Combine(contentRoot, "webroot")))
+        {
+            _webRootPath = Path.Combine(contentRoot, "webroot");
+        }
+        else
+        {
+            _webRootPath = Path.Combine(contentRoot, "wwwroot");
+        }
+
+        if (!Directory.Exists(_webRootPath))
+        {
+            Directory.CreateDirectory(_webRootPath);
+        }
+
+        _uploadBasePath = Path.Combine(_webRootPath, "uploads");
         if (!Directory.Exists(_uploadBasePath))
         {
             Directory.CreateDirectory(_uploadBasePath);
@@ -41,7 +61,7 @@ public class LocalFileStorageService : IStorageService
         if (string.IsNullOrWhiteSpace(fileUrl)) return Task.CompletedTask;
 
         var relativePath = fileUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-        var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath);
+        var fullPath = Path.Combine(_webRootPath, relativePath);
 
         if (File.Exists(fullPath))
         {

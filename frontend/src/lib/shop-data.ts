@@ -37,6 +37,7 @@ export type Product = {
   badge?: string;
   purchaseRate: number;
   sizePrices?: Record<string, number>;
+  sizeStock?: Record<string, number>;
   videoUrl?: string;
   returnPolicy?: string;
   isBundle?: boolean;
@@ -47,6 +48,44 @@ export type Product = {
 
 export const getSizePrice = (product: Product, size: string): number =>
   product.sizePrices?.[size] ?? product.price;
+
+export const getSizeStock = (product: Product, size: string): number =>
+  product.sizeStock?.[size] ?? 15;
+
+export const COLOR_MAP: Record<string, string> = {
+  black: "#000000",
+  white: "#ffffff",
+  navy: "#1e293b",
+  blue: "#2563eb",
+  "royal blue": "#1d4ed8",
+  red: "#dc2626",
+  crimson: "#991b1b",
+  maroon: "#800000",
+  green: "#16a34a",
+  emerald: "#059669",
+  olive: "#808000",
+  yellow: "#ca8a04",
+  amber: "#d97706",
+  orange: "#ea580c",
+  purple: "#9333ea",
+  pink: "#db2777",
+  charcoal: "#374151",
+  grey: "#6b7280",
+  gray: "#6b7280",
+  beige: "#f5f5dc",
+  brown: "#78350f",
+  cream: "#fffdd0",
+};
+
+export const getColorHex = (colorNameOrHex: string): string => {
+  if (!colorNameOrHex) return "#94a3b8";
+  const trimmed = colorNameOrHex.trim();
+  if (trimmed.startsWith("#") || trimmed.startsWith("rgb") || trimmed.startsWith("hsl")) {
+    return trimmed;
+  }
+  const normalized = trimmed.toLowerCase();
+  return COLOR_MAP[normalized] || "#64748b";
+};
 
 export const offerBanner = {
   image: bannerOffer,

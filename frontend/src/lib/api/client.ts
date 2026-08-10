@@ -89,6 +89,32 @@ class ApiClient {
   public delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "DELETE" });
   }
+
+  public async uploadFile(file: File, folder: string = "products"): Promise<{ url: string }> {
+    const url = `${this.baseUrl}/uploads`;
+    const token = this.getAuthToken();
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", folder);
+
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`Upload failed with status ${response.status}`, response.status);
+    }
+
+    const data = await response.json();
+    return data;
+  }
 }
 
 export const apiClient = new ApiClient();

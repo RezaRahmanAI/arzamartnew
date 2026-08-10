@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Trash2, X, Upload } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -27,6 +27,8 @@ import { formatBDT } from "@/lib/dashboard-data";
 import { type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { useCategories } from "@/lib/categories-store";
+import { W3ColorPicker } from "@/components/ui/color-picker";
+import { ColorSwatches } from "@/components/ui/color-swatch";
 
 type FormState = {
   slug: string;
@@ -85,6 +87,29 @@ export default function AdminProducts() {
   const [open, setOpen] = useState(false);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null);
+  const [stockForm, setStockForm] = useState<Record<string, number>>({});
+
+  const openStockModal = (p: Product) => {
+    setStockModalProduct(p);
+    const initialStock: Record<string, number> = {};
+    p.sizes.forEach((s) => {
+      initialStock[s] = p.sizeStock?.[s] ?? 15;
+    });
+    setStockForm(initialStock);
+  };
+
+  const saveStock = () => {
+    if (!stockModalProduct) return;
+    updateProduct(stockModalProduct.slug, {
+      ...stockModalProduct,
+      sizeStock: stockForm,
+    });
+    toast.success(`Stock updated for ${stockModalProduct.name}`, {
+      description: "Size-wise inventory saved successfully.",
+    });
+    setStockModalProduct(null);
+  };
 
   const sizesArray = form.sizes
     .split(",")
@@ -228,9 +253,11 @@ export default function AdminProducts() {
             <TableRow>
               <TableHead>Product</TableHead>
               <TableHead>Category</TableHead>
+              <TableHead>Colors</TableHead>
               <TableHead className="text-right">Purchase</TableHead>
               <TableHead className="text-right">Base price</TableHead>
               <TableHead className="text-right">Sizes</TableHead>
+              <TableHead className="text-center">Stock</TableHead>
               <TableHead className="text-right">Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -249,6 +276,12 @@ export default function AdminProducts() {
                 minPrice === maxPrice
                   ? formatBDT(p.price)
                   : `${formatBDT(minPrice)} – ${formatBDT(maxPrice)}`;
+
+              // Calculate total stock
+              const totalStock = p.sizes.reduce((acc, s) => {
+                return acc + (p.sizeStock?.[s] ?? 15);
+              }, 0);
+
               return (
                 <TableRow key={p.slug}>
                   <TableCell>
@@ -263,12 +296,31 @@ export default function AdminProducts() {
                     </div>
                   </TableCell>
                   <TableCell className="capitalize text-muted-foreground">{p.category}</TableCell>
+                  <TableCell>
+                    <ColorSwatches colors={p.colors} size="sm" />
+                  </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {formatBDT(p.purchaseRate)}
                   </TableCell>
                   <TableCell className="text-right font-semibold">{priceRange}</TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {p.sizes.join(", ")}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => openStockModal(p)}
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold cursor-pointer transition-colors ${
+                        totalStock > 20
+                          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                          : totalStock > 0
+                          ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                          : "bg-red-100 text-red-800 hover:bg-red-200"
+                      }`}
+                    >
+                      <Boxes className="size-3" />
+                      <span>{totalStock} in stock</span>
+                    </button>
                   </TableCell>
                   <TableCell className="text-right">
                     <button
@@ -284,12 +336,22 @@ export default function AdminProducts() {
                     </button>
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openStockModal(p)}
+                        className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary cursor-pointer"
+                        title="Manage Size Stock"
+                      >
+                        <Boxes className="size-3.5 text-primary" />
+                        <span className="hidden sm:inline">Stock</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => openEdit(p)}
                         className="rounded-md border border-border p-2 text-foreground transition-colors hover:border-primary hover:text-primary cursor-pointer"
                         aria-label="Edit"
+                        title="Edit Product"
                       >
                         <Pencil className="size-3.5" />
                       </button>
@@ -298,6 +360,7 @@ export default function AdminProducts() {
                         onClick={() => remove(p.slug)}
                         className="rounded-md border border-border p-2 text-foreground transition-colors hover:border-destructive hover:text-destructive cursor-pointer"
                         aria-label="Delete"
+                        title="Delete Product"
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -571,7 +634,7 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-1">
               <div className="space-y-1.5">
                 <Label htmlFor="sizes">Sizes (comma separated)</Label>
                 <Input
@@ -582,12 +645,13 @@ export default function AdminProducts() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="colors">Colours (comma separated)</Label>
-                <Input
-                  id="colors"
-                  value={form.colors}
-                  onChange={(e) => update("colors", e.target.value)}
-                  placeholder="Black, White"
+                <Label>Product Colours (W3 Color Picker)</Label>
+                <W3ColorPicker
+                  selectedColors={form.colors
+                    .split(",")
+                    .map((c) => c.trim())
+                    .filter(Boolean)}
+                  onChange={(colorsArr) => update("colors", colorsArr.join(", "))}
                 />
               </div>
             </div>
@@ -667,6 +731,160 @@ export default function AdminProducts() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Management Dialog */}
+      <Dialog open={!!stockModalProduct} onOpenChange={(open) => !open && setStockModalProduct(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Boxes className="size-5 text-primary" />
+              <span>Manage Size-Wise Stock</span>
+            </DialogTitle>
+            <DialogDescription>
+              Set exact inventory quantity for each size of {stockModalProduct?.name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          {stockModalProduct && (
+            <div className="space-y-4 py-2">
+              {/* Product Info Header */}
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-3">
+                <img
+                  src={stockModalProduct.image}
+                  alt={stockModalProduct.name}
+                  className="size-12 rounded-md object-cover border border-border"
+                />
+                <div>
+                  <h4 className="font-bold text-sm text-foreground">{stockModalProduct.name}</h4>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    Category: {stockModalProduct.category}
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-secondary/20 p-2">
+                <span className="text-xs font-bold text-muted-foreground">Quick Fill:</span>
+                <div className="flex gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] cursor-pointer"
+                    onClick={() => {
+                      const updated: Record<string, number> = {};
+                      stockModalProduct.sizes.forEach((s) => (updated[s] = 10));
+                      setStockForm(updated);
+                    }}
+                  >
+                    All 10
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] cursor-pointer"
+                    onClick={() => {
+                      const updated: Record<string, number> = {};
+                      stockModalProduct.sizes.forEach((s) => (updated[s] = 50));
+                      setStockForm(updated);
+                    }}
+                  >
+                    All 50
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] text-destructive hover:text-destructive cursor-pointer"
+                    onClick={() => {
+                      const updated: Record<string, number> = {};
+                      stockModalProduct.sizes.forEach((s) => (updated[s] = 0));
+                      setStockForm(updated);
+                    }}
+                  >
+                    Clear All
+                  </Button>
+                </div>
+              </div>
+
+              {/* Size Wise Stock Inputs */}
+              <div className="space-y-3">
+                {stockModalProduct.sizes.map((s) => {
+                  const qty = stockForm[s] ?? 0;
+                  return (
+                    <div
+                      key={s}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 transition-colors hover:border-primary/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="flex size-7 items-center justify-center rounded-md bg-primary/10 font-bold text-xs text-primary">
+                          {s}
+                        </span>
+                        <div>
+                          <span className="font-semibold text-xs text-foreground">Size {s}</span>
+                          <div className="flex items-center gap-1">
+                            <span
+                              className={`inline-block size-2 rounded-full ${
+                                qty > 5
+                                  ? "bg-emerald-500"
+                                  : qty > 0
+                                  ? "bg-amber-500"
+                                  : "bg-red-500"
+                              }`}
+                            />
+                            <span className="text-[11px] text-muted-foreground">
+                              {qty > 5 ? "In Stock" : qty > 0 ? "Low Stock" : "Out of Stock"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          value={qty}
+                          onChange={(e) => {
+                            const val = Math.max(0, parseInt(e.target.value) || 0);
+                            setStockForm((prev) => ({ ...prev, [s]: val }));
+                          }}
+                          className="h-9 w-24 text-right font-bold text-xs"
+                        />
+                        <span className="text-xs text-muted-foreground">pcs</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Total Stock Summary */}
+              <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
+                <span className="font-bold text-foreground">Total Product Stock:</span>
+                <span className="font-bold text-sm text-primary">
+                  {Object.values(stockForm).reduce((a, b) => a + b, 0)} units available
+                </span>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStockModalProduct(null)}
+                  className="cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button type="button" onClick={saveStock} className="cursor-pointer gap-1.5">
+                  <PackageCheck className="size-4" />
+                  Save Inventory
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

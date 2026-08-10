@@ -1,4 +1,6 @@
-import { Upload } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Upload } from "lucide-react";
+import { apiClient } from "@/lib/api/client";
 
 interface ImageUploaderProps {
   value: string;
@@ -15,10 +17,36 @@ export function ImageUploader({
   sublabel,
   size = "md"
 }: ImageUploaderProps) {
+  const [isUploading, setIsUploading] = useState(false);
+
   const sizeClasses = {
     sm: "size-10",
     md: "size-16",
     lg: "size-20"
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const res = await apiClient.uploadFile(file, "uploads");
+      if (res && res.url) {
+        onChange(res.url);
+      } else {
+        throw new Error("Invalid response");
+      }
+    } catch {
+      // Fallback to base64 Data URL if offline or upload endpoint unavailable
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onChange(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -38,22 +66,20 @@ export function ImageUploader({
           </div>
         ) : (
           <label className={`flex flex-col items-center justify-center rounded-md border border-dashed border-border hover:border-primary bg-secondary/10 cursor-pointer text-muted-foreground hover:text-foreground transition-colors ${sizeClasses[size]}`}>
-            <Upload className="size-3.5" />
-            <span className="text-[8px] mt-1 font-semibold uppercase tracking-wider">Upload</span>
+            {isUploading ? (
+              <Loader2 className="size-4 animate-spin text-primary" />
+            ) : (
+              <>
+                <Upload className="size-3.5" />
+                <span className="text-[8px] mt-1 font-semibold uppercase tracking-wider">Upload</span>
+              </>
+            )}
             <input
               type="file"
               accept="image/*"
+              disabled={isUploading}
               className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    onChange(reader.result as string);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
+              onChange={handleFileChange}
             />
           </label>
         )}

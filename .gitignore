@@ -1,39 +1,58 @@
-# Logs
+# Build & Output Folders
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+**/bin/
+**/obj/
+dist/
+dist-ssr/
+.output/
+.next/
+frontend/.next/
+frontend_temp_publish/
+frontend_temp_dev/
+publish_backend/
+frontend_publish_light.zip
+
+# Compiled Binaries & Assemblies
+*.dll
+*.exe
+*.pdb
+*.cache
+*.filelist
+*.nupkg
+*.user
+*.userosv
+*.suo
+*.userprefs
+
+# Logs & Debug
 logs
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-.output
-.vinxi
-.tanstack/**
-.nitro
-*.local
+# Dependencies
+node_modules/
 
-# Wrangler / Cloudflare
-.wrangler/
+# Environment & Config Secrets
+.env
+.env*.local
 .dev.vars
 
-# Editor directories and files
+# IDE & Editor Files
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.sln.docstates
 *.sw?
-.env
-backend/src/Presentation/Ecommerce.Api/bin
-frontend/.next
-frontend_temp_publish
-publish_backend
-frontend_temp_dev
-frontend_publish_light.zip
+*.DS_Store
+Thumbs.db
+
+# Cloudflare / Wrangler
+.wrangler/

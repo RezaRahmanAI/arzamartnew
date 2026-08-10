@@ -313,11 +313,15 @@ export default function AdminOrders() {
         <div className="flex-1" />
         
         <div className="flex gap-2 w-full md:w-auto">
-          <Button variant="secondary" className="gap-2 w-full md:w-auto">
-            <ShoppingCart className="h-4 w-4" /> New Order
+          <Button variant="secondary" className="gap-2 w-full md:w-auto" asChild>
+            <Link href="/admin/manual-order">
+              <ShoppingCart className="h-4 w-4" /> New Order
+            </Link>
           </Button>
-          <Button className="gap-2 w-full md:w-auto">
-            <PackagePlus className="h-4 w-4" /> Pre-order
+          <Button className="gap-2 w-full md:w-auto" asChild>
+            <Link href="/admin/pre-order">
+              <PackagePlus className="h-4 w-4" /> Pre-order
+            </Link>
           </Button>
           <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />

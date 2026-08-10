@@ -10,7 +10,7 @@ import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
 import { useReviews } from "@/lib/reviews";
 import { useProducts } from "@/lib/products-store";
-import { formatBDT, getSizePrice, products as staticProducts } from "@/lib/shop-data";
+import { formatBDT, getSizePrice, getSizeStock, getColorHex, products as staticProducts } from "@/lib/shop-data";
 
 
 export default function ProductPage() {
@@ -289,14 +289,18 @@ export default function ProductPage() {
             <div className="mt-2 flex flex-wrap gap-2">
               {product.sizes.map((s) => {
                 const sp = getSizePrice(product, s);
+                const st = getSizeStock(product, s);
+                const isOutOfStock = st === 0;
                 return (
                   <button
                     key={s}
                     type="button"
                     onClick={() => setSize(s)}
-                    className={`min-w-11 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors cursor-pointer ${
+                    className={`relative min-w-11 rounded-lg border px-3 py-2 text-sm font-semibold transition-all cursor-pointer ${
                       s === size
-                        ? "border-primary bg-primary text-primary-foreground"
+                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        : isOutOfStock
+                        ? "border-dashed border-destructive/40 bg-secondary/20 text-muted-foreground opacity-60 line-through"
                         : "border-border bg-card text-foreground hover:border-primary"
                     }`}
                   >
@@ -310,25 +314,56 @@ export default function ProductPage() {
                 );
               })}
             </div>
+            {size && (
+              <p className="mt-2 text-xs font-medium">
+                {getSizeStock(product, size) > 5 ? (
+                  <span className="text-emerald-600 font-semibold inline-flex items-center gap-1">
+                    <span className="size-2 rounded-full bg-emerald-500" />
+                    In Stock ({getSizeStock(product, size)} items left)
+                  </span>
+                ) : getSizeStock(product, size) > 0 ? (
+                  <span className="text-amber-600 font-semibold inline-flex items-center gap-1">
+                    <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+                    Low Stock! Only {getSizeStock(product, size)} left in size {size}
+                  </span>
+                ) : (
+                  <span className="text-red-600 font-bold inline-flex items-center gap-1">
+                    <span className="size-2 rounded-full bg-red-500" />
+                    Out of Stock in size {size}
+                  </span>
+                )}
+              </p>
+            )}
           </div>
 
           <div className="mt-5">
-            <p className="text-xs font-bold uppercase tracking-wider text-foreground">Colour</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {product.colors.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={`rounded-lg border px-3 py-2 text-sm font-semibold transition-colors cursor-pointer ${
-                    c === color
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card text-foreground hover:border-primary"
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
+            <p className="text-xs font-bold uppercase tracking-wider text-foreground">
+              Colour: <span className="font-semibold text-primary">{color}</span>
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2.5">
+              {product.colors.map((c) => {
+                const hex = getColorHex(c);
+                const isSelected = c === color;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setColor(c)}
+                    title={c}
+                    className={`group relative flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? "border-primary bg-primary/10 text-primary ring-2 ring-primary ring-offset-1 shadow-sm"
+                        : "border-border bg-card text-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    <span
+                      className="size-4 rounded-full border border-black/10 shadow-sm inline-block"
+                      style={{ backgroundColor: hex }}
+                    />
+                    <span>{c}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

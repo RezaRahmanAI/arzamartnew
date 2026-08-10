@@ -109,6 +109,17 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseStaticFiles();
+
+var webrootFolder = Path.Combine(builder.Environment.ContentRootPath, "webroot");
+if (Directory.Exists(webrootFolder))
+{
+    app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webrootFolder),
+        RequestPath = ""
+    });
+}
+
 app.UseRouting();
 
 app.UseCors("AllowFrontend");

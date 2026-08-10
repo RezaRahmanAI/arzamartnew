@@ -368,6 +368,42 @@ export default function AdminManualOrder() {
     setModalQty(1);
   };
 
+  // Directly select size and add product to order lines without popup
+  const addProductDirectly = (product: Product, size: string) => {
+    const color = product.colors[0] || "Default";
+    const unitPrice = getSizePrice(product, size);
+
+    setLines((prev) => {
+      const existingIdx = prev.findIndex(
+        (l) => l.slug === product.slug && l.size === size && l.color === color
+      );
+      if (existingIdx >= 0) {
+        const next = [...prev];
+        next[existingIdx] = {
+          ...next[existingIdx],
+          qty: next[existingIdx].qty + 1,
+        };
+        return next;
+      }
+      return [
+        ...prev,
+        {
+          key: `cart-${uniqueKeyCounter++}`,
+          slug: product.slug,
+          name: product.name,
+          size: size,
+          color: color,
+          qty: 1,
+          price: unitPrice,
+          availableSizes: product.sizes || ["S", "M", "L", "XL"],
+          availableColors: product.colors || ["Standard"],
+        },
+      ];
+    });
+
+    toast.success(`Added ${product.name} (${size})`);
+  };
+
   // Confirm options in modal and add to cart
   const confirmAddToCartFromModal = () => {
     if (!selectedProductForModal) return;
@@ -921,14 +957,14 @@ export default function AdminManualOrder() {
                           </div>
                         </div>
 
-                        {/* Size Stock Badges Grid opens Modal with clicked size */}
+                        {/* Size Stock Badges Grid directly selects size and adds to cart */}
                         <div className="pt-1.5 border-t border-border/40 mt-1">
                           <div className="grid grid-cols-3 gap-0.5">
                             {product.sizes.slice(0, 6).map((sz) => (
                               <button
                                 key={sz}
                                 type="button"
-                                onClick={() => openSelectOptionsModal(product, sz)}
+                                onClick={() => addProductDirectly(product, sz)}
                                 className="flex items-center justify-between bg-secondary/40 hover:bg-primary/20 hover:border-primary border border-border rounded px-1 py-0.5 text-[9px] cursor-pointer transition-colors"
                               >
                                 <span className="font-bold text-foreground text-[9px]">{sz}</span>
