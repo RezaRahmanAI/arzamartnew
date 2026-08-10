@@ -1,7 +1,14 @@
 using Ecommerce.Application.Common.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ecommerce.Api.Controllers;
+
+public class UploadFileRequest
+{
+    public IFormFile? File { get; set; }
+    public string Folder { get; set; } = "products";
+}
 
 [ApiController]
 [Route("api/v1/[controller]")]
@@ -15,15 +22,16 @@ public class UploadsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Upload([FromForm] IFormFile? file, [FromForm] string folder = "products")
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Upload([FromForm] UploadFileRequest request)
     {
-        if (file == null || file.Length == 0)
+        if (request.File == null || request.File.Length == 0)
         {
             return BadRequest(new { Message = "No file was provided for upload." });
         }
 
-        using var stream = file.OpenReadStream();
-        var url = await _storageService.UploadFileAsync(stream, file.FileName, folder);
+        using var stream = request.File.OpenReadStream();
+        var url = await _storageService.UploadFileAsync(stream, request.File.FileName, request.Folder);
         return Ok(new { url });
     }
 }
