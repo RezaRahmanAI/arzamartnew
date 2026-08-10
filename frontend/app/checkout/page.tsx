@@ -10,10 +10,7 @@ import { generateOrderId, useOrders, type Order } from "@/lib/orders";
 import { useSettings } from "@/context/settings-context";
 import { useCustomers } from "@/lib/customers-store";
 
-const DEFAULT_DISTRICTS = [
-  "Dhaka", "Chattogram", "Sylhet", "Khulna", "Rajshahi", "Barishal", "Rangpur",
-  "Mymensingh", "Gazipur", "Narayanganj", "Comilla", "Bogra", "Feni", "Cox's Bazar",
-];
+import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
 
 export default function CheckoutPage() {
   const { detailedLines, subtotal, clear } = useCart();
@@ -23,7 +20,17 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [placing, setPlacing] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState("Dhaka");
+  const [selectedArea, setSelectedArea] = useState(() => getAreasForCity("Dhaka")[0] || "");
   const formRef = useRef<HTMLFormElement>(null);
+
+  const availableAreas = getAreasForCity(selectedCity);
+
+  const handleCityChange = (city: string) => {
+    setSelectedCity(city);
+    const areas = getAreasForCity(city);
+    setSelectedArea(areas[0] || "");
+  };
 
   // Delivery logic from centralized settings
   const freeShippingThreshold = settings?.shipping?.freeShippingThreshold ?? 5000;
@@ -56,7 +63,8 @@ export default function CheckoutPage() {
         customer: name || "Incomplete",
         phone,
         address: String(data.get("address") ?? "").trim(),
-        city: String(data.get("district") ?? "Dhaka"),
+        city: selectedCity,
+        area: selectedArea,
         note: String(data.get("note") ?? "").trim(),
         payment: String(data.get("payment") ?? "Cash on delivery"),
         items: detailedLines.map((l) => ({
@@ -77,7 +85,7 @@ export default function CheckoutPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [detailedLines, draftId, subtotal, delivery, saveIncomplete]);
+  }, [detailedLines, draftId, subtotal, delivery, saveIncomplete, selectedCity, selectedArea]);
 
   if (detailedLines.length === 0) {
     return (
@@ -102,13 +110,12 @@ export default function CheckoutPage() {
     const name = String(formData.get("name") ?? "");
     const phone = String(formData.get("phone") ?? "");
     const address = String(formData.get("address") ?? "");
-    const district = String(formData.get("district") ?? "Dhaka");
 
     // Master Customer Record Architecture: find or create Customer Master
     const customerMaster = findOrCreateByPhone(phone, {
       fullName: name,
       address,
-      district,
+      district: selectedCity,
     });
 
     setPlacing(true);
@@ -119,7 +126,8 @@ export default function CheckoutPage() {
       customer: name,
       phone,
       address,
-      city: district,
+      city: selectedCity,
+      area: selectedArea,
       note: String(formData.get("note") ?? ""),
       payment: String(formData.get("payment") ?? "Cash on delivery"),
       items: detailedLines.map((l) => ({
@@ -168,21 +176,39 @@ export default function CheckoutPage() {
                 name="address"
                 required
                 rows={3}
-                placeholder="House, road, area"
+                placeholder="House, road, area details"
                 className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </label>
+
             <label className="text-sm">
-              <span className="font-semibold text-foreground">District</span>
+              <span className="font-semibold text-foreground">Select City</span>
               <select
-                name="district"
+                name="city"
+                value={selectedCity}
+                onChange={(e) => handleCityChange(e.target.value)}
                 className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               >
-                {DEFAULT_DISTRICTS.map((d) => (
-                  <option key={d}>{d}</option>
+                {DEFAULT_CITIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </label>
+
+            <label className="text-sm">
+              <span className="font-semibold text-foreground">Select Area (Thana / Upazila)</span>
+              <select
+                name="area"
+                value={selectedArea}
+                onChange={(e) => setSelectedArea(e.target.value)}
+                className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              >
+                {availableAreas.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+            </label>
+
             <Field label="Note (optional)" name="note" placeholder="Anything we should know?" />
           </div>
 

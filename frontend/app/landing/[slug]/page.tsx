@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { landingPagesService, type LandingPageResponse } from "@/lib/api/services/landing-pages.service";
 import { ordersService } from "@/lib/api/services/orders.service";
+import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
 
 
 export default function PublicLandingPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -35,10 +36,13 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [district, setDistrict] = useState("Dhaka");
+  const [city, setCity] = useState("Dhaka");
+  const [area, setArea] = useState(() => getAreasForCity("Dhaka")[0] || "");
   const [shippingFee, setShippingFee] = useState(60);
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
+
+  const availableAreas = getAreasForCity(city);
 
   useEffect(() => {
     fetchPageData();
@@ -64,9 +68,11 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
     }
   };
 
-  const handleDistrictChange = (dist: string) => {
-    setDistrict(dist);
-    setShippingFee(dist === "Dhaka" ? 60 : 120);
+  const handleCityChange = (newCity: string) => {
+    setCity(newCity);
+    const areas = getAreasForCity(newCity);
+    setArea(areas[0] || "");
+    setShippingFee(newCity === "Dhaka" ? 60 : 120);
   };
 
   const scrollToOrderForm = () => {
@@ -91,8 +97,10 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
       const orderPayload = {
         fullName,
         phone,
-        address: `${address}, ${district}`,
-        district,
+        address: `${address}, ${area}, ${city}`,
+        city,
+        area,
+        district: city,
         items: [
           {
             productId: data.product.id,
@@ -515,17 +523,33 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      ডেলিভারি এলাকা *
+                      সিটি / জেলা সিলেক্ট করুন (Select City) *
                     </label>
                     <select
-                      value={district}
-                      onChange={(e) => handleDistrictChange(e.target.value)}
+                      value={city}
+                      onChange={(e) => handleCityChange(e.target.value)}
                       className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-amber-600 dark:border-slate-800 dark:bg-slate-800 dark:text-white"
                     >
-                      <option value="Dhaka">ঢাকা শহরের ভেতরে (৳৬০)</option>
-                      <option value="Outside Dhaka">ঢাকা শহরের বাইরে (৳১২০)</option>
+                      {DEFAULT_CITIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      এরিয়া (থানা / উপজেলা) সিলেক্ট করুন *
+                    </label>
+                    <select
+                      value={area}
+                      onChange={(e) => setArea(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-amber-600 dark:border-slate-800 dark:bg-slate-800 dark:text-white"
+                    >
+                      {availableAreas.map((a) => (
+                        <option key={a} value={a}>{a}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                       পরিমাণ (Quantity)

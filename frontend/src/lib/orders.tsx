@@ -36,6 +36,7 @@ export type Order = {
   phone: string;
   address: string;
   city: string;
+  area?: string;
   note: string;
   payment: string;
   items: OrderItem[];

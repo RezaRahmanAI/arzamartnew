@@ -33,6 +33,7 @@ public class FrontendOrderDto
     public string Phone { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string City { get; set; } = string.Empty;
+    public string? Area { get; set; }
     public string? Note { get; set; }
     public string? Payment { get; set; }
     public List<FrontendOrderItemDto> Items { get; set; } = new();
@@ -181,7 +182,11 @@ public class OrdersController : ControllerBase
             var paymentStr = dto.Payment ?? "pending";
             var paymentStatus = paymentStr.ToLower().Contains("paid") ? PaymentStatus.Paid : PaymentStatus.Pending;
 
-            var shippingAddress = $"{dto.Address}, {dto.City}".Trim(new[] { ' ', ',' });
+            var addrList = new List<string>();
+            if (!string.IsNullOrWhiteSpace(dto.Address)) addrList.Add(dto.Address.Trim());
+            if (!string.IsNullOrWhiteSpace(dto.Area)) addrList.Add(dto.Area.Trim());
+            if (!string.IsNullOrWhiteSpace(dto.City)) addrList.Add(dto.City.Trim());
+            var shippingAddress = string.Join(", ", addrList);
             if (!string.IsNullOrWhiteSpace(dto.Note))
             {
                 shippingAddress += $" (Note: {dto.Note})";
