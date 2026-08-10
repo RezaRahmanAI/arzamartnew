@@ -56,32 +56,63 @@ public class OrdersController : ControllerBase
         _context = context;
     }
 
+    private static bool TryParseOrderStatus(string? raw, out OrderStatus status)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            status = OrderStatus.Pending;
+            return false;
+        }
+
+        return Enum.TryParse<OrderStatus>(raw.Replace("-", ""), true, out status);
+    }
+
+    private static string StatusToFrontend(OrderStatus status) =>
+        status == OrderStatus.ReturnProcess ? "return-process" : status.ToString().ToLower();
+
     public record CreateOrderApiRequest(List<CreateOrderItemDto> Items, string ShippingAddressJson, string? CouponCode);
 
     [HttpGet]
     public async Task<IActionResult> GetOrders()
     {
         var orders = await _context.Orders
-            .Include(o => o.Items)
-            .Include(o => o.Customer)
+            .AsNoTracking()
             .OrderByDescending(o => o.CreatedAtUtc)
+            .Select(o => new
+            {
+                o.Id,
+                o.OrderNumber,
+                CustomerName = o.Customer != null ? o.Customer.FullName : null,
+                CustomerPhone = o.Customer != null ? o.Customer.Phone : null,
+                CustomerDistrict = o.Customer != null ? o.Customer.District : null,
+                o.ShippingAddressJson,
+                o.PaymentStatus,
+                o.TotalAmount,
+                o.ShippingFee,
+                o.OrderStatus,
+                o.CreatedAtUtc,
+                o.CustomerId,
+                Items = o.Items.Select(i => new { i.ProductName, i.ProductId, i.Quantity, i.UnitPrice })
+            })
             .ToListAsync();
 
-        var result = orders.Select(o => new {
+        var result = orders.Select(o => new
+        {
             id = string.IsNullOrWhiteSpace(o.OrderNumber) ? $"ORD-{o.Id}" : o.OrderNumber,
             customerId = o.CustomerId.ToString(),
-            customer = o.Customer != null ? o.Customer.FullName : "Customer User",
-            phone = o.Customer != null ? o.Customer.Phone : "01700000000",
+            customer = o.CustomerName ?? "Customer User",
+            phone = o.CustomerPhone ?? "01700000000",
             address = o.ShippingAddressJson,
-            city = o.Customer != null ? o.Customer.District : "dhaka",
+            city = o.CustomerDistrict ?? "dhaka",
             note = "Delivery order",
             payment = o.PaymentStatus.ToString().ToLower(),
             total = o.TotalAmount,
             delivery = o.ShippingFee,
-            status = o.OrderStatus.ToString().ToLower(),
+            status = StatusToFrontend(o.OrderStatus),
             date = o.CreatedAtUtc.ToString("yyyy-MM-dd"),
             source = "checkout",
-            items = o.Items.Select(i => new {
+            items = o.Items.Select(i => new
+            {
                 slug = "product",
                 name = string.IsNullOrWhiteSpace(i.ProductName) ? $"Product Item #{i.ProductId}" : i.ProductName,
                 size = "Standard",
@@ -145,7 +176,7 @@ public class OrdersController : ControllerBase
             var orderNum = string.IsNullOrWhiteSpace(dto.Id) ? $"ORD-{Random.Shared.Next(10000, 99999)}" : dto.Id.Trim();
 
             var statusStr = dto.Status ?? "pending";
-            Enum.TryParse<Ecommerce.Domain.Enums.OrderStatus>(statusStr, true, out var parsedStatus);
+            TryParseOrderStatus(statusStr, out var parsedStatus);
 
             var paymentStr = dto.Payment ?? "pending";
             var paymentStatus = paymentStr.ToLower().Contains("paid") ? PaymentStatus.Paid : PaymentStatus.Pending;
@@ -207,17 +238,22 @@ public class OrdersController : ControllerBase
     [HttpPatch("{id}/status")]
     public async Task<IActionResult> UpdateOrderStatus(string id, [FromBody] UpdateOrderStatusRequest req)
     {
+        if (req == null || !TryParseOrderStatus(req.Status, out var parsedStatus))
+        {
+            return BadRequest(new { Message = $"Unsupported order status: '{req?.Status}'" });
+        }
+
         var cleanIdStr = id.Replace("ORD-", "");
         var isGuid = Guid.TryParse(cleanIdStr, out var g);
         var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderNumber == id || o.OrderNumber == $"ORD-{id}" || (isGuid && o.Id == g));
 
-        if (order != null && Enum.TryParse<Ecommerce.Domain.Enums.OrderStatus>(req.Status, true, out var parsedStatus))
+        if (order != null)
         {
             order.OrderStatus = parsedStatus;
             await _context.SaveChangesAsync();
-            return Ok(order);
+            return Ok(new { id, status = StatusToFrontend(parsedStatus) });
         }
 
-        return Ok(new { id, status = req.Status });
+        return NotFound(new { Message = $"Order '{id}' not found." });
     }
 }

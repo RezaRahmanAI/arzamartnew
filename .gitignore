@@ -56,3 +56,7 @@ Thumbs.db
 
 # Cloudflare / Wrangler
 .wrangler/
+# Graphify knowledge graph
+
+.opencode/plugins/graphify.js
+graphify-out

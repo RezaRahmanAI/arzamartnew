@@ -1,6 +1,7 @@
 import { apiClient } from "../client";
 import { apiConfig } from "../config";
-import { type Order, type OrderStatus } from "@/lib/orders";
+import { type Order } from "@/lib/orders";
+import type { OrderStatus } from "@/lib/dashboard-data";
 
 const ORDERS_KEY = "arza-orders-v1";
 const INCOMPLETE_KEY = "arza-incomplete-orders-v1";
@@ -84,16 +85,16 @@ class OrdersService {
     }
   }
 
-  public async updateStatus(id: string, status: OrderStatus): Promise<Order> {
+  public async updateStatus(id: string, status: OrderStatus): Promise<void> {
     const { orders } = this.getLocalOrders();
-    const updated = orders.map((o) => (o.id === id ? { ...o, status } : o));
+    const updated = orders.map((o) => ({ ...o, status }) as Order);
     this.saveLocalOrders(updated);
-    const target = updated.find((o) => o.id === id)!;
 
     try {
-      return await apiClient.patch<Order>(`/orders/${id}/status`, { status });
-    } catch {
-      return target;
+      await apiClient.patch(`/orders/${id}/status`, { status });
+    } catch (err) {
+      this.saveLocalOrders(orders);
+      throw err;
     }
   }
 

@@ -157,9 +157,14 @@ export default function AdminOrders() {
     toast.success(`Copied ${id}`);
   };
 
-  const updateStatus = (orderId: string, newStatus: OrderStatus) => {
-    setData(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-    toast.success(`Order ${orderId} marked as ${newStatus}`);
+  const updateStatus = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      await ordersService.updateStatus(orderId, newStatus);
+      setData(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      toast.success(`Order ${orderId} marked as ${newStatus}`);
+    } catch {
+      toast.error(`Failed to update order ${orderId}`);
+    }
   };
 
   // Stock Management Logic
