@@ -34,5 +34,17 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         base.OnModelCreating(modelBuilder);
         modelBuilder.HasDefaultSchema("dbo");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        modelBuilder.Entity<Product>(b =>
+        {
+            b.HasIndex(p => new { p.IsActive, p.CategoryId, p.CreatedAtUtc })
+             .HasDatabaseName("IX_Products_IsActive_CategoryId_CreatedAtUtc");
+        });
+
+        modelBuilder.Entity<Order>(b =>
+        {
+            b.HasIndex(o => new { o.OrderStatus, o.CreatedAtUtc })
+             .HasDatabaseName("IX_Orders_OrderStatus_CreatedAtUtc");
+        });
     }
 }

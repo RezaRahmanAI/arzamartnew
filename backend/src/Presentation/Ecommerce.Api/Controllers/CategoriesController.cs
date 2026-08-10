@@ -3,6 +3,8 @@ using Ecommerce.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+using Microsoft.Extensions.Caching.Memory;
+
 namespace Ecommerce.Api.Controllers;
 
 public class CreateCategoryRequest
@@ -19,18 +21,30 @@ public class CreateCategoryRequest
 public class CategoriesController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly IMemoryCache _cache;
+    private const string CATEGORIES_CACHE_KEY = "categories_list_cache_v1";
 
-    public CategoriesController(IApplicationDbContext context)
+    public CategoriesController(IApplicationDbContext context, IMemoryCache cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetCategories()
     {
-        var categories = await _context.Categories
-            .OrderBy(c => c.DisplayOrder)
-            .ToListAsync();
+        if (!_cache.TryGetValue(CATEGORIES_CACHE_KEY, out List<Category>? categories) || categories == null)
+        {
+            categories = await _context.Categories
+                .AsNoTracking()
+                .OrderBy(c => c.DisplayOrder)
+                .ToListAsync();
+
+            var cacheOptions = new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(10));
+
+            _cache.Set(CATEGORIES_CACHE_KEY, categories, cacheOptions);
+        }
         return Ok(categories);
     }
 
@@ -80,6 +94,7 @@ public class CategoriesController : ControllerBase
 
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
+        _cache.Remove(CATEGORIES_CACHE_KEY);
 
         return CreatedAtAction(nameof(GetCategoryById), new { id = category.Id }, category);
     }
@@ -95,6 +110,7 @@ public class CategoriesController : ControllerBase
         if (!string.IsNullOrWhiteSpace(req.Image ?? req.ImageUrl)) category.ImageUrl = req.Image ?? req.ImageUrl;
 
         await _context.SaveChangesAsync();
+        _cache.Remove(CATEGORIES_CACHE_KEY);
         return Ok(category);
     }
 
@@ -134,6 +150,7 @@ public class CategoriesController : ControllerBase
             }
 
             await _context.SaveChangesAsync();
+            _cache.Remove(CATEGORIES_CACHE_KEY);
         }
 
         return Ok(category);
@@ -147,6 +164,7 @@ public class CategoriesController : ControllerBase
 
         _context.Categories.Remove(category);
         await _context.SaveChangesAsync();
+        _cache.Remove(CATEGORIES_CACHE_KEY);
         return NoContent();
     }
 
@@ -158,6 +176,7 @@ public class CategoriesController : ControllerBase
 
         _context.Categories.Remove(category);
         await _context.SaveChangesAsync();
+        _cache.Remove(CATEGORIES_CACHE_KEY);
         return NoContent();
     }
 }
