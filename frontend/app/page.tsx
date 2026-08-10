@@ -9,6 +9,7 @@ import { useCategories } from "@/lib/categories-store";
 import { useBanners } from "@/lib/banners-store";
 import { offerBanner as fallbackOfferBanner } from "@/lib/shop-data";
 import { useSettings } from "@/context/settings-context";
+import { getImageUrl, FALLBACK_IMAGE } from "@/components/image-uploader";
 
 export default function HomePage() {
   const { products } = useProducts();
@@ -111,9 +112,13 @@ export default function HomePage() {
             >
               <div className="aspect-square overflow-hidden bg-secondary">
                 <img
-                  src={c.image}
+                  src={getImageUrl(c.image)}
                   alt={c.name}
                   loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = FALLBACK_IMAGE;
+                  }}
                   width={800}
                   height={800}
                   className="size-full object-cover transition-transform duration-500 group-hover:scale-105"

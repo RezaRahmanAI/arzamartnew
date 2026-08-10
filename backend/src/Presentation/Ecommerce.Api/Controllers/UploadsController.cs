@@ -31,7 +31,11 @@ public class UploadsController : ControllerBase
         }
 
         using var stream = request.File.OpenReadStream();
-        var url = await _storageService.UploadFileAsync(stream, request.File.FileName, request.Folder);
-        return Ok(new { url });
+        var relativeUrl = await _storageService.UploadFileAsync(stream, request.File.FileName, request.Folder);
+
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+        var fullUrl = $"{baseUrl}{relativeUrl}";
+
+        return Ok(new { url = fullUrl, relativeUrl });
     }
 }

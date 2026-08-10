@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ImageUploader, getImageUrl, handleImageError } from "@/components/image-uploader";
 
 export default function AdminBannersPage() {
   const { slides, isLoading, addSlide, updateSlide, deleteSlide } = useBanners();
@@ -102,8 +103,9 @@ export default function AdminBannersPage() {
             >
               <div className="relative aspect-[16/9] overflow-hidden bg-secondary">
                 <img
-                  src={slide.image}
+                  src={getImageUrl(slide.image)}
                   alt={slide.title}
+                  onError={handleImageError}
                   className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
@@ -219,16 +221,13 @@ export default function AdminBannersPage() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="image">Banner Image URL</Label>
-              <Input
-                id="image"
-                placeholder="https://images.unsplash.com/..."
-                value={formData.image}
-                onChange={(e) => setFormData((prev) => ({ ...prev, image: e.target.value }))}
-                required
-              />
-            </div>
+            <ImageUploader
+              label="Banner Image"
+              value={formData.image}
+              onChange={(val) => setFormData((prev) => ({ ...prev, image: val }))}
+              folder="banners"
+              sublabel="Upload slide image or enter URL. Recommended: 1600x900 PNG/JPG/WEBP"
+            />
 
             <div className="space-y-1.5">
               <Label htmlFor="href">Target Button Link (href)</Label>

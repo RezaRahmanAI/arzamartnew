@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { getImageUrl, handleImageError } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useBanners } from "@/lib/banners-store";
 
@@ -41,8 +42,9 @@ export function HeroSlider() {
             }`}
           >
             <img
-              src={slide.image}
+              src={getImageUrl(slide.image)}
               alt={slide.title}
+              onError={handleImageError}
               width={1600}
               height={1000}
               className="size-full object-cover"

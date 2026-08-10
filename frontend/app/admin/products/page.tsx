@@ -29,6 +29,8 @@ import { useProducts } from "@/lib/products-store";
 import { useCategories } from "@/lib/categories-store";
 import { W3ColorPicker } from "@/components/ui/color-picker";
 import { ColorSwatches } from "@/components/ui/color-swatch";
+import { ImageUploader, getImageUrl, handleImageError } from "@/components/image-uploader";
+import { apiClient } from "@/lib/api/client";
 
 type FormState = {
   slug: string;
@@ -287,10 +289,11 @@ export default function AdminProducts() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <img
-                        src={p.image}
+                        src={getImageUrl(p.image)}
                         alt={p.name}
                         loading="lazy"
-                        className="size-10 rounded-md object-cover"
+                        onError={handleImageError}
+                        className="size-10 rounded-md object-cover bg-muted/20"
                       />
                       <span className="font-medium">{p.name}</span>
                     </div>
@@ -423,7 +426,7 @@ export default function AdminProducts() {
                           return (
                             <div key={idx} className="flex items-center gap-2 bg-card p-1.5 rounded border border-border text-xs justify-between">
                               <div className="flex items-center gap-2 min-w-0">
-                                <img src={p.image} alt={p.name} className="size-6 object-cover rounded" />
+                                <img src={getImageUrl(p.image)} alt={p.name} onError={handleImageError} className="size-6 object-cover rounded bg-muted/20" />
                                 <span className="truncate font-medium">{p.name}</span>
                               </div>
                               <Button
@@ -454,7 +457,7 @@ export default function AdminProducts() {
                             className="flex items-center justify-between text-xs py-1 px-1.5 rounded hover:bg-secondary/40"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <img src={p.image} alt={p.name} className="size-6 object-cover rounded" />
+                              <img src={getImageUrl(p.image)} alt={p.name} onError={handleImageError} className="size-6 object-cover rounded bg-muted/20" />
                               <span className="truncate">{p.name}</span>
                             </div>
                             <Button
@@ -516,47 +519,13 @@ export default function AdminProducts() {
                   ))}
                 </select>
               </div>
-              <div className="space-y-1.5">
-                <Label>Featured Image</Label>
-                <div className="flex items-center gap-3">
-                  {form.image ? (
-                    <div className="relative size-20 rounded-md border border-border overflow-hidden group">
-                      <img src={form.image} alt="Featured Preview" className="size-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => update("image", "")}
-                        className="absolute inset-0 bg-black/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold cursor-pointer"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center size-20 rounded-md border border-dashed border-border hover:border-primary bg-secondary/10 cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
-                      <Upload className="size-4" />
-                      <span className="text-[9px] mt-1 font-semibold">Upload</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              update("image", reader.result as string);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                    </label>
-                  )}
-                  <div className="text-xs text-muted-foreground">
-                    <p className="font-semibold">Upload featured thumbnail</p>
-                    <p>Supported: JPG, PNG, WEBP</p>
-                  </div>
-                </div>
-              </div>
+              <ImageUploader
+                label="Featured Image"
+                value={form.image}
+                onChange={(val) => update("image", val)}
+                folder="products"
+                sublabel="Upload featured thumbnail. Supported: JPG, PNG, WEBP"
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -564,7 +533,7 @@ export default function AdminProducts() {
               <div className="flex flex-wrap gap-3 items-center">
                 {form.images.map((img, idx) => (
                   <div key={idx} className="relative size-16 rounded-md border border-border overflow-hidden group">
-                    <img src={img} alt={`Gallery Preview ${idx + 1}`} className="size-full object-cover" />
+                    <img src={getImageUrl(img)} alt={`Gallery Preview ${idx + 1}`} onError={handleImageError} className="size-full object-cover" />
                     <button
                       type="button"
                       onClick={() => {
@@ -585,22 +554,26 @@ export default function AdminProducts() {
                     accept="image/*"
                     multiple
                     className="hidden"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const files = Array.from(e.target.files || []);
-                      const loadedImages: string[] = [];
-                      let processed = 0;
                       if (files.length === 0) return;
-                      files.forEach((file) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          loadedImages.push(reader.result as string);
-                          processed++;
-                          if (processed === files.length) {
-                            update("images", [...form.images, ...loadedImages]);
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      });
+                      const uploadedUrls: string[] = [];
+                      for (const file of files) {
+                        try {
+                          const res = await apiClient.uploadFile(file, "products");
+                          if (res?.url) uploadedUrls.push(res.url);
+                        } catch {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            update("images", [...form.images, reader.result as string]);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }
+                      if (uploadedUrls.length > 0) {
+                        update("images", [...form.images, ...uploadedUrls]);
+                        toast.success(`${uploadedUrls.length} image(s) uploaded!`);
+                      }
                     }}
                   />
                 </label>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit2, Trash2, Upload } from "lucide-react";
+import { Plus, Edit2, Trash2, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { useCategories } from "@/lib/categories-store";
 import { type Category } from "@/lib/shop-data";
+import { ImageUploader, getImageUrl, FALLBACK_IMAGE } from "@/components/image-uploader";
 
 type FormState = {
   name: string;
@@ -131,10 +133,14 @@ export default function CategoriesPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <img
-                        src={c.image}
+                        src={getImageUrl(c.image)}
                         alt={c.name}
                         loading="lazy"
-                        className="size-10 rounded-md object-cover"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = FALLBACK_IMAGE;
+                        }}
+                        className="size-10 rounded-md object-cover bg-muted/20"
                       />
                       <span className="font-medium">{c.name}</span>
                     </div>
@@ -200,47 +206,13 @@ export default function CategoriesPage() {
                 required
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>Category Image</Label>
-              <div className="flex items-center gap-3">
-                {form.image ? (
-                  <div className="relative size-20 rounded-md border border-border overflow-hidden group">
-                    <img src={form.image} alt="Category Preview" className="size-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => update("image", "")}
-                      className="absolute inset-0 bg-black/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold cursor-pointer"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center size-20 rounded-md border border-dashed border-border hover:border-primary bg-secondary/10 cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
-                    <Upload className="size-4" />
-                    <span className="text-[9px] mt-1 font-semibold">Upload</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            update("image", reader.result as string);
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                  </label>
-                )}
-                <div className="text-xs text-muted-foreground">
-                  <p className="font-semibold">Upload category banner</p>
-                  <p>Supported: JPG, PNG, WEBP</p>
-                </div>
-              </div>
-            </div>
+            <ImageUploader
+              label="Category Image"
+              value={form.image}
+              onChange={(val) => update("image", val)}
+              folder="categories"
+              sublabel="Upload category banner. Supported: JPG, PNG, WEBP"
+            />
             <div className="space-y-1.5">
               <Label htmlFor="blurb">Blurb (Short description)</Label>
               <Input

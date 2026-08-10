@@ -10,13 +10,38 @@ export interface RawApiCategory {
 
 const initialMockCategories: Category[] = [];
 
+const LOCAL_STORAGE_KEY = "arzamart_categories_overrides_v1";
+
+const getLocalCategoryOverrides = (): Record<string, Partial<Category>> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const setLocalCategoryOverride = (slug: string, category: Category) => {
+  if (typeof window === "undefined") return;
+  try {
+    const current = getLocalCategoryOverrides();
+    current[slug] = category;
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(current));
+  } catch (err) {
+    console.error("Failed to save local category override:", err);
+  }
+};
+
 class CategoriesService {
   private mapApiCategoryToFrontend(c: RawApiCategory): Category {
+    const overrides = getLocalCategoryOverrides();
+    const local = overrides[c.slug] || overrides[c.slug.replace("-", "")];
     return {
       slug: c.slug,
       name: c.name,
-      image: c.imageUrl || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
-      blurb: `Explore our premium ${c.name} collection`
+      image: local?.image || c.imageUrl || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
+      blurb: local?.blurb || `Explore our premium ${c.name} collection`
     };
   }
 
@@ -45,11 +70,13 @@ class CategoriesService {
   }
 
   public async create(category: Category): Promise<Category> {
+    setLocalCategoryOverride(category.slug, category);
     try {
       const created = await apiClient.post<RawApiCategory>("/categories", {
         name: category.name,
         slug: category.slug,
         image: category.image,
+        imageUrl: category.image,
         blurb: category.blurb,
       });
       return this.mapApiCategoryToFrontend(created);
@@ -60,17 +87,28 @@ class CategoriesService {
   }
 
   public async update(slug: string, updated: Category): Promise<Category> {
+    setLocalCategoryOverride(slug, updated);
+    if (updated.slug !== slug) setLocalCategoryOverride(updated.slug, updated);
+
+    const payload = {
+      name: updated.name,
+      slug: updated.slug,
+      image: updated.image,
+      imageUrl: updated.image,
+      blurb: updated.blurb,
+    };
+
     try {
-      const res = await apiClient.put<RawApiCategory>(`/categories/by-slug/${slug}`, {
-        name: updated.name,
-        slug: updated.slug,
-        image: updated.image,
-        blurb: updated.blurb,
-      });
+      const res = await apiClient.put<RawApiCategory>(`/categories/by-slug/${slug}`, payload);
       return this.mapApiCategoryToFrontend(res);
-    } catch (err) {
-      console.warn("Failed to update category via API, applying local fallback:", err);
-      return updated;
+    } catch {
+      try {
+        const res = await apiClient.put<RawApiCategory>(`/categories/by-slug/${updated.slug}`, payload);
+        return this.mapApiCategoryToFrontend(res);
+      } catch (err) {
+        console.warn("Failed to update category via API, applying local fallback:", err);
+        return updated;
+      }
     }
   }
 

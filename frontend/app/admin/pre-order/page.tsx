@@ -26,6 +26,7 @@ import { getSizePrice, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { useSettings } from "@/context/settings-context";
 import { CITY_AREAS_MAP as INITIAL_CITY_AREAS_MAP, DEFAULT_CITIES, DEFAULT_AREAS } from "@/lib/location-data";
+import { getImageUrl, handleImageError } from "@/lib/utils";
 
 const FALLBACK_SOURCES: Record<string, string[]> = {
   "Facebook Page": ["Alzeena Official FB Page"],
@@ -850,8 +851,9 @@ export default function AdminPreOrderPage() {
                         >
                           <div className="aspect-square w-full overflow-hidden rounded bg-secondary">
                             <img
-                              src={product.image}
+                              src={getImageUrl(product.image)}
                               alt={product.name}
+                              onError={handleImageError}
                               className="size-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           </div>
@@ -913,8 +915,9 @@ export default function AdminPreOrderPage() {
             <div className="mt-4 flex gap-4">
               <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-secondary border border-border">
                 <img
-                  src={selectedProductForModal.image}
+                  src={getImageUrl(selectedProductForModal.image)}
                   alt={selectedProductForModal.name}
+                  onError={handleImageError}
                   className="size-full object-cover"
                 />
               </div>

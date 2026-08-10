@@ -99,16 +99,43 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpPut("by-slug/{slug}")]
+    [HttpPatch("by-slug/{slug}")]
+    [HttpPut("{slug}")]
+    [HttpPatch("{slug}")]
     public async Task<IActionResult> UpdateCategoryBySlug(string slug, [FromBody] CreateCategoryRequest req)
     {
-        var category = await _context.Categories.FirstOrDefaultAsync(c => c.Slug == slug);
-        if (category == null) return NotFound();
+        var cleanSlug = slug.Trim().ToLower();
+        var category = await _context.Categories.FirstOrDefaultAsync(c =>
+            c.Slug == cleanSlug ||
+            c.Slug == cleanSlug.Replace("-", "") ||
+            c.Slug.Replace("-", "") == cleanSlug.Replace("-", "") ||
+            c.Name.ToLower() == cleanSlug.Replace("-", " ")
+        );
 
-        if (!string.IsNullOrWhiteSpace(req.Name)) category.Name = req.Name;
-        if (!string.IsNullOrWhiteSpace(req.Slug)) category.Slug = req.Slug;
-        if (!string.IsNullOrWhiteSpace(req.Image ?? req.ImageUrl)) category.ImageUrl = req.Image ?? req.ImageUrl;
+        if (category == null && int.TryParse(slug, out int catId))
+        {
+            category = await _context.Categories.FindAsync(catId);
+        }
 
-        await _context.SaveChangesAsync();
+        if (category == null)
+        {
+            return NotFound(new { Message = $"Category '{slug}' not found." });
+        }
+
+        if (req != null)
+        {
+            if (!string.IsNullOrWhiteSpace(req.Name)) category.Name = req.Name.Trim();
+            if (!string.IsNullOrWhiteSpace(req.Slug)) category.Slug = req.Slug.Trim();
+
+            var newImg = req.Image ?? req.ImageUrl;
+            if (!string.IsNullOrWhiteSpace(newImg))
+            {
+                category.ImageUrl = newImg.Trim();
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
         return Ok(category);
     }
 

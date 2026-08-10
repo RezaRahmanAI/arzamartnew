@@ -14,6 +14,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useSettings } from "@/context/settings-context";
+import { getImageUrl, handleImageError } from "@/lib/utils";
 
 export default function CartPage() {
   const { detailedLines, subtotal, add, update, setQty, remove } = useCart();
@@ -97,12 +98,13 @@ export default function CartPage() {
                 className="flex gap-4 rounded-xl border border-border bg-card p-3 shadow-card"
               >
                 <img
-                  src={line.product.image}
+                  src={getImageUrl(line.product.image)}
                   alt={line.product.name}
                   loading="lazy"
+                  onError={handleImageError}
                   width={800}
                   height={800}
-                  className="size-24 rounded-lg object-cover"
+                  className="size-24 rounded-lg object-cover bg-muted/20"
                 />
                 <div className="flex-1">
                   <p className="text-sm font-bold text-foreground">{line.product.name}</p>
@@ -197,7 +199,7 @@ export default function CartPage() {
 
             <div className="mt-4 flex gap-4">
               <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-secondary border border-border">
-                <img src={activeProduct.image} alt={activeProduct.name} className="size-full object-cover" />
+                <img src={getImageUrl(activeProduct.image)} alt={activeProduct.name} onError={handleImageError} className="size-full object-cover" />
               </div>
               <div className="flex flex-col justify-center">
                 <h4 className="text-sm font-semibold text-foreground leading-snug">{activeProduct.name}</h4>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { formatBDT, type Product, getSizePrice } from "@/lib/shop-data";
 import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
+import { getImageUrl, FALLBACK_IMAGE, handleImageError } from "@/lib/utils";
 import { toast } from "sonner";
 import { ShoppingBag, Minus, Plus, Heart } from "lucide-react";
 import { useState } from "react";
@@ -72,9 +73,10 @@ export function ProductCard({ product }: { product: Product }) {
       >
         <div className="relative aspect-square overflow-hidden bg-secondary">
           <img
-            src={product.image}
+            src={getImageUrl(product.image)}
             alt={product.name}
             loading="lazy"
+            onError={handleImageError}
             width={800}
             height={800}
             className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -146,7 +148,7 @@ export function ProductCard({ product }: { product: Product }) {
 
           <div className="mt-4 flex gap-4">
             <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-secondary border border-border">
-              <img src={product.image} alt={product.name} className="size-full object-cover" />
+              <img src={getImageUrl(product.image)} alt={product.name} onError={handleImageError} className="size-full object-cover" />
             </div>
             <div className="flex flex-col justify-center">
               <h4 className="text-sm font-semibold text-foreground leading-snug">{product.name}</h4>

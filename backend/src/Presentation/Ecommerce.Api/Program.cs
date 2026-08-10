@@ -48,6 +48,14 @@ builder.Services.AddValidatorsFromAssembly(typeof(GetProductsPagedQuery).Assembl
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 builder.Services.AddSingleton<IStorageService, LocalFileStorageService>();
+
+// 3.1. Response Compression (Brotli & Gzip)
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+});
 builder.Services.AddTransient<IGoogleOAuthService, GoogleOAuthService>();
 builder.Services.AddTransient<IEmailService, EmailService>();
 builder.Services.AddTransient<ISmsService, SmsService>();
@@ -108,7 +116,15 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty;
 });
 
-app.UseStaticFiles();
+app.UseResponseCompression();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=2592000, immutable";
+    }
+});
 
 var webrootFolder = Path.Combine(builder.Environment.ContentRootPath, "webroot");
 if (Directory.Exists(webrootFolder))

@@ -15,6 +15,7 @@ import { useWishlist } from "@/lib/wishlist";
 import { useAuth } from "@/context/auth-context";
 import { useOrders } from "@/lib/orders";
 import { Trash2, ShoppingBag, LogOut, CheckCircle2 } from "lucide-react";
+import { getImageUrl, handleImageError } from "@/lib/utils";
 
 function AccountContent() {
   const searchParams = useSearchParams();
@@ -155,10 +156,11 @@ function AccountContent() {
 
                   <Link href={`/product/${p.slug}`} className="block">
                     <img
-                      src={p.image}
+                      src={getImageUrl(p.image)}
                       alt={p.name}
                       loading="lazy"
-                      className="aspect-square w-full rounded-lg object-cover transition-transform duration-300 group-hover:scale-105"
+                      onError={handleImageError}
+                      className="aspect-square w-full rounded-lg object-cover transition-transform duration-300 group-hover:scale-105 bg-muted/20"
                     />
                   </Link>
 
