@@ -24,7 +24,8 @@ public record ProductDto(
     string CategoryName,
     string BrandName,
     decimal AverageRating,
-    int ReviewCount
+    int ReviewCount,
+    List<ProductVariantDto>? Variants
 );
 
 public class GetProductsPagedQueryHandler : IRequestHandler<GetProductsPagedQuery, Result<PagedResult<ProductDto>>>
@@ -40,13 +41,6 @@ public class GetProductsPagedQueryHandler : IRequestHandler<GetProductsPagedQuer
 
     public async Task<Result<PagedResult<ProductDto>>> Handle(GetProductsPagedQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = $"products_p{request.PageIndex}_s{request.PageSize}_c{request.CategoryId}_q{request.Search}";
-        var cached = await _cacheService.GetAsync<PagedResult<ProductDto>>(cacheKey, cancellationToken);
-        if (cached != null)
-        {
-            return Result<PagedResult<ProductDto>>.Success(cached);
-        }
-
         var query = _unitOfWork.Repository<Product>().Query().AsNoTracking().Where(p => p.IsActive);
 
         if (request.CategoryId.HasValue)
@@ -75,13 +69,12 @@ public class GetProductsPagedQueryHandler : IRequestHandler<GetProductsPagedQuer
                 p.Category != null ? p.Category.Name : "General",
                 p.Brand != null ? p.Brand.Name : "Alzeena",
                 p.AverageRating,
-                p.ReviewCount
+                p.ReviewCount,
+                p.Variants.Where(v => v.IsActive).Select(v => new ProductVariantDto(v.Id, v.Name, v.SKU, v.PriceOverride, v.StockQuantity)).ToList()
             ))
             .ToListAsync(cancellationToken);
 
         var result = new PagedResult<ProductDto>(items, totalCount, request.PageIndex, request.PageSize);
-        await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5), ct: cancellationToken);
-
         return Result<PagedResult<ProductDto>>.Success(result);
     }
 }

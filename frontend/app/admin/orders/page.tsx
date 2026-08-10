@@ -238,45 +238,49 @@ export default function AdminOrders() {
 
   return (
     <div className="space-y-6 relative">
-      
-      {/* Loading Overlay */}
-      {isStockChecking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm">
-          <div className="bg-card p-6 rounded-lg shadow-lg border flex flex-col items-center gap-4">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-            <p className="font-medium">Checking stock availability...</p>
-          </div>
+      {/* Top Header Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
+          <p className="text-muted-foreground text-sm">
+            Manage customer purchases, update statuses, and export invoices.
+          </p>
         </div>
-      )}
+      </div>
 
-      {/* Top Controls Bar */}
-      <div className="bg-card border rounded-lg p-4 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative w-full md:w-48 group">
-          <Hash className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary" />
-          <Input 
-            placeholder="Order ID..." 
-            className="pl-9"
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-xl border shadow-sm">
+        <div className="relative flex-1 min-w-[200px]">
+          <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by Order ID..."
             value={orderIdQuery}
             onChange={(e) => setOrderIdQuery(e.target.value)}
-          />
-        </div>
-        <div className="relative w-full md:w-48 group">
-          <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary" />
-          <Input 
-            placeholder="Phone..." 
-            className="pl-9"
-            value={phoneQuery}
-            onChange={(e) => setPhoneQuery(e.target.value)}
+            className="pl-9 h-9 text-xs"
           />
         </div>
 
+        <div className="relative flex-1 min-w-[200px]">
+          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by Phone Number..."
+            value={phoneQuery}
+            onChange={(e) => setPhoneQuery(e.target.value)}
+            className="pl-9 h-9 text-xs"
+          />
+        </div>
+
+        {/* Filter Popover */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className={`w-full md:w-48 justify-between ${activeFiltersCount > 0 ? "border-primary" : ""}`}>
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-                <span>{activeFiltersCount > 0 ? `Filters (${activeFiltersCount})` : "More Filters"}</span>
-              </div>
+            <Button variant="outline" size="sm" className="gap-2 text-xs h-9">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span>Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="ml-1 rounded-full bg-primary px-1.5 py-0.2 text-[10px] font-bold text-primary-foreground">
+                  {activeFiltersCount}
+                </span>
+              )}
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </PopoverTrigger>
@@ -345,88 +349,97 @@ export default function AdminOrders() {
               <TableHead>Phone</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-center">Revenue</TableHead>
-              <TableHead>Source</TableHead>
+              <TableHead>Social Media</TableHead>
+              <TableHead>Page Name</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedOrders.map((o) => (
-              <TableRow key={o.id} className="group">
-                <TableCell>
-                  <div className="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors" onClick={() => copyOrderId(o.id)}>
-                    <span className={`font-mono text-xs ${o.isPreOrder ? "text-indigo-600 font-bold" : ""}`}>#{o.id}</span>
-                    <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100" />
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{o.date}</TableCell>
-                <TableCell>
-                  <Link href={`/admin/customers/${o.phone}`} className="font-medium hover:underline hover:text-primary transition-colors block max-w-[120px] truncate">
-                    {o.customer}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{o.phone}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className={`flex items-center gap-2 rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize border transition-colors hover:opacity-80 ${statusStyles[o.status]}`}>
-                        {o.status}
-                        <ChevronDown className="h-3 w-3 opacity-50" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-48">
-                      {statusOptions.map(s => (
-                        <DropdownMenuItem key={s} onClick={() => handleManualStatusChange(o, s)} className="capitalize flex justify-between">
-                          {s}
-                          {o.status === s && <Check className="h-3 w-3" />}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-                <TableCell className="text-center font-semibold text-sm tracking-tight">{formatBDT(o.total)}</TableCell>
-                <TableCell>
-                  {o.sourcePageName ? (
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-600">
-                      <Globe className="h-3 w-3" /> <span className="truncate max-w-[100px]">{o.sourcePageName}</span>
+            {paginatedOrders.map((o) => {
+              const sourceInfo = getOrderSourceDetails(o);
+              return (
+                <TableRow key={o.id} className="group">
+                  <TableCell>
+                    <div className="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors" onClick={() => copyOrderId(o.id)}>
+                      <span className={`font-mono text-xs ${o.isPreOrder ? "text-indigo-600 font-bold" : ""}`}>#{o.id}</span>
+                      <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100" />
                     </div>
-                  ) : o.socialMediaSourceName ? (
-                    <div className="flex items-center gap-1.5 text-xs text-pink-600">
-                      <Share2 className="h-3 w-3" /> <span className="truncate max-w-[100px]">{o.socialMediaSourceName}</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Layers className="h-3 w-3 opacity-50" /> <span>Website</span>
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex flex-wrap justify-end gap-1.5 min-w-[200px]">
-                    {nextStatusLabels[o.status] && (
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-600 hover:text-white" onClick={() => progressStatus(o)}>
-                        {nextStatusLabels[o.status]}
-                      </Button>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{o.date}</TableCell>
+                  <TableCell>
+                    <Link href={`/admin/customers/${o.phone}`} className="font-medium hover:underline hover:text-primary transition-colors block max-w-[120px] truncate">
+                      {o.customer}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{o.phone}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className={`flex items-center gap-2 rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize border transition-colors hover:opacity-80 ${statusStyles[o.status]}`}>
+                          {o.status}
+                          <ChevronDown className="h-3 w-3 opacity-50" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-48">
+                        {statusOptions.map(s => (
+                          <DropdownMenuItem key={s} onClick={() => handleManualStatusChange(o, s)} className="capitalize flex justify-between">
+                            {s}
+                            {o.status === s && <Check className="h-3 w-3" />}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                  <TableCell className="text-center font-semibold text-sm tracking-tight">{formatBDT(o.total)}</TableCell>
+                  <TableCell>
+                    {sourceInfo.isWebsite ? (
+                      <div className="flex items-center gap-1.5 text-xs text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-2 py-1 rounded-md font-medium w-fit">
+                        <Globe className="h-3.5 w-3.5 text-slate-500" /> <span>Website</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-xs text-pink-700 bg-pink-50 dark:bg-pink-950/40 dark:text-pink-300 border border-pink-200/60 px-2 py-1 rounded-md font-semibold w-fit">
+                        <Share2 className="h-3.5 w-3.5 text-pink-500" /> <span className="truncate max-w-[110px]">{sourceInfo.socialMedia}</span>
+                      </div>
                     )}
-                    
-                    {o.isPreOrder && (
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-600 hover:text-white" onClick={() => transferToMainOrder(o.id)}>
-                        Transfer
-                      </Button>
+                  </TableCell>
+                  <TableCell>
+                    {sourceInfo.isWebsite || sourceInfo.pageName === "-" ? (
+                      <span className="text-xs text-muted-foreground font-mono">-</span>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200/60 px-2 py-1 rounded-md font-semibold w-fit max-w-[140px] truncate">
+                        <Layers className="h-3.5 w-3.5 text-blue-500" /> <span className="truncate">{sourceInfo.pageName}</span>
+                      </div>
                     )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex flex-wrap justify-end gap-1.5 min-w-[200px]">
+                      {nextStatusLabels[o.status] && (
+                        <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-600 hover:text-white" onClick={() => progressStatus(o)}>
+                          {nextStatusLabels[o.status]}
+                        </Button>
+                      )}
+                      
+                      {o.isPreOrder && (
+                        <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-600 hover:text-white" onClick={() => transferToMainOrder(o.id)}>
+                          Transfer
+                        </Button>
+                      )}
 
-                    <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white" onClick={() => setActiveNotesOrder(o)}>
-                      Notes {o.hasNotes && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-600 hover:text-white" onClick={() => setActiveInvoiceOrder(o)}>PDF</Button>
-                    <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-600 hover:text-white" onClick={() => setActiveTrackingOrder(o)}>History</Button>
-                    <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-green-50 text-green-600 border-green-200 hover:bg-green-600 hover:text-white" onClick={() => window.open(`https://wa.me/${o.phone.replace(/\D/g, "")}`, "_blank")}>WA</Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white" onClick={() => setActiveNotesOrder(o)}>
+                        Notes {o.hasNotes && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-600 hover:text-white" onClick={() => setActiveInvoiceOrder(o)}>PDF</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-600 hover:text-white" onClick={() => setActiveTrackingOrder(o)}>History</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-green-50 text-green-600 border-green-200 hover:bg-green-600 hover:text-white" onClick={() => window.open(`https://wa.me/${o.phone.replace(/\D/g, "")}`, "_blank")}>WA</Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             
             {paginatedOrders.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="py-24 text-center">
+                <TableCell colSpan={9} className="py-24 text-center">
                   <div className="flex flex-col items-center gap-4">
                     <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground opacity-50">
                       <PackageX className="h-8 w-8" />

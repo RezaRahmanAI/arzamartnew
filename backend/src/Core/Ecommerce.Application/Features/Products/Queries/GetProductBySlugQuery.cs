@@ -41,10 +41,6 @@ public class GetProductBySlugQueryHandler : IRequestHandler<GetProductBySlugQuer
 
     public async Task<Result<ProductDetailDto>> Handle(GetProductBySlugQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = $"product_slug_{request.Slug}";
-        var cached = await _cacheService.GetAsync<ProductDetailDto>(cacheKey, cancellationToken);
-        if (cached != null) return Result<ProductDetailDto>.Success(cached);
-
         var product = await _unitOfWork.Repository<Product>()
             .Query()
             .AsNoTracking()
@@ -69,7 +65,6 @@ public class GetProductBySlugQueryHandler : IRequestHandler<GetProductBySlugQuer
 
         if (product == null) return Result<ProductDetailDto>.Failure("Product not found.");
 
-        await _cacheService.SetAsync(cacheKey, product, TimeSpan.FromMinutes(15), ct: cancellationToken);
         return Result<ProductDetailDto>.Success(product);
     }
 }

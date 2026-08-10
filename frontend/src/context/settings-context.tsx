@@ -13,7 +13,7 @@ interface SettingsContextType {
   isSaving: boolean;
   hasUnsavedChanges: boolean;
   updateSection: <K extends keyof SystemSettings>(section: K, values: Partial<SystemSettings[K]>) => void;
-  saveSettings: () => Promise<boolean>;
+  saveSettings: (options?: { silent?: boolean }) => Promise<boolean>;
   resetDrafts: () => void;
   resetToFactoryDefaults: () => Promise<void>;
   clearSystemCache: () => Promise<void>;
@@ -48,15 +48,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(liveSettings));
       } catch (err) {
         console.warn("API settings fetch failed, checking local storage:", err);
-        const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
-        if (saved) {
+        const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (stored) {
           try {
-            const parsed = JSON.parse(saved);
+            const parsed = JSON.parse(stored);
             setSettings(parsed);
             setDraftSettings(parsed);
           } catch {
-            setSettings(DEFAULT_SYSTEM_SETTINGS);
-            setDraftSettings(DEFAULT_SYSTEM_SETTINGS);
+            /* ignore */
           }
         }
       } finally {
@@ -82,21 +81,23 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Save changes to API & local storage
-  const saveSettings = useCallback(async (): Promise<boolean> => {
+  const saveSettings = useCallback(async (options?: { silent?: boolean }): Promise<boolean> => {
     try {
       setIsSaving(true);
       const success = await settingsService.update(draftSettings, "Super Admin");
       setSettings(draftSettings);
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(draftSettings));
 
-      if (success) {
-        toast.success("Settings Saved Successfully!", {
-          description: "All website configurations have been updated globally in the backend.",
-        });
-      } else {
-        toast.success("Settings Saved Locally!", {
-          description: "Saved to local cache (backend offline).",
-        });
+      if (!options?.silent) {
+        if (success) {
+          toast.success("Settings Saved Successfully!", {
+            description: "All website configurations have been updated globally in the backend.",
+          });
+        } else {
+          toast.success("Settings Saved Locally!", {
+            description: "Saved to local cache (backend offline).",
+          });
+        }
       }
       setIsSaving(false);
       return true;
@@ -104,9 +105,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       console.warn("Saving to API failed, applying local persist:", err);
       setSettings(draftSettings);
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(draftSettings));
-      toast.success("Settings Saved Locally!", {
-        description: "Configuration saved to local cache.",
-      });
+      if (!options?.silent) {
+        toast.success("Settings Saved Locally!", {
+          description: "Configuration saved to local cache.",
+        });
+      }
       setIsSaving(false);
       return true;
     }

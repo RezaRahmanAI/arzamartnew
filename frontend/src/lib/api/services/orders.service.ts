@@ -49,11 +49,17 @@ class OrdersService {
       const incomplete = await apiClient.get<Order[]>("/orders/incomplete").catch(() => null);
 
       const local = this.getLocalOrders();
-      const resolvedOrders = Array.isArray(orders) ? orders : local.orders;
+      let resolvedOrders: Order[] = local.orders;
+
+      if (Array.isArray(orders)) {
+        const apiOrderIds = new Set(orders.map((o) => o.id));
+        const localOnly = local.orders.filter((o) => !apiOrderIds.has(o.id));
+        resolvedOrders = [...orders, ...localOnly];
+      }
+
       const resolvedIncomplete = Array.isArray(incomplete) ? incomplete : local.incomplete;
 
-      // Sync localStorage with API data to prevent stale fallbacks
-      if (Array.isArray(orders)) this.saveLocalOrders(resolvedOrders);
+      this.saveLocalOrders(resolvedOrders);
       if (Array.isArray(incomplete)) this.saveLocalIncomplete(resolvedIncomplete);
 
       return { orders: resolvedOrders, incomplete: resolvedIncomplete };

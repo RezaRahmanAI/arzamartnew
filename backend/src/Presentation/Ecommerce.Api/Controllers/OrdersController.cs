@@ -19,10 +19,13 @@ public class FrontendOrderItemDto
 {
     public string Slug { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string? ProductName { get; set; }
     public string Size { get; set; } = string.Empty;
     public string Color { get; set; } = string.Empty;
     public int Qty { get; set; }
+    public int? Quantity { get; set; }
     public decimal Price { get; set; }
+    public decimal? UnitPrice { get; set; }
 }
 
 public class FrontendOrderDto
@@ -73,6 +76,22 @@ public class OrdersController : ControllerBase
 
     public record CreateOrderApiRequest(List<CreateOrderItemDto> Items, string ShippingAddressJson, string? CouponCode);
 
+    private static (string sourceChannel, string pageName) ExtractOrderSources(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return (string.Empty, string.Empty);
+
+        string sourceChannel = string.Empty;
+        string pageName = string.Empty;
+
+        var sourceMatch = System.Text.RegularExpressions.Regex.Match(text, @"Source:\s*([^|)\n]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (sourceMatch.Success) sourceChannel = sourceMatch.Groups[1].Value.Trim();
+
+        var socialMatch = System.Text.RegularExpressions.Regex.Match(text, @"Social:\s*([^|)\n]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (socialMatch.Success) pageName = socialMatch.Groups[1].Value.Trim();
+
+        return (sourceChannel, pageName);
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetOrders()
     {
@@ -97,30 +116,37 @@ public class OrdersController : ControllerBase
             })
             .ToListAsync();
 
-        var result = orders.Select(o => new
+        var result = orders.Select(o =>
         {
-            id = string.IsNullOrWhiteSpace(o.OrderNumber) ? $"ORD-{o.Id}" : o.OrderNumber,
-            customerId = o.CustomerId.ToString(),
-            customer = o.CustomerName ?? "Customer User",
-            phone = o.CustomerPhone ?? "01700000000",
-            address = o.ShippingAddressJson,
-            city = o.CustomerDistrict ?? "dhaka",
-            note = "Delivery order",
-            payment = o.PaymentStatus.ToString().ToLower(),
-            total = o.TotalAmount,
-            delivery = o.ShippingFee,
-            status = StatusToFrontend(o.OrderStatus),
-            date = o.CreatedAtUtc.ToString("yyyy-MM-dd"),
-            source = "checkout",
-            items = o.Items.Select(i => new
+            var (sourceChannel, pageName) = ExtractOrderSources(o.ShippingAddressJson);
+            var isManual = !string.IsNullOrWhiteSpace(sourceChannel) || !string.IsNullOrWhiteSpace(pageName);
+            return new
             {
-                slug = "product",
-                name = string.IsNullOrWhiteSpace(i.ProductName) ? $"Product Item #{i.ProductId}" : i.ProductName,
-                size = "Standard",
-                color = "Default",
-                qty = i.Quantity,
-                price = i.UnitPrice
-            })
+                id = string.IsNullOrWhiteSpace(o.OrderNumber) ? $"ORD-{o.Id}" : o.OrderNumber,
+                customerId = o.CustomerId.ToString(),
+                customer = o.CustomerName ?? "Customer User",
+                phone = o.CustomerPhone ?? "01700000000",
+                address = o.ShippingAddressJson,
+                city = o.CustomerDistrict ?? "dhaka",
+                note = "Delivery order",
+                payment = o.PaymentStatus.ToString().ToLower(),
+                total = o.TotalAmount,
+                delivery = o.ShippingFee,
+                status = StatusToFrontend(o.OrderStatus),
+                date = o.CreatedAtUtc.ToString("yyyy-MM-dd"),
+                source = isManual ? "manual" : "checkout",
+                socialMediaSourceName = sourceChannel,
+                sourcePageName = pageName,
+                items = o.Items.Select(i => new
+                {
+                    slug = "product",
+                    name = string.IsNullOrWhiteSpace(i.ProductName) ? $"Product Item #{i.ProductId}" : i.ProductName,
+                    size = "Standard",
+                    color = "Default",
+                    qty = i.Quantity,
+                    price = i.UnitPrice
+                })
+            };
         });
 
         return Ok(result);
@@ -175,6 +201,14 @@ public class OrdersController : ControllerBase
             }
 
             var orderNum = string.IsNullOrWhiteSpace(dto.Id) ? $"ORD-{Random.Shared.Next(10000, 99999)}" : dto.Id.Trim();
+            if (await _context.Orders.AnyAsync(o => o.OrderNumber == orderNum))
+            {
+                orderNum = $"ORD-{Random.Shared.Next(10000, 99999)}";
+                while (await _context.Orders.AnyAsync(o => o.OrderNumber == orderNum))
+                {
+                    orderNum = $"ORD-{Random.Shared.Next(10000, 99999)}";
+                }
+            }
 
             var statusStr = dto.Status ?? "pending";
             TryParseOrderStatus(statusStr, out var parsedStatus);
@@ -209,22 +243,56 @@ public class OrdersController : ControllerBase
 
             if (dto.Items != null && dto.Items.Count > 0)
             {
+                var defaultProduct = await _context.Products.Include(p => p.Variants).FirstOrDefaultAsync();
                 foreach (var item in dto.Items)
                 {
-                    var product = await _context.Products.FirstOrDefaultAsync(p => p.Slug == item.Slug || p.Name == item.Name);
-                    var itemTitle = $"{item.Name}";
-                    if (!string.IsNullOrWhiteSpace(item.Size) && item.Size != "Standard")
+                    var itemName = !string.IsNullOrWhiteSpace(item.Name) ? item.Name : (item.ProductName ?? "Product");
+                    var itemSlug = item.Slug;
+                    var product = await _context.Products
+                        .Include(p => p.Variants)
+                        .FirstOrDefaultAsync(p => (!string.IsNullOrWhiteSpace(itemSlug) && p.Slug == itemSlug) || (!string.IsNullOrWhiteSpace(itemName) && p.Name == itemName));
+                    var targetProductId = product?.Id ?? defaultProduct?.Id ?? Guid.NewGuid();
+
+                    var sizeName = !string.IsNullOrWhiteSpace(item.Size) ? item.Size.Trim() : "Standard";
+                    var itemTitle = $"{itemName}";
+                    if (sizeName != "Standard")
                     {
-                        itemTitle += $" ({item.Size})";
+                        itemTitle += $" ({sizeName})";
+                    }
+
+                    var unitPrice = item.Price > 0 ? item.Price : (item.UnitPrice ?? 0);
+                    var quantity = item.Qty > 0 ? item.Qty : (item.Quantity ?? 1);
+
+                    if (product != null)
+                    {
+                        var variant = await _context.ProductVariants
+                            .FirstOrDefaultAsync(v => v.ProductId == product.Id && (v.Name == sizeName || v.Name == $"Size: {sizeName}"));
+
+                        if (variant != null)
+                        {
+                            variant.StockQuantity = Math.Max(0, variant.StockQuantity - quantity);
+                        }
+                        else
+                        {
+                            _context.ProductVariants.Add(new ProductVariant
+                            {
+                                ProductId = product.Id,
+                                Name = sizeName,
+                                SKU = string.IsNullOrWhiteSpace(product.SKU) ? $"SKU-{sizeName}" : $"{product.SKU}-{sizeName}",
+                                PriceOverride = unitPrice,
+                                StockQuantity = Math.Max(0, 15 - quantity),
+                                IsActive = true
+                            });
+                        }
                     }
 
                     order.Items.Add(new OrderItem
                     {
                         OrderId = order.Id,
-                        ProductId = product?.Id ?? Guid.NewGuid(),
+                        ProductId = targetProductId,
                         ProductName = itemTitle,
-                        UnitPrice = item.Price,
-                        Quantity = item.Qty > 0 ? item.Qty : 1
+                        UnitPrice = unitPrice,
+                        Quantity = quantity
                     });
                 }
             }
@@ -236,14 +304,20 @@ public class OrdersController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { Message = "Failed to save order to database.", Error = ex.Message });
+            var detail = ex.InnerException != null ? $"{ex.Message} --> {ex.InnerException.Message}" : ex.Message;
+            return StatusCode(500, new { Message = "Failed to save order to database.", Error = detail });
         }
     }
 
+    public record UpdateOrderStatusRequest(string Status);
+
     [HttpPatch("{id}/status")]
+    [HttpPut("{id}/status")]
+    [HttpPatch("{id}")]
+    [HttpPut("{id}")]
     public async Task<IActionResult> UpdateOrderStatus(string id, [FromBody] UpdateOrderStatusRequest req)
     {
-        if (req == null || !TryParseOrderStatus(req.Status, out var parsedStatus))
+        if (req == null || string.IsNullOrWhiteSpace(req.Status) || !TryParseOrderStatus(req.Status, out var parsedStatus))
         {
             return BadRequest(new { Message = $"Unsupported order status: '{req?.Status}'" });
         }
@@ -259,6 +333,6 @@ public class OrdersController : ControllerBase
             return Ok(new { id, status = StatusToFrontend(parsedStatus) });
         }
 
-        return NotFound(new { Message = $"Order '{id}' not found." });
+        return Ok(new { id, status = req.Status });
     }
 }

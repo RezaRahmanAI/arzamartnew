@@ -18,6 +18,7 @@ type ProductsContextValue = {
   addProduct: (product: Product) => Promise<void>;
   updateProduct: (slug: string, updated: Product) => Promise<void>;
   deleteProduct: (slug: string) => Promise<void>;
+  deductStock: (items: { slug: string; size?: string; qty: number }[]) => void;
   getProduct: (slug: string) => Product | undefined;
 };
 
@@ -70,6 +71,29 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const deductStock = useCallback((items: { slug: string; size?: string; qty: number }[]) => {
+    setProducts((prev) =>
+      prev.map((product) => {
+        const itemMatches = items.filter(
+          (i) => i.slug === product.slug || product.name.toLowerCase().includes(i.slug.toLowerCase())
+        );
+        if (itemMatches.length === 0) return product;
+
+        const updatedSizeStock = { ...(product.sizeStock || {}) };
+        itemMatches.forEach((item) => {
+          const sz = item.size || "M";
+          const currentStock = updatedSizeStock[sz] ?? 15;
+          updatedSizeStock[sz] = Math.max(0, currentStock - item.qty);
+        });
+
+        return {
+          ...product,
+          sizeStock: updatedSizeStock,
+        };
+      })
+    );
+  }, []);
+
   const getProduct = useCallback(
     (slug: string) => products.find((p) => p.slug === slug),
     [products]
@@ -82,9 +106,10 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       addProduct,
       updateProduct,
       deleteProduct,
+      deductStock,
       getProduct,
     }),
-    [products, isLoading, addProduct, updateProduct, deleteProduct, getProduct]
+    [products, isLoading, addProduct, updateProduct, deleteProduct, deductStock, getProduct]
   );
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;

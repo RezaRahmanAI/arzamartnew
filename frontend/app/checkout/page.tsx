@@ -214,28 +214,15 @@ export default function CheckoutPage() {
 
           <h2 className="mt-8 font-display text-lg font-bold text-foreground">Payment</h2>
           <div className="mt-3 space-y-2">
-            {enableCOD && (
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-primary bg-secondary/60 p-3">
-                <input type="radio" name="payment" value="Cash on delivery" defaultChecked className="mt-1 accent-primary" />
-                <span>
-                  <span className="block text-sm font-bold text-foreground">Cash on delivery</span>
-                  <span className="text-xs text-muted-foreground">
-                    Pay the courier when your parcel arrives.
-                  </span>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-primary bg-secondary/60 p-3">
+              <input type="radio" name="payment" value="Cash on delivery" defaultChecked className="mt-1 accent-primary" />
+              <span>
+                <span className="block text-sm font-bold text-foreground">Cash on delivery</span>
+                <span className="text-xs text-muted-foreground">
+                  Pay the courier when your parcel arrives.
                 </span>
-              </label>
-            )}
-            {enableOnlinePayment && (
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-secondary/30 p-3">
-                <input type="radio" name="payment" value="Online Payment" defaultChecked={!enableCOD} className="mt-1 accent-primary" />
-                <span>
-                  <span className="block text-sm font-bold text-foreground">Online Payment</span>
-                  <span className="text-xs text-muted-foreground">
-                    Pay via bKash, Nagad, or card.
-                  </span>
-                </span>
-              </label>
-            )}
+              </span>
+            </label>
           </div>
         </div>
 

@@ -38,6 +38,9 @@ class ProductsService {
       sizePrices: p.variants && p.variants.length > 0
         ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.priceOverride ?? basePrice]))
         : {},
+      sizeStock: p.variants && p.variants.length > 0
+        ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.stockQuantity ?? 15]))
+        : {},
       images: p.images && p.images.length > 0 ? p.images.map((img) => img.imageUrl || "").filter(Boolean) : [p.mainImageUrl || ""]
     };
   }

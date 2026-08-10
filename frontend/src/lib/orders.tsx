@@ -104,7 +104,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       const extractedNum = parseInt(order.id.replace(prefix, ""), 10);
       const nextNum = !isNaN(extractedNum) ? Math.max(currentNum + 1, extractedNum + 1) : currentNum + 1;
       updateSection("orders", { nextOrderNumber: nextNum });
-      saveSettings();
+      saveSettings({ silent: true });
     }
 
     try {
