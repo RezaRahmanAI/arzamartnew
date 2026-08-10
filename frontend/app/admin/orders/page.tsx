@@ -245,12 +245,12 @@ export default function AdminOrders() {
     toast.success("Order transferred to main pool. Stock will now be deducted upon confirmation.");
   };
 
-  const getOrderSourceDetails = (o: Order & { socialMediaSourceName?: string; sourcePageName?: string }) => {
+  const getOrderSourceDetails = (o: Order & { socialMediaSourceName?: string; sourcePageName?: string; note?: string; address?: string; shippingAddress?: string }) => {
     let socialMedia = o.socialMediaSourceName || "";
     let pageName = o.sourcePageName || "";
 
     if (!socialMedia || !pageName) {
-      const fullText = `${(o as any).note || ""} ${(o as any).address || (o as any).shippingAddress || ""}`;
+      const fullText = `${o.note || ""} ${o.address || o.shippingAddress || ""}`;
       const sourceMatch = fullText.match(/Source:\s*([^|\n,]+)/i);
       const socialMatch = fullText.match(/Social:\s*([^|\n,]+)/i);
 

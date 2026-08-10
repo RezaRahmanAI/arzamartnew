@@ -44,12 +44,14 @@ export const saveNotesStore = (store: Record<string, NoteRecord[]>) => {
   }
 };
 
+type OrderWithNotes = Order & { notesList?: NoteRecord[] };
+
 export function OrderNotesModal({
   order,
   isOpen,
   onClose,
 }: {
-  order: Order | null;
+  order: OrderWithNotes | null;
   isOpen: boolean;
   onClose: () => void;
 }) {
@@ -60,8 +62,8 @@ export function OrderNotesModal({
   useEffect(() => {
     if (order) {
       const store = getSavedNotesStore();
-      const savedForOrder = store[order.id] || (order as any).notesList || [];
-      const normalized: NoteRecord[] = savedForOrder.map((item: any, idx: number) => {
+      const savedForOrder = store[order.id] || order.notesList || [];
+      const normalized: NoteRecord[] = savedForOrder.map((item: string | NoteRecord, idx: number) => {
         if (typeof item === "string") {
           return {
             id: `note-${idx}`,
@@ -105,7 +107,7 @@ export function OrderNotesModal({
 
     const updatedNotes = [...notesList, newNoteObj];
     setNotesList(updatedNotes);
-    (order as any).notesList = updatedNotes;
+    order.notesList = updatedNotes;
     order.hasNotes = true;
 
     // Persist permanently in localStorage and Database

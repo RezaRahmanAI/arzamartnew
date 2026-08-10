@@ -194,7 +194,7 @@ export default function AdminManualOrder() {
               slug: it.slug,
               name: it.name,
               size: it.size || "M",
-              color: (it as any).color || "Default",
+              color: it.color || "Default",
               qty: it.qty,
               price: it.price,
             }))
