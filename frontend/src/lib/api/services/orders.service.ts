@@ -91,16 +91,30 @@ class OrdersService {
     }
   }
 
-  public async updateStatus(id: string, status: OrderStatus): Promise<void> {
+  public async updateStatus(id: string, status: string): Promise<boolean> {
     const { orders } = this.getLocalOrders();
-    const updated = orders.map((o) => ({ ...o, status }) as Order);
+    const updated = orders.map((o) => (o.id === id ? { ...o, status: status as Order["status"] } : o));
     this.saveLocalOrders(updated);
 
     try {
       await apiClient.patch(`/orders/${id}/status`, { status });
-    } catch (err) {
-      this.saveLocalOrders(orders);
-      throw err;
+      return true;
+    } catch {
+      try {
+        await apiClient.put(`/orders/${id}/status`, { status });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  public async addNote(orderId: string, text: string, author: string): Promise<boolean> {
+    try {
+      await apiClient.post(`/orders/${orderId}/notes`, { text, author });
+      return true;
+    } catch {
+      return false;
     }
   }
 

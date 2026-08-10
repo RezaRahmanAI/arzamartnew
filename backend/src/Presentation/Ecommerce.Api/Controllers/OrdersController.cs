@@ -92,6 +92,26 @@ public class OrdersController : ControllerBase
         return (sourceChannel, pageName);
     }
 
+    private static List<object> ExtractOrderNotes(string? text)
+    {
+        var list = new List<object>();
+        if (string.IsNullOrWhiteSpace(text)) return list;
+
+        var matches = System.Text.RegularExpressions.Regex.Matches(text, @"Note:\s*(.+?)\s*\(by\s*(.+?)\s*at\s*(.+?)\)");
+        foreach (System.Text.RegularExpressions.Match m in matches)
+        {
+            list.Add(new
+            {
+                id = Guid.NewGuid().ToString(),
+                text = m.Groups[1].Value.Trim(),
+                author = m.Groups[2].Value.Trim(),
+                timestamp = m.Groups[3].Value.Trim()
+            });
+        }
+
+        return list;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetOrders()
     {
@@ -120,6 +140,7 @@ public class OrdersController : ControllerBase
         {
             var (sourceChannel, pageName) = ExtractOrderSources(o.ShippingAddressJson);
             var isManual = !string.IsNullOrWhiteSpace(sourceChannel) || !string.IsNullOrWhiteSpace(pageName);
+            var notes = ExtractOrderNotes(o.ShippingAddressJson);
             return new
             {
                 id = string.IsNullOrWhiteSpace(o.OrderNumber) ? $"ORD-{o.Id}" : o.OrderNumber,
@@ -129,6 +150,8 @@ public class OrdersController : ControllerBase
                 address = o.ShippingAddressJson,
                 city = o.CustomerDistrict ?? "dhaka",
                 note = "Delivery order",
+                hasNotes = notes.Count > 0,
+                notesList = notes,
                 payment = o.PaymentStatus.ToString().ToLower(),
                 total = o.TotalAmount,
                 delivery = o.ShippingFee,
@@ -334,5 +357,33 @@ public class OrdersController : ControllerBase
         }
 
         return Ok(new { id, status = req.Status });
+    }
+
+    public record AddOrderNoteRequest(string Text, string? Author);
+
+    [HttpPost("{id}/notes")]
+    [HttpPut("{id}/notes")]
+    public async Task<IActionResult> AddOrderNote(string id, [FromBody] AddOrderNoteRequest req)
+    {
+        if (req == null || string.IsNullOrWhiteSpace(req.Text))
+        {
+            return BadRequest(new { Message = "Note text cannot be empty." });
+        }
+
+        var cleanIdStr = id.Replace("ORD-", "");
+        var isGuid = Guid.TryParse(cleanIdStr, out var g);
+        var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderNumber == id || o.OrderNumber == $"ORD-{id}" || (isGuid && o.Id == g));
+
+        if (order == null)
+        {
+            return NotFound(new { Message = $"Order '{id}' not found." });
+        }
+
+        var timeStr = DateTime.UtcNow.ToString("MMM dd, hh:mm tt");
+        var noteEntry = $"Note: {req.Text.Trim()} (by {req.Author ?? "Admin"} at {timeStr})";
+        order.ShippingAddressJson = (order.ShippingAddressJson ?? string.Empty) + "\n" + noteEntry;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { success = true, id });
     }
 }

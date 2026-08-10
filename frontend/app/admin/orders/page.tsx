@@ -39,15 +39,17 @@ import {
   Layers,
   Globe,
   Share2,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Pencil
 } from "lucide-react";
 import { DateRangePicker } from "@/components/admin/date-range-picker";
-import { OrderNotesModal } from "@/components/admin/order-notes-modal";
+import { OrderNotesModal, getSavedNotesStore } from "@/components/admin/order-notes-modal";
 import { OrderTrackingModal } from "@/components/admin/order-tracking-modal";
 import { OrderInvoiceModal } from "@/components/admin/order-invoice-modal";
 import { OrderStockWarningModal, OutOfStockItem } from "@/components/admin/order-stock-warning-modal";
 import { DateRange } from "react-day-picker";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 const statusOptions: OrderStatus[] = [
@@ -72,6 +74,7 @@ const nextStatusLabels: Partial<Record<OrderStatus, string>> = {
 };
 
 export default function AdminOrders() {
+  const router = useRouter();
   const [orderIdQuery, setOrderIdQuery] = useState("");
   const [phoneQuery, setPhoneQuery] = useState("");
   
@@ -83,6 +86,7 @@ export default function AdminOrders() {
   const [activeNotesOrder, setActiveNotesOrder] = useState<Order | null>(null);
   const [activeTrackingOrder, setActiveTrackingOrder] = useState<Order | null>(null);
   const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<Order | null>(null);
+  const [activeEditOrder, setActiveEditOrder] = useState<Order | null>(null);
 
   // Stock Checking State
   const [isStockChecking, setIsStockChecking] = useState(false);
@@ -234,6 +238,32 @@ export default function AdminOrders() {
   const transferToMainOrder = (orderId: string) => {
     setData(prev => prev.map(o => o.id === orderId ? { ...o, isPreOrder: false } : o));
     toast.success("Order transferred to main pool. Stock will now be deducted upon confirmation.");
+  };
+
+  const getOrderSourceDetails = (o: Order & { socialMediaSourceName?: string; sourcePageName?: string }) => {
+    let socialMedia = o.socialMediaSourceName || "";
+    let pageName = o.sourcePageName || "";
+
+    if (!socialMedia || !pageName) {
+      const fullText = `${(o as any).note || ""} ${(o as any).address || (o as any).shippingAddress || ""}`;
+      const sourceMatch = fullText.match(/Source:\s*([^|\n,]+)/i);
+      const socialMatch = fullText.match(/Social:\s*([^|\n,]+)/i);
+
+      if (socialMatch && socialMatch[1]) {
+        socialMedia = socialMatch[1].trim();
+      }
+      if (sourceMatch && sourceMatch[1]) {
+        pageName = sourceMatch[1].trim();
+      }
+    }
+
+    const isWebsite = (!socialMedia && !pageName) || socialMedia.toLowerCase() === "website" || pageName.toLowerCase() === "website";
+
+    return {
+      isWebsite,
+      socialMedia: socialMedia || (isWebsite ? "Website" : "Social Media"),
+      pageName: pageName || "-",
+    };
   };
 
   return (
@@ -413,6 +443,23 @@ export default function AdminOrders() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-wrap justify-end gap-1.5 min-w-[200px]">
+                      {o.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[10px] px-2 bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-600 hover:text-white flex items-center gap-1 font-bold"
+                          onClick={() => {
+                            if (o.isPreOrder || o.status === "preorder") {
+                              router.push(`/admin/pre-order?edit=${o.id}`);
+                            } else {
+                              router.push(`/admin/manual-order?edit=${o.id}`);
+                            }
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" /> Edit
+                        </Button>
+                      )}
+
                       {nextStatusLabels[o.status] && (
                         <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-600 hover:text-white" onClick={() => progressStatus(o)}>
                           {nextStatusLabels[o.status]}
@@ -426,7 +473,7 @@ export default function AdminOrders() {
                       )}
 
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white" onClick={() => setActiveNotesOrder(o)}>
-                        Notes {o.hasNotes && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}
+                        Notes {(o.hasNotes || (getSavedNotesStore()[o.id]?.length ?? 0) > 0) && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}
                       </Button>
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-600 hover:text-white" onClick={() => setActiveInvoiceOrder(o)}>PDF</Button>
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-600 hover:text-white" onClick={() => setActiveTrackingOrder(o)}>History</Button>

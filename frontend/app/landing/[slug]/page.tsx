@@ -572,7 +572,6 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
                       </button>
                     </div>
                   </div>
-                </div>
 
                 {/* Price Summary */}
                 <div className="rounded-2xl bg-amber-50/70 border border-amber-200 p-4 dark:bg-slate-800 dark:border-slate-700 space-y-2 text-sm">
@@ -581,7 +580,7 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
                     <span className="font-semibold text-slate-900 dark:text-white">৳{activePrice * quantity}</span>
                   </div>
                   <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                    <span>ডেলিভারি চার্জ ({district === "Dhaka" ? "ঢাকা সিটি" : "ঢাকার বাইরে"}):</span>
+                    <span>ডেলিভারি চার্জ ({city === "Dhaka" ? "ঢাকা সিটি" : "ঢাকার বাইরে"}):</span>
                     <span className="font-semibold text-slate-900 dark:text-white">৳{shippingFee}</span>
                   </div>
                   <div className="pt-2 border-t border-amber-200/80 dark:border-slate-700 flex justify-between text-base font-bold text-slate-900 dark:text-white">

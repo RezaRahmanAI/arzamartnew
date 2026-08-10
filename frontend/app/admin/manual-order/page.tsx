@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Minus, Plus, Search, Trash2, RotateCcw, ShoppingBag, X, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 
@@ -140,7 +141,9 @@ function SearchableSelect({
 }
 
 export default function AdminManualOrder() {
-  const { addOrder, generateNextOrderId } = useOrders();
+  const searchParams = useSearchParams();
+  const editOrderId = searchParams ? searchParams.get("edit") : null;
+  const { addOrder, generateNextOrderId, orders } = useOrders();
   const { products } = useProducts();
   const { settings } = useSettings();
 
@@ -170,6 +173,36 @@ export default function AdminManualOrder() {
   const [paid, setPaid] = useState(0);
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState("Internal");
+
+  // Load existing order for editing if ?edit=ORD-xxx query is present
+  useEffect(() => {
+    if (editOrderId && orders && orders.length > 0) {
+      const existing = orders.find((o) => o.id === editOrderId || o.id === `ORD-${editOrderId}`);
+      if (existing) {
+        setCustomer(existing.customer || "");
+        setPhone(existing.phone || "");
+        setAddress(existing.address || "");
+        if (existing.city) setCity(existing.city);
+        if (existing.area) setArea(existing.area);
+        if (existing.delivery) setDeliveryCharge(existing.delivery);
+        if (existing.note) setNote(existing.note);
+        if (existing.items && existing.items.length > 0) {
+          setLines(
+            existing.items.map((it, idx) => ({
+              key: `edit-${idx}-${it.slug}`,
+              slug: it.slug,
+              name: it.name,
+              size: it.size || "M",
+              color: (it as any).color || "Default",
+              qty: it.qty,
+              price: it.price,
+            }))
+          );
+        }
+        toast.info(`Editing Order #${existing.id}`);
+      }
+    }
+  }, [editOrderId, orders]);
 
   // Source Page change handler -> automatically update Social Page dropdown options & default selected page
   const handleSourcePageChange = (newSourcePage: string) => {

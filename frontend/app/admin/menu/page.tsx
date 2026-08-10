@@ -144,7 +144,7 @@ export default function AdminMenuPage() {
           )}
           <Button
             size="sm"
-            onClick={saveSettings}
+            onClick={() => saveSettings()}
             disabled={isSaving || !hasUnsavedChanges}
             className="gap-1.5 font-bold text-xs bg-primary text-primary-foreground hover:bg-primary/90"
           >

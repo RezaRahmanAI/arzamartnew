@@ -10,7 +10,7 @@ export interface RawApiProduct {
   mainImageUrl?: string;
   shortDescription?: string;
   fullDescription?: string;
-  variants?: { name: string; priceOverride?: number }[];
+  variants?: { name: string; priceOverride?: number; stockQuantity?: number }[];
   images?: { imageUrl?: string }[];
 }
 
