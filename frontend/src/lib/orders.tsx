@@ -15,10 +15,18 @@ import { useSettings } from "@/context/settings-context";
 
 export type OrderStatus =
   | "pending"
+  | "confirmed"
   | "processing"
+  | "packed"
   | "shipped"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  | "refund"
+  | "hold"
+  | "preorder"
+  | "return"
+  | "exchange"
+  | "return-process";
 
 export type OrderItem = {
   slug: string;

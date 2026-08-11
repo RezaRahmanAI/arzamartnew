@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/popover";
 import { formatBDT, orders, inventory, statusStyles, OrderStatus, Order } from "@/lib/dashboard-data";
 import { ordersService } from "@/lib/api/services/orders.service";
+import { useOrders } from "@/lib/orders";
 import {
   Hash,
   Phone,
@@ -98,18 +99,29 @@ export default function AdminOrders() {
   const [stockWarningItems, setStockWarningItems] = useState<OutOfStockItem[]>([]);
   const [pendingConfirmOrder, setPendingConfirmOrder] = useState<Order | null>(null);
 
+  const { orders: contextOrders, updateStatus: contextUpdateStatus } = useOrders();
   const [page, setPage] = useState(1);
   const pageSize = 10;
   
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [data, setData] = useState<Order[]>([]);
+  const [data, setData] = useState<Order[]>(contextOrders);
 
+  // Instantly reflect cached orders in memory
+  useEffect(() => {
+    if (contextOrders && contextOrders.length > 0) {
+      setData(contextOrders as unknown as Order[]);
+    }
+  }, [contextOrders]);
+
+  // Background silent refresh from API
   const fetchOrders = async () => {
     try {
       const result = await ordersService.getAll();
-      setData(result.orders as unknown as Order[]);
+      if (result.orders && result.orders.length > 0) {
+        setData(result.orders as unknown as Order[]);
+      }
     } catch {
-      setData([]);
+      /* keep current memory state */
     }
   };
 
@@ -168,8 +180,8 @@ export default function AdminOrders() {
 
   const updateStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
-      await ordersService.updateStatus(orderId, newStatus);
       setData(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      await contextUpdateStatus(orderId, newStatus as unknown as Parameters<typeof contextUpdateStatus>[1]);
       toast.success(`Order ${orderId} marked as ${newStatus}`);
     } catch {
       toast.error(`Failed to update order ${orderId}`);
