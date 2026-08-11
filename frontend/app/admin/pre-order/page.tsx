@@ -183,15 +183,34 @@ export default function AdminPreOrderPage() {
         if (existing.note) setNote(existing.note);
         if (existing.items && existing.items.length > 0) {
           setLines(
-            existing.items.map((it, idx) => ({
-              key: `edit-${idx}-${it.slug}`,
-              slug: it.slug,
-              name: it.name,
-              size: it.size || "M",
-              color: it.color || "Default",
-              qty: it.qty,
-              price: it.price,
-            }))
+            existing.items.map((it, idx) => {
+              let rawName = it.name || "Product";
+              let extractedSize = it.size && it.size !== "Standard" ? it.size.trim() : "";
+
+              // Extract size from parenthetical suffix if name is "Midnight Heavyweight Tee (M)"
+              const match = rawName.match(/\(([^)]+)\)$/);
+              if (match) {
+                if (!extractedSize || extractedSize === "Standard") {
+                  extractedSize = match[1].trim();
+                }
+                rawName = rawName.replace(/\s*\([^)]+\)$/, "").trim();
+              }
+
+              const finalSize = extractedSize || "M";
+              const matchedProd = products.find((p) => p.slug === it.slug || p.name.toLowerCase() === rawName.toLowerCase());
+
+              return {
+                key: `edit-${idx}-${it.slug}`,
+                slug: it.slug,
+                name: rawName,
+                size: finalSize,
+                color: it.color && it.color !== "Default" ? it.color : (matchedProd?.colors?.[0] || "Default"),
+                qty: it.qty,
+                price: it.price,
+                availableSizes: matchedProd?.sizes && matchedProd.sizes.length > 0 ? matchedProd.sizes : ["S", "M", "L", "XL", "XXL"],
+                availableColors: matchedProd?.colors && matchedProd.colors.length > 0 ? matchedProd.colors : ["Standard"],
+              };
+            })
           );
         }
         toast.info(`Editing Pre-Order #${existing.id}`);
