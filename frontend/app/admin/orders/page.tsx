@@ -25,6 +25,7 @@ import {
 import { formatBDT, orders, inventory, statusStyles, OrderStatus, Order } from "@/lib/dashboard-data";
 import { ordersService } from "@/lib/api/services/orders.service";
 import { useOrders } from "@/lib/orders";
+import { products, getSizeStock } from "@/lib/shop-data";
 import {
   Hash,
   Phone,
@@ -192,18 +193,36 @@ export default function AdminOrders() {
   const checkStockBeforeConfirm = (order: Order) => {
     setIsStockChecking(true);
     
-    // Simulate API delay
     setTimeout(() => {
       const outOfStock: OutOfStockItem[] = [];
 
       order.items.forEach(item => {
-        const product = inventory.find(p => p.slug === item.slug);
-        const availableStock = product ? product.stock : 0;
+        let rawName = item.name || "Product";
+        let extractedSize = item.size && item.size !== "Standard" ? item.size.trim() : "";
+
+        // Extract size from parenthetical suffix if name is "Midnight Heavyweight Tee (M)"
+        const match = rawName.match(/\(([^)]+)\)$/);
+        if (match) {
+          if (!extractedSize || extractedSize === "Standard") {
+            extractedSize = match[1].trim();
+          }
+          rawName = rawName.replace(/\s*\([^)]+\)$/, "").trim();
+        }
+
+        const displaySize = extractedSize || "Standard";
+
+        // Find product in products catalog
+        const prod = products.find(p => p.slug === item.slug || p.name.toLowerCase() === rawName.toLowerCase());
+        
+        let availableStock = 15; // default fallback stock
+        if (prod) {
+          availableStock = getSizeStock(prod, displaySize);
+        }
 
         if (availableStock < item.qty) {
           outOfStock.push({
-            name: item.name,
-            size: item.size,
+            name: rawName,
+            size: displaySize,
             needed: item.qty,
             available: Math.max(0, availableStock)
           });
@@ -218,7 +237,7 @@ export default function AdminOrders() {
       } else {
         updateStatus(order.id, "confirmed");
       }
-    }, 500);
+    }, 200);
   };
 
   const confirmWithStockIssue = () => {
