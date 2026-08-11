@@ -50,9 +50,15 @@ export type Order = {
   items: OrderItem[];
   total: number;
   delivery: number;
+  paid?: number;
+  discount?: number;
   status: OrderStatus;
   date: string;
   source: "checkout" | "manual" | "pre-order";
+  isPreOrder?: boolean;
+  sourcePageName?: string;
+  socialMediaSourceName?: string;
+  hasNotes?: boolean;
 };
 
 export const generateOrderId = (): string =>

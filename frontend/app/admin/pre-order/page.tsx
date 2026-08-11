@@ -179,7 +179,9 @@ export default function AdminPreOrderPage() {
         setAddress(existing.address || "");
         if (existing.city) setCity(existing.city);
         if (existing.area) setArea(existing.area);
-        if (existing.delivery) setDeliveryCharge(existing.delivery);
+        if (existing.delivery !== undefined) setDeliveryCharge(existing.delivery);
+        if (existing.paid !== undefined) setPaid(existing.paid);
+        if (existing.discount !== undefined) setDiscount(existing.discount);
         if (existing.note) setNote(existing.note);
         if (existing.items && existing.items.length > 0) {
           setLines(
@@ -452,16 +454,19 @@ export default function AdminPreOrderPage() {
       .join(" | ");
 
     const order: Order = {
-      id: generateNextOrderId(),
+      id: editOrderId || generateNextOrderId(),
       customer: customer.trim(),
       phone: phone.trim(),
       address: address.trim() ? `${address.trim()}, ${area}` : `${area}, ${city}`,
       city,
+      area,
       note: preOrderNotes,
       payment: paid >= total ? "Paid" : paid > 0 ? "Advance Paid" : "Pending Advance",
       items: orderItems,
       total,
       delivery: deliveryCharge,
+      paid,
+      discount,
       status: "pending",
       date: new Date().toISOString().slice(0, 10),
       source: "pre-order",

@@ -17,10 +17,16 @@ export type Order = {
   customer: string;
   phone: string;
   city: string;
+  area?: string;
+  address?: string;
+  note?: string;
   date: string;
   status: OrderStatus;
   items: OrderItem[];
   total: number;
+  delivery?: number;
+  paid?: number;
+  discount?: number;
   isPreOrder?: boolean;
   sourcePageName?: string;
   socialMediaSourceName?: string;
