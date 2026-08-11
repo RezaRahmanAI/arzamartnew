@@ -267,6 +267,37 @@ public class OrdersController : ControllerBase
             if (dto.Items != null && dto.Items.Count > 0)
             {
                 var defaultProduct = await _context.Products.Include(p => p.Variants).FirstOrDefaultAsync();
+                if (defaultProduct == null)
+                {
+                    // Create a fallback system product if table is completely empty
+                    var cat = await _context.Categories.FirstOrDefaultAsync();
+                    if (cat == null)
+                    {
+                        cat = new Category { Name = "General", Slug = "general", CreatedAtUtc = DateTime.UtcNow };
+                        _context.Categories.Add(cat);
+                        await _context.SaveChangesAsync();
+                    }
+                    var brand = await _context.Brands.FirstOrDefaultAsync();
+                    if (brand == null)
+                    {
+                        brand = new Brand { Name = "General Brand", Slug = "general-brand", CreatedAtUtc = DateTime.UtcNow };
+                        _context.Brands.Add(brand);
+                        await _context.SaveChangesAsync();
+                    }
+                    defaultProduct = new Product
+                    {
+                        Name = "General Product Item",
+                        Slug = "general-product-item",
+                        SKU = "SKU-GEN-001",
+                        BasePrice = 1000,
+                        CategoryId = cat.Id,
+                        BrandId = brand.Id,
+                        CreatedAtUtc = DateTime.UtcNow
+                    };
+                    _context.Products.Add(defaultProduct);
+                    await _context.SaveChangesAsync();
+                }
+
                 foreach (var item in dto.Items)
                 {
                     var itemName = !string.IsNullOrWhiteSpace(item.Name) ? item.Name : (item.ProductName ?? "Product");
@@ -274,7 +305,8 @@ public class OrdersController : ControllerBase
                     var product = await _context.Products
                         .Include(p => p.Variants)
                         .FirstOrDefaultAsync(p => (!string.IsNullOrWhiteSpace(itemSlug) && p.Slug == itemSlug) || (!string.IsNullOrWhiteSpace(itemName) && p.Name == itemName));
-                    var targetProductId = product?.Id ?? defaultProduct?.Id ?? Guid.NewGuid();
+                    
+                    var targetProductId = product?.Id ?? defaultProduct.Id;
 
                     var sizeName = !string.IsNullOrWhiteSpace(item.Size) ? item.Size.Trim() : "Standard";
                     var itemTitle = $"{itemName}";
@@ -286,27 +318,25 @@ public class OrdersController : ControllerBase
                     var unitPrice = item.Price > 0 ? item.Price : (item.UnitPrice ?? 0);
                     var quantity = item.Qty > 0 ? item.Qty : (item.Quantity ?? 1);
 
-                    if (product != null)
-                    {
-                        var variant = await _context.ProductVariants
-                            .FirstOrDefaultAsync(v => v.ProductId == product.Id && (v.Name == sizeName || v.Name == $"Size: {sizeName}"));
+                    var targetProd = product ?? defaultProduct;
+                    var variant = await _context.ProductVariants
+                        .FirstOrDefaultAsync(v => v.ProductId == targetProd.Id && (v.Name == sizeName || v.Name == $"Size: {sizeName}"));
 
-                        if (variant != null)
+                    if (variant != null)
+                    {
+                        variant.StockQuantity = Math.Max(0, variant.StockQuantity - quantity);
+                    }
+                    else
+                    {
+                        _context.ProductVariants.Add(new ProductVariant
                         {
-                            variant.StockQuantity = Math.Max(0, variant.StockQuantity - quantity);
-                        }
-                        else
-                        {
-                            _context.ProductVariants.Add(new ProductVariant
-                            {
-                                ProductId = product.Id,
-                                Name = sizeName,
-                                SKU = string.IsNullOrWhiteSpace(product.SKU) ? $"SKU-{sizeName}" : $"{product.SKU}-{sizeName}",
-                                PriceOverride = unitPrice,
-                                StockQuantity = Math.Max(0, 15 - quantity),
-                                IsActive = true
-                            });
-                        }
+                            ProductId = targetProd.Id,
+                            Name = sizeName,
+                            SKU = string.IsNullOrWhiteSpace(targetProd.SKU) ? $"SKU-{sizeName}" : $"{targetProd.SKU}-{sizeName}",
+                            PriceOverride = unitPrice,
+                            StockQuantity = Math.Max(0, 15 - quantity),
+                            IsActive = true
+                        });
                     }
 
                     order.Items.Add(new OrderItem
@@ -332,17 +362,21 @@ public class OrdersController : ControllerBase
         }
     }
 
-    public record UpdateOrderStatusRequest(string Status);
-
     [HttpPatch("{id}/status")]
     [HttpPut("{id}/status")]
     [HttpPatch("{id}")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateOrderStatus(string id, [FromBody] UpdateOrderStatusRequest req)
     {
-        if (req == null || string.IsNullOrWhiteSpace(req.Status) || !TryParseOrderStatus(req.Status, out var parsedStatus))
+        var rawStatus = req?.Status;
+        if (string.IsNullOrWhiteSpace(rawStatus))
         {
-            return BadRequest(new { Message = $"Unsupported order status: '{req?.Status}'" });
+            return BadRequest(new { Message = "Order status cannot be empty." });
+        }
+
+        if (!TryParseOrderStatus(rawStatus, out var parsedStatus))
+        {
+            return BadRequest(new { Message = $"Unsupported order status: '{rawStatus}'" });
         }
 
         var cleanIdStr = id.Replace("ORD-", "");
@@ -353,10 +387,10 @@ public class OrdersController : ControllerBase
         {
             order.OrderStatus = parsedStatus;
             await _context.SaveChangesAsync();
-            return Ok(new { id, status = StatusToFrontend(parsedStatus) });
+            return Ok(new { id, status = StatusToFrontend(parsedStatus), orderNumber = order.OrderNumber });
         }
 
-        return Ok(new { id, status = req.Status });
+        return Ok(new { id, status = rawStatus });
     }
 
     public record AddOrderNoteRequest(string Text, string? Author);
