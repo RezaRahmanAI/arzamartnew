@@ -1,7 +1,7 @@
 "use client";
 
-import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -91,6 +91,18 @@ export default function AdminProducts() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null);
   const [stockForm, setStockForm] = useState<Record<string, number>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.slug.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q)
+    );
+  }, [products, searchQuery]);
 
   const openStockModal = (p: Product) => {
     setStockModalProduct(p);
@@ -242,7 +254,26 @@ export default function AdminProducts() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name, slug or category..."
+            className="pl-9"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
         <Button onClick={openCreate} className="gap-2 cursor-pointer">
           <Plus className="size-4" />
           Create product
@@ -250,6 +281,17 @@ export default function AdminProducts() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-card">
+        {filteredProducts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+            <Search className="size-8 text-muted-foreground opacity-50" />
+            <p className="font-medium">No products found</p>
+            <p className="text-sm text-muted-foreground">
+              {searchQuery
+                ? `Nothing matches "${searchQuery}". Try a different keyword.`
+                : "Create your first product to get started."}
+            </p>
+          </div>
+        ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -265,7 +307,7 @@ export default function AdminProducts() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((p) => {
+            {filteredProducts.map((p) => {
               const minPrice =
                 p.sizePrices && Object.keys(p.sizePrices).length > 0
                   ? Math.min(...Object.values(p.sizePrices))
@@ -374,6 +416,7 @@ export default function AdminProducts() {
             })}
           </TableBody>
         </Table>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
