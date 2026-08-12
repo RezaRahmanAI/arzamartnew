@@ -509,7 +509,7 @@ export default function AdminOrders() {
                       )}
 
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white" onClick={() => setActiveNotesOrder(o)}>
-                        Notes {(o.hasNotes || (getSavedNotesStore()[o.id]?.length ?? 0) > 0) && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}
+                        Notes {o.status === "pending" && (o.hasNotes || Boolean(o.note) || (getSavedNotesStore()[o.id]?.length ?? 0) > 0) && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}
                       </Button>
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-600 hover:text-white" onClick={() => setActiveInvoiceOrder(o)}>PDF</Button>
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-600 hover:text-white" onClick={() => setActiveTrackingOrder(o)}>History</Button>

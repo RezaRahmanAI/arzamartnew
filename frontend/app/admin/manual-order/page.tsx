@@ -27,6 +27,7 @@ import { useProducts } from "@/lib/products-store";
 import { useSettings } from "@/context/settings-context";
 import { CITY_AREAS_MAP as INITIAL_CITY_AREAS_MAP, DEFAULT_CITIES, DEFAULT_AREAS } from "@/lib/location-data";
 import { getImageUrl, handleImageError } from "@/lib/utils";
+import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
 
 // Source Pages & Social Pages are now managed from Settings > Social Media Links.
 // Fallback defaults are kept in case settings haven't loaded yet.
@@ -512,9 +513,25 @@ export default function AdminManualOrder() {
       status: "pending",
       date: new Date().toISOString().slice(0, 10),
       source: "manual",
+      hasNotes: !!note.trim(),
     };
 
     addOrder(order);
+
+    // Persist note into localStorage notes store so it shows in Notes modal
+    if (note.trim()) {
+      const store = getSavedNotesStore();
+      const noteRecord: NoteRecord = {
+        id: `note-${Date.now()}`,
+        text: note.trim(),
+        noteType: noteType === "Customer" ? "Customer / Delivery Note" : "Internal Note",
+        author: "Order Creation",
+        timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+      };
+      store[order.id] = [...(store[order.id] || []), noteRecord];
+      saveNotesStore(store);
+    }
+
     toast.success("Order Created Successfully!", {
       description: `Order ID: ${order.id} · Customer: ${order.customer}`,
     });

@@ -14,11 +14,12 @@ import { Order } from "@/lib/dashboard-data";
 import { useAuth } from "@/context/auth-context";
 import { ordersService } from "@/lib/api/services/orders.service";
 import { toast } from "sonner";
-import { User, Clock } from "lucide-react";
+import { User, Clock, ShieldAlert, Truck } from "lucide-react";
 
 export type NoteRecord = {
   id: string;
   text: string;
+  noteType?: "Internal Note" | "Customer / Delivery Note";
   author: string;
   timestamp: string;
 };
@@ -57,22 +58,48 @@ export function OrderNotesModal({
 }) {
   const { user } = useAuth();
   const [note, setNote] = useState("");
+  const [selectedType, setSelectedType] = useState<"Internal Note" | "Customer / Delivery Note">("Internal Note");
   const [notesList, setNotesList] = useState<NoteRecord[]>([]);
 
   useEffect(() => {
     if (order) {
       const store = getSavedNotesStore();
-      const savedForOrder = store[order.id] || order.notesList || [];
+      let savedForOrder = store[order.id] || order.notesList || [];
+
+      // If no saved notes list exists yet, check if order.note was populated during order creation/placement
+      if (savedForOrder.length === 0 && order.note && order.note.trim()) {
+        const parts = order.note.split(" | ");
+        const initialNotes: NoteRecord[] = parts.map((part, idx) => {
+          const isCustomer = part.toLowerCase().includes("customer") || part.toLowerCase().includes("delivery");
+          return {
+            id: `init-${idx}`,
+            text: part.trim(),
+            noteType: isCustomer ? "Customer / Delivery Note" : "Internal Note",
+            author: "Order Placement",
+            timestamp: order.date || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          };
+        });
+
+        savedForOrder = initialNotes;
+        store[order.id] = initialNotes;
+        saveNotesStore(store);
+      }
+
       const normalized: NoteRecord[] = savedForOrder.map((item: string | NoteRecord, idx: number) => {
         if (typeof item === "string") {
+          const isCustomer = item.toLowerCase().includes("customer") || item.toLowerCase().includes("delivery");
           return {
             id: `note-${idx}`,
             text: item,
+            noteType: isCustomer ? "Customer / Delivery Note" : "Internal Note",
             author: "System Admin",
             timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
           };
         }
-        return item;
+        return {
+          ...item,
+          noteType: item.noteType || (item.text?.toLowerCase().includes("customer") || item.text?.toLowerCase().includes("delivery") ? "Customer / Delivery Note" : "Internal Note"),
+        };
       });
 
       setNotesList(normalized);
@@ -101,6 +128,7 @@ export function OrderNotesModal({
     const newNoteObj: NoteRecord = {
       id: `note-${Date.now()}`,
       text: note.trim(),
+      noteType: selectedType,
       author: currentAuthor,
       timestamp: currentTime,
     };
@@ -110,15 +138,20 @@ export function OrderNotesModal({
     order.notesList = updatedNotes;
     order.hasNotes = true;
 
+    // Update order.note string for customer/delivery instructions
+    if (selectedType === "Customer / Delivery Note") {
+      order.note = order.note ? `${order.note} | Delivery Note: ${note.trim()}` : `Delivery Note: ${note.trim()}`;
+    }
+
     // Persist permanently in localStorage and Database
     const store = getSavedNotesStore();
     store[order.id] = updatedNotes;
     saveNotesStore(store);
 
-    ordersService.addNote(order.id, note.trim(), currentAuthor);
+    ordersService.addNote(order.id, `[${selectedType}] ${note.trim()}`, currentAuthor);
 
     setNote("");
-    toast.success(`Note saved by ${currentAuthor}!`);
+    toast.success(`${selectedType} saved successfully!`);
   };
 
   return (
@@ -127,7 +160,7 @@ export function OrderNotesModal({
         <DialogHeader>
           <DialogTitle>Order Notes for {order.id}</DialogTitle>
           <DialogDescription>
-            Internal notes for this order. Logged as: <span className="font-semibold text-foreground">{currentAuthor}</span>
+            Log notes for this order. Current user: <span className="font-semibold text-foreground">{currentAuthor}</span>
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
@@ -145,7 +178,26 @@ export function OrderNotesModal({
                         <Clock className="h-3 w-3" /> {n.timestamp}
                       </span>
                     </div>
-                    <p className="text-foreground whitespace-pre-wrap font-medium">{n.text}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-foreground whitespace-pre-wrap font-medium flex-1">{n.text}</p>
+                      <span
+                        className={`inline-flex items-center gap-1 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          n.noteType === "Customer / Delivery Note"
+                            ? "bg-amber-100 text-amber-800 border border-amber-300"
+                            : "bg-blue-100 text-blue-800 border border-blue-300"
+                        }`}
+                      >
+                        {n.noteType === "Customer / Delivery Note" ? (
+                          <>
+                            <Truck className="h-2.5 w-2.5" /> Customer/Delivery
+                          </>
+                        ) : (
+                          <>
+                            <ShieldAlert className="h-2.5 w-2.5" /> Internal
+                          </>
+                        )}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -153,21 +205,35 @@ export function OrderNotesModal({
               <p className="text-xs text-muted-foreground italic">No notes added yet.</p>
             )}
           </div>
-          <div className="space-y-2 pt-2 border-t">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Add New Note</h4>
+
+          <div className="space-y-2.5 pt-2 border-t">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Add New Note</h4>
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value as "Internal Note" | "Customer / Delivery Note")}
+                className="h-7 text-xs font-semibold rounded-md border border-input bg-background px-2 text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+              >
+                <option value="Internal Note">🔒 Internal Note</option>
+                <option value="Customer / Delivery Note">🚚 Customer / Delivery Note</option>
+              </select>
+            </div>
+
             <Textarea
               rows={3}
-              placeholder="Type internal note here..."
+              placeholder={
+                selectedType === "Customer / Delivery Note"
+                  ? "Type customer or delivery instruction (shows on Invoice PDF & Delivery)..."
+                  : "Type internal private note here..."
+              }
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="text-xs"
             />
           </div>
-          <Button
-            className="w-full font-bold"
-            onClick={handleSaveNote}
-          >
-            Save Note
+
+          <Button className="w-full font-bold" onClick={handleSaveNote}>
+            Save {selectedType}
           </Button>
         </div>
       </DialogContent>

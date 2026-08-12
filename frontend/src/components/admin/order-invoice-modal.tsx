@@ -32,6 +32,8 @@ function BarcodePlaceholder({ value }: { value: string }) {
   );
 }
 
+import { getSavedNotesStore } from "@/components/admin/order-notes-modal";
+
 export function OrderInvoiceModal({
   order,
   isOpen,
@@ -51,6 +53,21 @@ export function OrderInvoiceModal({
   }, [isOpen]);
 
   if (!order || !isOpen) return null;
+
+  // Extract Customer / Delivery Note (excluding purely internal notes)
+  const storeNotes = getSavedNotesStore()[order.id] || [];
+  const customerDeliveryNotesList = storeNotes
+    .filter((n) => n.noteType === "Customer / Delivery Note")
+    .map((n) => n.text);
+
+  if (customerDeliveryNotesList.length === 0 && order.note) {
+    const parts = order.note.split(" | ").filter((p) => !p.toLowerCase().includes("internal"));
+    if (parts.length > 0) {
+      customerDeliveryNotesList.push(...parts);
+    }
+  }
+
+  const customerNoteDisplay = customerDeliveryNotesList.join(" | ");
 
   const handlePrint = () => {
     window.print();
@@ -133,6 +150,11 @@ export function OrderInvoiceModal({
                   <div><strong className="font-bold">Name:</strong> {order.customer}</div>
                   <div><strong className="font-bold">Address:</strong> {order.city}</div>
                   <div><strong className="font-bold">Phone:</strong> {order.phone}</div>
+                  {customerNoteDisplay && (
+                    <div className="mt-1 pt-1 border-t border-black/40 text-[12px] text-rose-800 font-semibold leading-tight">
+                      <strong className="font-bold text-black">Delivery Note:</strong> {customerNoteDisplay}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

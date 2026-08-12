@@ -9,6 +9,7 @@ import { formatBDT, getSizePrice } from "@/lib/shop-data";
 import { generateOrderId, useOrders, type Order } from "@/lib/orders";
 import { useSettings } from "@/context/settings-context";
 import { useCustomers } from "@/lib/customers-store";
+import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
 
 import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
 
@@ -145,6 +146,22 @@ export default function CheckoutPage() {
       source: "checkout",
     };
     addOrder(order);
+
+    // Persist checkout note into localStorage notes store for admin Notes modal
+    const checkoutNote = String(formData.get("note") ?? "").trim();
+    if (checkoutNote) {
+      const store = getSavedNotesStore();
+      const noteRecord: NoteRecord = {
+        id: `note-${Date.now()}`,
+        text: checkoutNote,
+        noteType: "Customer / Delivery Note",
+        author: "Customer (Website)",
+        timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+      };
+      store[order.id] = [...(store[order.id] || []), noteRecord];
+      saveNotesStore(store);
+    }
+
     if (draftId) removeIncomplete(draftId);
     clear();
     toast.success("Order placed!", {
