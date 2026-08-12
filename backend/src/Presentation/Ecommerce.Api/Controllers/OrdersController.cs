@@ -15,6 +15,37 @@ public class UpdateOrderStatusRequest
     public string Status { get; set; } = string.Empty;
 }
 
+public class UpdateOrderItemRequest
+{
+    public string Slug { get; set; } = string.Empty;
+    public string? Name { get; set; }
+    public string? ProductName { get; set; }
+    public string? Size { get; set; }
+    public string SizeValue => string.IsNullOrWhiteSpace(Size) ? "Standard" : Size.Trim();
+    public string? Color { get; set; }
+    public int Qty { get; set; }
+    public int? Quantity { get; set; }
+    public int QuantityValue => Qty > 0 ? Qty : (Quantity ?? 1);
+    public decimal Price { get; set; }
+    public decimal? UnitPrice { get; set; }
+    public decimal PriceValue => Price > 0 ? Price : (UnitPrice ?? 0);
+}
+
+public class UpdateOrderRequest
+{
+    public string? Status { get; set; }
+    public string? Customer { get; set; }
+    public string? Phone { get; set; }
+    public string? Address { get; set; }
+    public string? City { get; set; }
+    public string? Area { get; set; }
+    public string? Note { get; set; }
+    public string? Payment { get; set; }
+    public decimal? Total { get; set; }
+    public decimal? Delivery { get; set; }
+    public List<UpdateOrderItemRequest>? Items { get; set; }
+}
+
 public class FrontendOrderItemDto
 {
     public string Slug { get; set; } = string.Empty;
@@ -141,6 +172,20 @@ public class OrdersController : ControllerBase
             var (sourceChannel, pageName) = ExtractOrderSources(o.ShippingAddressJson);
             var isManual = !string.IsNullOrWhiteSpace(sourceChannel) || !string.IsNullOrWhiteSpace(pageName);
             var notes = ExtractOrderNotes(o.ShippingAddressJson);
+
+            var customerNoteMatch = System.Text.RegularExpressions.Regex.Match(o.ShippingAddressJson ?? string.Empty, @"\(Note:\s*([^)\n]+)\)");
+            var customerNoteText = customerNoteMatch.Success ? customerNoteMatch.Groups[1].Value.Trim() : string.Empty;
+            if (!string.IsNullOrWhiteSpace(customerNoteText))
+            {
+                notes.Insert(0, new
+                {
+                    id = Guid.NewGuid().ToString(),
+                    text = customerNoteText,
+                    author = "Customer",
+                    timestamp = o.CreatedAtUtc.ToString("MMM dd, hh:mm tt")
+                });
+            }
+
             return new
             {
                 id = string.IsNullOrWhiteSpace(o.OrderNumber) ? $"ORD-{o.Id}" : o.OrderNumber,
@@ -149,7 +194,7 @@ public class OrdersController : ControllerBase
                 phone = o.CustomerPhone ?? "01700000000",
                 address = o.ShippingAddressJson,
                 city = o.CustomerDistrict ?? "dhaka",
-                note = "Delivery order",
+                note = !string.IsNullOrWhiteSpace(customerNoteText) ? customerNoteText : "Delivery order",
                 hasNotes = notes.Count > 0,
                 notesList = notes,
                 payment = o.PaymentStatus.ToString().ToLower(),
@@ -324,7 +369,10 @@ public class OrdersController : ControllerBase
 
                     if (variant != null)
                     {
-                        variant.StockQuantity = Math.Max(0, variant.StockQuantity - quantity);
+                        if (parsedStatus == OrderStatus.Confirmed)
+                        {
+                            variant.StockQuantity = Math.Max(0, variant.StockQuantity - quantity);
+                        }
                     }
                     else
                     {
@@ -334,7 +382,7 @@ public class OrdersController : ControllerBase
                             Name = sizeName,
                             SKU = string.IsNullOrWhiteSpace(targetProd.SKU) ? $"SKU-{sizeName}" : $"{targetProd.SKU}-{sizeName}",
                             PriceOverride = unitPrice,
-                            StockQuantity = Math.Max(0, 15 - quantity),
+                            StockQuantity = parsedStatus == OrderStatus.Confirmed ? Math.Max(0, 15 - quantity) : 15,
                             IsActive = true
                         });
                     }
@@ -366,34 +414,284 @@ public class OrdersController : ControllerBase
     [HttpPut("{id}/status")]
     [HttpPatch("{id}")]
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateOrderStatus(string id, [FromBody] UpdateOrderStatusRequest req)
+    public async Task<IActionResult> UpdateOrderStatus(string id, [FromBody] UpdateOrderRequest req)
     {
-        var rawStatus = req?.Status;
-        if (string.IsNullOrWhiteSpace(rawStatus))
+        if (req == null)
         {
-            return BadRequest(new { Message = "Order status cannot be empty." });
-        }
-
-        if (!TryParseOrderStatus(rawStatus, out var parsedStatus))
-        {
-            return BadRequest(new { Message = $"Unsupported order status: '{rawStatus}'" });
+            return BadRequest(new { Message = "Request body cannot be empty." });
         }
 
         var cleanIdStr = id.Replace("ORD-", "");
         var isGuid = Guid.TryParse(cleanIdStr, out var g);
-        var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderNumber == id || o.OrderNumber == $"ORD-{id}" || (isGuid && o.Id == g));
+        var order = await _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.OrderNumber == id || o.OrderNumber == $"ORD-{id}" || (isGuid && o.Id == g));
 
-        if (order != null)
+        if (order == null)
         {
-            order.OrderStatus = parsedStatus;
-            await _context.SaveChangesAsync();
-            return Ok(new { id, status = StatusToFrontend(parsedStatus), orderNumber = order.OrderNumber });
+            return NotFound(new { Message = $"Order '{id}' not found." });
         }
 
-        return Ok(new { id, status = rawStatus });
+        var oldStatus = order.OrderStatus;
+
+        // Full order update (items + customer + totals) from the editable order page
+        if (req.Items != null)
+        {
+            await ApplyFullOrderUpdateAsync(order, req, oldStatus);
+            return Ok(new { id, status = StatusToFrontend(order.OrderStatus), orderNumber = order.OrderNumber });
+        }
+
+        // Status-only update (keeps history: confirm deducts stock, leaving confirmed restores it)
+        if (string.IsNullOrWhiteSpace(req.Status))
+        {
+            return BadRequest(new { Message = "Order status cannot be empty." });
+        }
+
+        if (!TryParseOrderStatus(req.Status, out var parsedStatus))
+        {
+            return BadRequest(new { Message = $"Unsupported order status: '{req.Status}'" });
+        }
+
+        if (oldStatus != parsedStatus)
+        {
+            if (parsedStatus == OrderStatus.Confirmed)
+            {
+                await AdjustStockAsync(order, deduct: true);
+            }
+            else if (oldStatus == OrderStatus.Confirmed)
+            {
+                await AdjustStockAsync(order, deduct: false);
+            }
+        }
+
+        order.OrderStatus = parsedStatus;
+        await _context.SaveChangesAsync();
+        return Ok(new { id, status = StatusToFrontend(parsedStatus), orderNumber = order.OrderNumber });
     }
 
     public record AddOrderNoteRequest(string Text, string? Author);
+
+    private static string NormalizeSizeName(string sizeName)
+    {
+        if (string.IsNullOrWhiteSpace(sizeName)) return "Standard";
+        return System.Text.RegularExpressions.Regex.Replace(sizeName.Trim(), @"^Size\s*:\s*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+    }
+
+    private static int OrderItemQuantity(OrderItem item) => Math.Max(1, item.Quantity);
+
+    private static string OrderItemSizeName(OrderItem item)
+    {
+        var sizeName = "Standard";
+        var match = System.Text.RegularExpressions.Regex.Match(item.ProductName ?? string.Empty, @"\(([^)]+)\)$");
+        if (match.Success)
+        {
+            sizeName = match.Groups[1].Value.Trim();
+        }
+        return NormalizeSizeName(sizeName);
+    }
+
+    private async Task AdjustStockAsync(Order order, bool deduct)
+    {
+        var variantIds = order.Items.Where(i => i.VariantId.HasValue).Select(i => i.VariantId!.Value).Distinct().ToList();
+        var variantsById = variantIds.Count > 0
+            ? await _context.ProductVariants.Where(v => variantIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id)
+            : new Dictionary<Guid, ProductVariant>();
+
+        foreach (var item in order.Items)
+        {
+            if (item.ProductId == Guid.Empty) continue;
+
+            var sizeName = OrderItemSizeName(item);
+            if (item.VariantId.HasValue && variantsById.TryGetValue(item.VariantId.Value, out var byId))
+            {
+                sizeName = NormalizeSizeName(byId.Name);
+            }
+
+            var quantity = OrderItemQuantity(item);
+
+            var variant = await _context.ProductVariants.FirstOrDefaultAsync(v =>
+                v.ProductId == item.ProductId && (v.Name == sizeName || v.Name == $"Size: {sizeName}"));
+
+            if (variant == null) continue;
+
+            variant.StockQuantity = deduct
+                ? Math.Max(0, variant.StockQuantity - quantity)
+                : variant.StockQuantity + quantity;
+        }
+    }
+
+    private async Task ApplyFullOrderUpdateAsync(Order order, UpdateOrderRequest req, OrderStatus oldStatus)
+    {
+        var phone = !string.IsNullOrWhiteSpace(req.Phone) ? req.Phone.Trim() : "01700000000";
+        var customer = await _context.Customers.FirstOrDefaultAsync(c => c.Phone == phone);
+        if (customer == null)
+        {
+            customer = new Customer
+            {
+                FullName = !string.IsNullOrWhiteSpace(req.Customer) ? req.Customer.Trim() : "Guest Customer",
+                Phone = phone,
+                Email = $"{phone.Replace("+", "").Replace(" ", "")}@guest.arzamart.com",
+                DefaultAddress = req.Address ?? "",
+                District = string.IsNullOrWhiteSpace(req.City) ? "Dhaka" : req.City,
+                IsGuest = true,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            _context.Customers.Add(customer);
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(req.Customer)) customer.FullName = req.Customer.Trim();
+            if (!string.IsNullOrWhiteSpace(req.Address)) customer.DefaultAddress = req.Address;
+            if (!string.IsNullOrWhiteSpace(req.City)) customer.District = req.City;
+        }
+
+        var oldConfirmed = oldStatus == OrderStatus.Confirmed;
+        var newStatus = oldStatus;
+        if (!string.IsNullOrWhiteSpace(req.Status) && TryParseOrderStatus(req.Status, out var parsedStatus))
+        {
+            newStatus = parsedStatus;
+        }
+        var newConfirmed = newStatus == OrderStatus.Confirmed;
+
+        var paymentStatus = order.PaymentStatus;
+        if (!string.IsNullOrWhiteSpace(req.Payment))
+        {
+            paymentStatus = req.Payment.ToLower().Contains("paid") ? PaymentStatus.Paid : PaymentStatus.Pending;
+        }
+
+        // Old item -> variant quantities (for stock delta)
+        var oldVariantIds = order.Items.Where(i => i.VariantId.HasValue).Select(i => i.VariantId!.Value).Distinct().ToList();
+        var oldVariantsById = oldVariantIds.Count > 0
+            ? await _context.ProductVariants.Where(v => oldVariantIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id)
+            : new Dictionary<Guid, ProductVariant>();
+
+        var oldQuantities = new Dictionary<(Guid productId, string sizeName), int>();
+        foreach (var item in order.Items)
+        {
+            if (item.ProductId == Guid.Empty) continue;
+            var sizeName = OrderItemSizeName(item);
+            if (item.VariantId.HasValue && oldVariantsById.TryGetValue(item.VariantId.Value, out var byId))
+            {
+                sizeName = NormalizeSizeName(byId.Name);
+            }
+            var key = (item.ProductId, sizeName);
+            oldQuantities[key] = oldQuantities.GetValueOrDefault(key) + OrderItemQuantity(item);
+        }
+
+        // Rebuild order items
+        var newLines = new List<OrderItem>();
+        var newQuantities = new Dictionary<(Guid productId, string sizeName), int>();
+        var defaultProduct = await _context.Products.Include(p => p.Variants).FirstOrDefaultAsync();
+
+        foreach (var item in req.Items!)
+        {
+            var itemName = !string.IsNullOrWhiteSpace(item.Name)
+                ? item.Name.Trim()
+                : (!string.IsNullOrWhiteSpace(item.ProductName) ? item.ProductName.Trim() : "Product");
+
+            var product = await _context.Products
+                .Include(p => p.Variants)
+                .FirstOrDefaultAsync(p => (!string.IsNullOrWhiteSpace(item.Slug) && p.Slug == item.Slug) || p.Name == itemName);
+
+            var targetProduct = product ?? defaultProduct;
+            if (targetProduct == null) continue;
+
+            var sizeName = NormalizeSizeName(item.SizeValue);
+            var itemTitle = itemName;
+            if (sizeName != "Standard")
+            {
+                itemTitle += $" ({sizeName})";
+            }
+
+            var variant = await _context.ProductVariants
+                .FirstOrDefaultAsync(v => v.ProductId == targetProduct.Id && (v.Name == sizeName || v.Name == $"Size: {sizeName}"));
+
+            if (variant == null)
+            {
+                variant = new ProductVariant
+                {
+                    ProductId = targetProduct.Id,
+                    Name = sizeName,
+                    SKU = string.IsNullOrWhiteSpace(targetProduct.SKU) ? $"SKU-{sizeName}" : $"{targetProduct.SKU}-{sizeName}",
+                    PriceOverride = item.PriceValue,
+                    StockQuantity = 15,
+                    IsActive = true
+                };
+                _context.ProductVariants.Add(variant);
+            }
+
+            var quantity = item.QuantityValue;
+            var key = (targetProduct.Id, sizeName);
+            newQuantities[key] = newQuantities.GetValueOrDefault(key) + quantity;
+
+            newLines.Add(new OrderItem
+            {
+                OrderId = order.Id,
+                ProductId = targetProduct.Id,
+                VariantId = variant.Id,
+                ProductName = itemTitle,
+                UnitPrice = item.PriceValue,
+                Quantity = quantity
+            });
+        }
+
+        // Stock delta per variant (with/without confirmation transitions)
+        if (oldConfirmed || newConfirmed)
+        {
+            var allKeys = oldQuantities.Keys.Union(newQuantities.Keys).ToList();
+            foreach (var key in allKeys)
+            {
+                var oldQty = oldQuantities.GetValueOrDefault(key);
+                var newQty = newQuantities.GetValueOrDefault(key);
+
+                int delta;
+                if (oldConfirmed && newConfirmed)
+                {
+                    delta = newQty - (oldQuantities.ContainsKey(key) ? oldQty : 0);
+                }
+                else if (newConfirmed)
+                {
+                    delta = -newQty;
+                }
+                else
+                {
+                    delta = oldQty;
+                }
+                if (delta == 0) continue;
+
+                var variant = await _context.ProductVariants
+                    .FirstOrDefaultAsync(v => v.ProductId == key.productId && (v.Name == key.sizeName || v.Name == $"Size: {key.sizeName}"));
+
+                if (variant == null) continue;
+                variant.StockQuantity = Math.Max(0, variant.StockQuantity + delta);
+            }
+        }
+
+        _context.OrderItems.RemoveRange(order.Items);
+        order.Items = newLines;
+        order.CustomerId = customer.Id;
+        order.OrderStatus = newStatus;
+        order.PaymentStatus = paymentStatus;
+
+        var addrList = new List<string>();
+        if (!string.IsNullOrWhiteSpace(req.Address)) addrList.Add(req.Address.Trim());
+        if (!string.IsNullOrWhiteSpace(req.Area)) addrList.Add(req.Area.Trim());
+        if (!string.IsNullOrWhiteSpace(req.City)) addrList.Add(req.City.Trim());
+        var shippingAddress = string.Join(", ", addrList);
+        if (!string.IsNullOrWhiteSpace(req.Note))
+        {
+            shippingAddress += $" (Note: {req.Note.Trim()})";
+        }
+        order.ShippingAddressJson = shippingAddress;
+
+        var total = req.Total ?? order.TotalAmount;
+        var delivery = req.Delivery ?? order.ShippingFee;
+        order.SubTotal = total > delivery ? total - delivery : total;
+        order.ShippingFee = delivery;
+        order.TotalAmount = total;
+
+        await _context.SaveChangesAsync();
+    }
 
     [HttpPost("{id}/notes")]
     [HttpPut("{id}/notes")]

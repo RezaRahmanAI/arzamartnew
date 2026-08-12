@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus, Search, Trash2, RotateCcw, ShoppingBag, X, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 
@@ -145,9 +145,10 @@ function SearchableSelect({
 export default function AdminManualOrder() {
   const searchParams = useSearchParams();
   const editOrderId = searchParams ? searchParams.get("edit") : null;
-  const { addOrder, generateNextOrderId, orders } = useOrders();
+  const { addOrder, generateNextOrderId, orders, updateOrder } = useOrders();
   const { products } = useProducts();
   const { settings } = useSettings();
+  const router = useRouter();
 
   // Derive source pages from centralized settings
   const socialPageMapBySource = (settings.socialMedia.sources && Object.keys(settings.socialMedia.sources).length > 0)
@@ -175,6 +176,8 @@ export default function AdminManualOrder() {
   const [paid, setPaid] = useState(0);
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState("Internal");
+  const [existingStatus, setExistingStatus] = useState<Order["status"]>("pending");
+  const isEditMode = !!editOrderId;
 
   // Load existing order for editing if ?edit=ORD-xxx query is present
   useEffect(() => {
@@ -190,6 +193,7 @@ export default function AdminManualOrder() {
         if (existing.paid !== undefined) setPaid(existing.paid);
         if (existing.discount !== undefined) setDiscount(existing.discount);
         if (existing.note) setNote(existing.note);
+        if (existing.status) setExistingStatus(existing.status);
         if (existing.items && existing.items.length > 0) {
           setLines(
             existing.items.map((it, idx) => {
@@ -500,7 +504,7 @@ export default function AdminManualOrder() {
       id: editOrderId || generateNextOrderId(),
       customer: customer.trim(),
       phone: phone.trim(),
-      address: address.trim() ? `${address.trim()}, ${area}` : `${area}, ${city}`,
+      address: address.trim() ? address.trim() : `${area}, ${city}`,
       city,
       area,
       note: orderNotes,
@@ -510,11 +514,34 @@ export default function AdminManualOrder() {
       delivery: deliveryCharge,
       paid,
       discount,
-      status: "pending",
+      status: editOrderId ? existingStatus : "pending",
       date: new Date().toISOString().slice(0, 10),
       source: "manual",
       hasNotes: !!note.trim(),
     };
+
+    if (editOrderId) {
+      // Persist edited note into localStorage notes store so it shows in Notes modal
+      if (note.trim()) {
+        const store = getSavedNotesStore();
+        const noteRecord: NoteRecord = {
+          id: `note-${Date.now()}`,
+          text: note.trim(),
+          noteType: noteType === "Customer" ? "Customer / Delivery Note" : "Internal Note",
+          author: "Order Edit",
+          timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+        };
+        store[order.id] = [...(store[order.id] || []), noteRecord];
+        saveNotesStore(store);
+      }
+
+      updateOrder(editOrderId, order);
+      toast.success("Order Updated Successfully!", {
+        description: `Order ID: ${order.id} · Customer: ${order.customer}`,
+      });
+      router.replace("/admin/manual-order");
+      return;
+    }
 
     addOrder(order);
 

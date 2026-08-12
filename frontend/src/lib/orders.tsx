@@ -74,6 +74,7 @@ type OrdersContextValue = {
   removeIncomplete: (id: string) => Promise<void>;
   promoteIncomplete: (id: string) => Promise<void>;
   updateStatus: (id: string, status: OrderStatus) => Promise<void>;
+  updateOrder: (id: string, payload: Partial<Order>) => Promise<void>;
 };
 
 const OrdersContext = createContext<OrdersContextValue | null>(null);
@@ -122,7 +123,10 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      await ordersService.create(order);
+      const saved = await ordersService.create(order);
+      if (saved && saved.id && saved.id !== order.id) {
+        setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, id: saved.id! } : o)));
+      }
     } catch (err) {
       console.error("Failed to sync order creation with API:", err);
     }
@@ -174,6 +178,16 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateOrder = useCallback(async (id: string, payload: Partial<Order>) => {
+    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...payload, id } : o)));
+    setIncomplete((prev) => prev.map((o) => (o.id === id ? { ...o, ...payload, id } : o)));
+    try {
+      await ordersService.updateOrder(id, payload);
+    } catch (err) {
+      console.error("Failed to sync order update with API:", err);
+    }
+  }, []);
+
   const value = useMemo<OrdersContextValue>(
     () => ({
       orders,
@@ -185,6 +199,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       removeIncomplete,
       promoteIncomplete,
       updateStatus,
+      updateOrder,
     }),
     [
       orders,
@@ -196,6 +211,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       removeIncomplete,
       promoteIncomplete,
       updateStatus,
+      updateOrder,
     ]
   );
 

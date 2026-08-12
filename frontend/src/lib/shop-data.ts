@@ -101,7 +101,7 @@ export const categories: Category[] = [
   { slug: "trousers", name: "Trousers", image: catTrouser, blurb: "Chinos & joggers" },
 ];
 
-const SIZES = ["S", "M", "L", "XL", "XXL"];
+const SIZES = ["M", "L", "XL", "XXL"];
 
 export const products: Product[] = [
   {
@@ -113,12 +113,12 @@ export const products: Product[] = [
     mrp: 990,
     image: catTshirt,
     sizes: SIZES,
-    colors: ["Black", "Off White", "Olive"],
+    colors: ["Black", "White", "Navy", "Olive", "Maroon"],
     description:
       "A 240 GSM combed cotton tee with a boxy fall, ribbed neck and pre-shrunk finish. Keeps its shape after every wash.",
     badge: "Best seller",
     purchaseRate: 450,
-    sizePrices: { S: 790, M: 790, L: 820, XL: 850, XXL: 890 },
+    sizePrices: { M: 790, L: 820, XL: 850, XXL: 890 },
     images: [catShirt, catPanjabi, catHoodie],
   },
   {
@@ -129,11 +129,11 @@ export const products: Product[] = [
     mrp: 1090,
     image: catTshirt,
     sizes: SIZES,
-    colors: ["Black", "Sand"],
+    colors: ["Black", "White", "Navy", "Olive", "Charcoal"],
     description:
       "Oversized silhouette with a hand-drawn print, screen printed with water-based ink so the graphic stays soft.",
     purchaseRate: 520,
-    sizePrices: { S: 890, M: 890, L: 920, XL: 950, XXL: 990 },
+    sizePrices: { M: 890, L: 920, XL: 950, XXL: 990 },
     images: [catShirt, catHoodie],
   },
   {
@@ -145,12 +145,12 @@ export const products: Product[] = [
     mrp: 1890,
     image: catShirt,
     sizes: SIZES,
-    colors: ["Sky", "White", "Sage"],
+    colors: ["White", "Navy", "Beige", "Olive", "Charcoal", "Black"],
     description:
       "Airy 100% linen weave with a soft collar and coconut buttons. Built for humid afternoons and long commutes.",
     badge: "New",
     purchaseRate: 980,
-    sizePrices: { S: 1490, M: 1490, L: 1550, XL: 1590, XXL: 1650 },
+    sizePrices: { M: 1490, L: 1550, XL: 1590, XXL: 1650 },
     images: [catTshirt, catTrouser],
   },
   {
@@ -161,11 +161,11 @@ export const products: Product[] = [
     mrp: 1550,
     image: catShirt,
     sizes: SIZES,
-    colors: ["Sky", "Charcoal"],
+    colors: ["White", "Navy", "Charcoal", "Olive", "Black"],
     description:
       "Classic oxford cotton with a slightly relaxed fit. Works tucked in for the office and open over a tee.",
     purchaseRate: 850,
-    sizePrices: { S: 1350, M: 1350, L: 1390, XL: 1450, XXL: 1490 },
+    sizePrices: { M: 1350, L: 1390, XL: 1450, XXL: 1490 },
     images: [catTshirt, catTrouser],
   },
   {
@@ -177,12 +177,12 @@ export const products: Product[] = [
     mrp: 2790,
     image: catPanjabi,
     sizes: SIZES,
-    colors: ["Cream", "Ash", "Deep Green"],
+    colors: ["Black", "White", "Cream", "Navy", "Maroon", "Olive"],
     description:
       "Fine cotton panjabi with tonal chikan-style embroidery along the placket and cuffs. Festive without the fuss.",
     badge: "Eid pick",
     purchaseRate: 1650,
-    sizePrices: { S: 2390, M: 2390, L: 2490, XL: 2590, XXL: 2690 },
+    sizePrices: { M: 2390, L: 2490, XL: 2590, XXL: 2690 },
     images: [catShirt, catHoodie],
   },
   {
@@ -193,11 +193,11 @@ export const products: Product[] = [
     mrp: 2290,
     image: catPanjabi,
     sizes: SIZES,
-    colors: ["Cream", "Rust"],
+    colors: ["Black", "White", "Navy", "Beige", "Maroon"],
     description:
       "Slim-cut panjabi in breathable viscose-cotton with a mandarin collar and side vents for easy movement.",
     purchaseRate: 1300,
-    sizePrices: { S: 1990, M: 1990, L: 2090, XL: 2150, XXL: 2190 },
+    sizePrices: { M: 1990, L: 2090, XL: 2150, XXL: 2190 },
     images: [catShirt, catHoodie],
   },
   {
@@ -209,11 +209,11 @@ export const products: Product[] = [
     mrp: 2190,
     image: catHoodie,
     sizes: SIZES,
-    colors: ["Heather Grey", "Black"],
+    colors: ["Black", "White", "Navy", "Charcoal", "Olive", "Maroon"],
     description:
       "Brushed fleece inside, dense knit outside, with a double-layer hood and kangaroo pocket that holds its shape.",
     purchaseRate: 1150,
-    sizePrices: { S: 1790, M: 1790, L: 1850, XL: 1890, XXL: 1950 },
+    sizePrices: { M: 1790, L: 1850, XL: 1890, XXL: 1950 },
     images: [catTshirt, catTrouser],
   },
   {
@@ -224,7 +224,7 @@ export const products: Product[] = [
     mrp: 1990,
     image: catTrouser,
     sizes: ["30", "32", "34", "36", "38"],
-    colors: ["Olive", "Beige", "Navy"],
+    colors: ["Black", "Navy", "Olive", "Beige", "Charcoal"],
     description:
       "Mid-rise chino in stretch twill with a tapered leg and deep pockets. Holds a crease, survives a rickshaw ride.",
     badge: "New",

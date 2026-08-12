@@ -155,7 +155,6 @@ public static class DbInitializer
                 },
                 Variants = new List<ProductVariant>
                 {
-                    new ProductVariant { Name = "Size: S", SKU = "TS-MHT-01-S", PriceOverride = 790, StockQuantity = 20 },
                     new ProductVariant { Name = "Size: M", SKU = "TS-MHT-01-M", PriceOverride = 790, StockQuantity = 30 },
                     new ProductVariant { Name = "Size: L", SKU = "TS-MHT-01-L", PriceOverride = 820, StockQuantity = 25 },
                     new ProductVariant { Name = "Size: XL", SKU = "TS-MHT-01-XL", PriceOverride = 850, StockQuantity = 15 },
@@ -182,7 +181,6 @@ public static class DbInitializer
                 },
                 Variants = new List<ProductVariant>
                 {
-                    new ProductVariant { Name = "Size: S", SKU = "TS-ARG-02-S", PriceOverride = 890, StockQuantity = 15 },
                     new ProductVariant { Name = "Size: M", SKU = "TS-ARG-02-M", PriceOverride = 890, StockQuantity = 20 },
                     new ProductVariant { Name = "Size: L", SKU = "TS-ARG-02-L", PriceOverride = 920, StockQuantity = 20 }
                 }

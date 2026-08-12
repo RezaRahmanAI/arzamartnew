@@ -74,9 +74,6 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
                         return Result<CreatedOrderResultDto>.Failure($"Insufficient stock for item '{variant.Name}'.");
                     }
 
-                    variant.StockQuantity -= itemReq.Quantity;
-                    variantRepo.Update(variant);
-
                     if (variant.PriceOverride.HasValue) unitPrice = variant.PriceOverride.Value;
                 }
 

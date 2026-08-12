@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus, Search, Trash2, RotateCcw, ShoppingBag, X, Check, ChevronsUpDown, Calendar, Clock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -142,9 +142,10 @@ function SearchableSelect({
 export default function AdminPreOrderPage() {
   const searchParams = useSearchParams();
   const editOrderId = searchParams ? searchParams.get("edit") : null;
-  const { addOrder, generateNextOrderId, orders } = useOrders();
+  const { addOrder, generateNextOrderId, orders, updateOrder } = useOrders();
   const { products } = useProducts();
   const { settings } = useSettings();
+  const router = useRouter();
 
   const socialPageMapBySource = (settings.socialMedia.sources && Object.keys(settings.socialMedia.sources).length > 0)
     ? settings.socialMedia.sources
@@ -184,6 +185,7 @@ export default function AdminPreOrderPage() {
         if (existing.paid !== undefined) setPaid(existing.paid);
         if (existing.discount !== undefined) setDiscount(existing.discount);
         if (existing.note) setNote(existing.note);
+        if (existing.status) setExistingStatus(existing.status);
         if (existing.items && existing.items.length > 0) {
           setLines(
             existing.items.map((it, idx) => {
@@ -227,6 +229,8 @@ export default function AdminPreOrderPage() {
     d.setDate(d.getDate() + 14); // default 2 weeks pre-order fulfillment lead time
     return d.toISOString().slice(0, 10);
   });
+  const [existingStatus, setExistingStatus] = useState<Order["status"]>("pending");
+  const isEditMode = !!editOrderId;
 
   // Product Options Modal state
   const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
@@ -458,7 +462,7 @@ export default function AdminPreOrderPage() {
       id: editOrderId || generateNextOrderId(),
       customer: customer.trim(),
       phone: phone.trim(),
-      address: address.trim() ? `${address.trim()}, ${area}` : `${area}, ${city}`,
+      address: address.trim() ? address.trim() : `${area}, ${city}`,
       city,
       area,
       note: preOrderNotes,
@@ -468,11 +472,34 @@ export default function AdminPreOrderPage() {
       delivery: deliveryCharge,
       paid,
       discount,
-      status: "pending",
+      status: editOrderId ? existingStatus : "pending",
       date: new Date().toISOString().slice(0, 10),
       source: "pre-order",
       hasNotes: !!note.trim(),
     };
+
+    if (editOrderId) {
+      // Persist edited note into localStorage notes store so it shows in Notes modal
+      if (note.trim()) {
+        const store = getSavedNotesStore();
+        const noteRecord: NoteRecord = {
+          id: `note-${Date.now()}`,
+          text: note.trim(),
+          noteType: noteType === "Customer" ? "Customer / Delivery Note" : "Internal Note",
+          author: "Pre-Order Edit",
+          timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+        };
+        store[order.id] = [...(store[order.id] || []), noteRecord];
+        saveNotesStore(store);
+      }
+
+      updateOrder(editOrderId, order);
+      toast.success("Pre-order Updated Successfully!", {
+        description: `Pre-order ID: ${order.id} · Customer: ${order.customer}`,
+      });
+      router.replace("/admin/pre-order");
+      return;
+    }
 
     addOrder(order);
 

@@ -25,6 +25,48 @@ export default function CheckoutPage() {
   const [selectedArea, setSelectedArea] = useState(() => getAreasForCity("Dhaka")[0] || "");
   const formRef = useRef<HTMLFormElement>(null);
 
+  // Persist customer details so returning from cart/products keeps everything typed
+  const CHECKOUT_PROFILE_KEY = "arza-checkout-profile-v1";
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(CHECKOUT_PROFILE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved.name) setName(saved.name);
+      if (saved.phone) setPhone(saved.phone);
+      if (saved.address) setAddress(saved.address);
+      if (saved.note) setNote(saved.note);
+      if (saved.city) {
+        setSelectedCity(saved.city);
+        const areas = getAreasForCity(saved.city);
+        setSelectedArea(areas[0] || saved.area || "");
+      } else if (saved.area) {
+        setSelectedArea(saved.area);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        window.localStorage.setItem(
+          CHECKOUT_PROFILE_KEY,
+          JSON.stringify({ name, phone, address, note, city: selectedCity, area: selectedArea })
+        );
+      } catch {
+        /* ignore */
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [name, phone, address, note, selectedCity, selectedArea]);
+
   const availableAreas = getAreasForCity(selectedCity);
 
   const handleCityChange = (city: string) => {
@@ -178,7 +220,7 @@ export default function CheckoutPage() {
         <div className="rounded-xl border border-border bg-card p-5 shadow-card">
           <h2 className="font-display text-lg font-bold text-foreground">Delivery details</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Field label="Full name" name="name" placeholder="Your name" required />
+            <Field label="Full name" name="name" placeholder="Your name" required value={name} onChange={(e) => setName(e.target.value)} />
             <Field
               label="Mobile number"
               name="phone"
@@ -186,6 +228,8 @@ export default function CheckoutPage() {
               placeholder="01XXXXXXXXX"
               pattern="01[0-9]{9}"
               required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
             />
             <label className="text-sm sm:col-span-2">
               <span className="font-semibold text-foreground">Address</span>
@@ -194,6 +238,8 @@ export default function CheckoutPage() {
                 required
                 rows={3}
                 placeholder="House, road, area details"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
                 className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </label>
@@ -226,7 +272,7 @@ export default function CheckoutPage() {
               </select>
             </label>
 
-            <Field label="Note (optional)" name="note" placeholder="Anything we should know?" />
+            <Field label="Note (optional)" name="note" placeholder="Anything we should know?" value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
 
           <h2 className="mt-8 font-display text-lg font-bold text-foreground">Payment</h2>

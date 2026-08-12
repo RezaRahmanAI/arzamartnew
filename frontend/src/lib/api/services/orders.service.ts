@@ -76,9 +76,32 @@ class OrdersService {
     this.saveLocalIncomplete(updatedInc);
 
     try {
-      return await apiClient.post<Order>("/orders", order);
+      const saved = await apiClient.post<{ id?: string; orderNumber?: string; success?: boolean }>("/orders", order);
+      const serverId = saved?.orderNumber || saved?.id;
+      if (serverId && serverId !== order.id) {
+        const adopted = { ...order, id: serverId };
+        const reordered = updatedOrders.map((o) => (o.id === order.id ? adopted : o));
+        this.saveLocalOrders(reordered);
+        return adopted;
+      }
+      return order;
     } catch {
       return order;
+    }
+  }
+
+  public async updateOrder(id: string, payload: Partial<Order>): Promise<Order | null> {
+    const { orders } = this.getLocalOrders();
+    const updated = orders.map((o) => (o.id === id ? { ...o, ...payload, id } : o));
+    this.saveLocalOrders(updated);
+
+    try {
+      return await apiClient.put<Order>(
+        `/orders/${encodeURIComponent(id)}`,
+        payload
+      );
+    } catch {
+      return null;
     }
   }
 
