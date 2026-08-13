@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useOrders, type Order, type OrderItem } from "@/lib/orders";
 import { getSizePrice, getColorHex, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
+import { CustomerSearchInput } from "@/components/admin/customer-search-input";
 import { useSettings } from "@/context/settings-context";
 import { CITY_AREAS_MAP as INITIAL_CITY_AREAS_MAP, DEFAULT_CITIES, DEFAULT_AREAS } from "@/lib/location-data";
 import { getImageUrl, handleImageError } from "@/lib/utils";
@@ -149,7 +150,6 @@ export default function AdminManualOrder() {
   const { products } = useProducts();
   const { settings } = useSettings();
   const router = useRouter();
-
   // Derive source pages from centralized settings
   const socialPageMapBySource = (settings.socialMedia.sources && Object.keys(settings.socialMedia.sources).length > 0)
     ? settings.socialMedia.sources
@@ -765,14 +765,20 @@ export default function AdminManualOrder() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label htmlFor="m-phone" className="text-xs font-semibold">Phone *</Label>
-                  <Input
+                  <CustomerSearchInput
                     id="m-phone"
-                    type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={setPhone}
+                    onSelect={(c) => {
+                      if (!customer.trim()) setCustomer(c.fullName || "");
+                      if (!address.trim()) setAddress(c.address || "");
+                      if (!city.trim() && c.district) setCity(c.district);
+                      if (!area.trim() && c.area) setArea(c.area);
+                      setDeliveryCharge(
+                        c.district && c.district.toLowerCase() === "dhaka" ? 70 : 130
+                      );
+                    }}
                     placeholder="Phone number"
-                    required
-                    className="h-9 text-xs"
                   />
                 </div>
                 <div className="space-y-1">
