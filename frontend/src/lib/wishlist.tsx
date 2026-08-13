@@ -34,10 +34,6 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         setWishlistSlugs(JSON.parse(raw) as string[]);
-      } else {
-        // Default initial items
-        const initialSlugs = staticProducts.slice(0, 4).map((p) => p.slug);
-        setWishlistSlugs(initialSlugs);
       }
     } catch {
       /* ignore storage errors */

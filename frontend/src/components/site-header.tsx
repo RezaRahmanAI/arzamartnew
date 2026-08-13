@@ -153,15 +153,6 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
-        <button
-          type="button"
-          aria-label="Open menu"
-          onClick={() => setOpen((v) => !v)}
-          className="rounded-md p-2 text-foreground transition-colors hover:bg-secondary md:hidden"
-        >
-          {open ? <X className="size-5" /> : <Menu className="size-5" />}
-        </button>
-
         <Link href="/" className="shrink-0">
           <span className="font-display text-2xl font-extrabold tracking-tight text-foreground">
             {brandName.toUpperCase()}
@@ -279,10 +270,18 @@ export function SiteHeader() {
               <User className="size-5" />
             )}
           </Link>
+          <button
+            type="button"
+            aria-label="Open menu"
+            onClick={() => setOpen((v) => !v)}
+            className="rounded-md p-2 text-foreground transition-colors hover:bg-secondary md:hidden"
+          >
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
+          </button>
         </div>
       </div>
 
-      <div className={`border-t border-border bg-secondary/60 transition-all duration-300 ease-in-out ${
+      <div className={`hidden sm:block border-t border-border bg-secondary/60 transition-all duration-300 ease-in-out ${
         scrolled ? "max-h-0 opacity-0 border-t-transparent overflow-hidden" : "max-h-[72px] opacity-100 overflow-visible"
       }`}>
         <form
