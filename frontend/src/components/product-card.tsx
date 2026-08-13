@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { formatBDT, type Product, getSizePrice } from "@/lib/shop-data";
+import { formatBDT, type Product, getSizePrice, getColorHex } from "@/lib/shop-data";
 import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
 import { getImageUrl, FALLBACK_IMAGE, handleImageError } from "@/lib/utils";
@@ -193,20 +193,26 @@ export function ProductCard({ product }: { product: Product }) {
 
             {/* Color Selector */}
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Colour</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Colour: <span className="font-semibold text-primary">{color}</span>
+              </span>
               <div className="mt-2 flex flex-wrap gap-2">
                 {product.colors.map((c) => (
                   <button
                     key={c}
                     type="button"
                     onClick={() => setColor(c)}
-                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                    title={c}
+                    className={`group relative flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                       c === color
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card text-foreground hover:border-primary"
+                        ? "border-primary bg-primary/10 text-primary ring-2 ring-primary ring-offset-1 shadow-sm"
+                        : "border-border bg-card text-foreground hover:border-primary/50"
                     }`}
                   >
-                    {c}
+                    <span
+                      className="size-4 rounded-full border border-black/10 shadow-sm inline-block"
+                      style={{ backgroundColor: getColorHex(c) }}
+                    />
                   </button>
                 ))}
               </div>

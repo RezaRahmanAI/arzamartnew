@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrders, type Order, type OrderItem } from "@/lib/orders";
-import { getSizePrice, type Product } from "@/lib/shop-data";
+import { getSizePrice, getColorHex, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { useSettings } from "@/context/settings-context";
 import { CITY_AREAS_MAP as INITIAL_CITY_AREAS_MAP, DEFAULT_CITIES, DEFAULT_AREAS } from "@/lib/location-data";
@@ -1083,7 +1083,7 @@ export default function AdminManualOrder() {
               {/* Color Selector */}
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Colour
+                  Colour: <span className="font-semibold text-primary">{modalColor}</span>
                 </span>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {selectedProductForModal.colors.map((c) => (
@@ -1091,13 +1091,17 @@ export default function AdminManualOrder() {
                       key={c}
                       type="button"
                       onClick={() => setModalColor(c)}
-                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                      title={c}
+                      className={`group relative flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                         c === modalColor
-                          ? "border-primary bg-primary text-primary-foreground font-bold"
-                          : "border-border bg-card text-foreground hover:border-primary"
+                          ? "border-primary bg-primary/10 text-primary ring-2 ring-primary ring-offset-1 shadow-sm"
+                          : "border-border bg-card text-foreground hover:border-primary/50"
                       }`}
                     >
-                      {c}
+                      <span
+                        className="size-4 rounded-full border border-black/10 shadow-sm inline-block"
+                        style={{ backgroundColor: getColorHex(c) }}
+                      />
                     </button>
                   ))}
                 </div>

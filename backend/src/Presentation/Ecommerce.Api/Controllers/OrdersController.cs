@@ -206,14 +206,25 @@ public class OrdersController : ControllerBase
                 source = isManual ? "manual" : "checkout",
                 socialMediaSourceName = sourceChannel,
                 sourcePageName = pageName,
-                items = o.Items.Select(i => new
+                items = o.Items.Select(i =>
                 {
-                    slug = "product",
-                    name = string.IsNullOrWhiteSpace(i.ProductName) ? $"Product Item #{i.ProductId}" : i.ProductName,
-                    size = "Standard",
-                    color = "Default",
-                    qty = i.Quantity,
-                    price = i.UnitPrice
+                    var rawName = string.IsNullOrWhiteSpace(i.ProductName) ? $"Product Item #{i.ProductId}" : i.ProductName;
+                    var sizeName = "Standard";
+                    var match = System.Text.RegularExpressions.Regex.Match(rawName, @"\(([^)]+)\)$");
+                    if (match.Success)
+                    {
+                        sizeName = match.Groups[1].Value.Trim();
+                        rawName = rawName.Substring(0, match.Index).TrimEnd();
+                    }
+                    return new
+                    {
+                        slug = "product",
+                        name = rawName,
+                        size = sizeName,
+                        color = "Default",
+                        qty = i.Quantity,
+                        price = i.UnitPrice
+                    };
                 })
             };
         });
