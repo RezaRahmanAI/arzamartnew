@@ -14,6 +14,7 @@ public class CreateCategoryRequest
     public string? Image { get; set; }
     public string? ImageUrl { get; set; }
     public string? Blurb { get; set; }
+    public bool? IsActive { get; set; }
 }
 
 [ApiController]
@@ -89,6 +90,7 @@ public class CategoriesController : ControllerBase
             Name = req.Name,
             Slug = slug,
             ImageUrl = req.Image ?? req.ImageUrl ?? "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
+            Blurb = req.Blurb,
             DisplayOrder = maxOrder + 1
         };
 
@@ -108,6 +110,8 @@ public class CategoriesController : ControllerBase
         if (!string.IsNullOrWhiteSpace(req.Name)) category.Name = req.Name;
         if (!string.IsNullOrWhiteSpace(req.Slug)) category.Slug = req.Slug;
         if (!string.IsNullOrWhiteSpace(req.Image ?? req.ImageUrl)) category.ImageUrl = req.Image ?? req.ImageUrl;
+        if (req.Blurb != null) category.Blurb = req.Blurb;
+        if (req.IsActive.HasValue) category.IsActive = req.IsActive.Value;
 
         await _context.SaveChangesAsync();
         _cache.Remove(CATEGORIES_CACHE_KEY);
@@ -148,6 +152,8 @@ public class CategoriesController : ControllerBase
             {
                 category.ImageUrl = newImg.Trim();
             }
+            if (req.Blurb != null) category.Blurb = req.Blurb;
+            if (req.IsActive.HasValue) category.IsActive = req.IsActive.Value;
 
             await _context.SaveChangesAsync();
             _cache.Remove(CATEGORIES_CACHE_KEY);

@@ -10,12 +10,15 @@ public record CreateCustomerCommand(
     string FullName,
     string Email,
     string Phone,
-    string? DefaultAddress,
-    string District = "Dhaka",
+    string? DefaultAddress = null,
+    string? Area = null,
+    string? District = "Dhaka",
+    string? PostalCode = null,
+    string? DefaultNote = null,
     bool IsGuest = false
 ) : IRequest<Result<CustomerDto>>;
 
-public record CustomerDto(Guid Id, string FullName, string Email, string Phone, string District, bool IsGuest);
+public record CustomerDto(Guid Id, string FullName, string Email, string Phone, string? DefaultAddress, string? Area, string District, string? PostalCode, string? DefaultNote, bool IsGuest);
 
 public class CreateCustomerCommandValidator : AbstractValidator<CreateCustomerCommand>
 {
@@ -49,7 +52,10 @@ public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerComman
                 Email = request.Email,
                 Phone = request.Phone,
                 DefaultAddress = request.DefaultAddress,
-                District = request.District,
+                Area = request.Area,
+                District = request.District ?? "Dhaka",
+                PostalCode = request.PostalCode,
+                DefaultNote = request.DefaultNote,
                 IsGuest = request.IsGuest
             };
 
@@ -62,7 +68,11 @@ public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerComman
             customer.FullName,
             customer.Email,
             customer.Phone,
+            customer.DefaultAddress,
+            customer.Area,
             customer.District,
+            customer.PostalCode,
+            customer.DefaultNote,
             customer.IsGuest
         ));
     }
