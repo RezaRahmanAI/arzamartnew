@@ -238,7 +238,7 @@ export function SiteHeader() {
           <Link
             href="/cart"
             aria-label="Cart"
-            className="relative rounded-md p-2 text-foreground transition-colors hover:bg-secondary"
+            className="relative rounded-md p-2 text-foreground transition-colors hover:bg-secondary hidden sm:inline-flex"
           >
             <ShoppingCart className="size-5" />
             {count > 0 && (

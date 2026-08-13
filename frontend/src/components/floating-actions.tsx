@@ -4,12 +4,11 @@ import Link from "next/link";
 import { MessageCircle, ShoppingCart } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/lib/cart";
-import { formatBDT } from "@/lib/shop-data";
 import { useSettings } from "@/context/settings-context";
 
 export function FloatingActions() {
   const pathname = usePathname();
-  const { subtotal } = useCart();
+  const { count } = useCart();
   const { settings } = useSettings();
 
   if (pathname.startsWith("/admin")) {
@@ -30,14 +29,14 @@ export function FloatingActions() {
         className="fixed bottom-5 left-4 z-40 flex items-center gap-2 rounded-full bg-success px-4 py-3 text-sm font-bold text-ink-foreground shadow-float transition-transform hover:scale-105"
       >
         <MessageCircle className="size-5" />
-        WhatsApp Chat
+        WhatsApp
       </a>
       <Link
         href="/cart"
         className="fixed bottom-5 right-4 z-40 flex items-center gap-2 rounded-full gradient-sale px-4 py-3 text-sm font-bold text-primary-foreground shadow-float transition-transform hover:scale-105"
       >
         <ShoppingCart className="size-5" />
-        Cart: {formatBDT(subtotal)}
+        {count > 0 ? `${count} Item${count > 1 ? "s" : ""}` : "Cart"}
       </Link>
     </>
   );
