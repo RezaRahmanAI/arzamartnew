@@ -363,7 +363,7 @@ export default function ProductPage() {
                       className="size-4 rounded-full border border-black/10 shadow-sm inline-block"
                       style={{ backgroundColor: hex }}
                     />
-                    <span>{c}</span>
+                    
                   </button>
                 );
               })}

@@ -61,3 +61,5 @@ Thumbs.db
 .opencode/plugins/graphify.js
 graphify-out
 .graphify
+backend_publish.zip
+frontend_publish_light.zip
