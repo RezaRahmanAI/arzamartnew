@@ -233,20 +233,99 @@ public class OrdersController : ControllerBase
     }
 
     [HttpGet("incomplete")]
-    public IActionResult GetIncompleteOrders()
+    public async Task<IActionResult> GetIncompleteOrders()
     {
-        return Ok(new List<object>());
+        var rows = await _context.IncompleteOrders
+            .AsNoTracking()
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .Select(o => new
+            {
+                o.OrderId,
+                o.OrderJson,
+                o.CreatedAtUtc
+            })
+            .ToListAsync();
+
+        var result = new List<object>();
+        foreach (var row in rows)
+        {
+            try
+            {
+                var parsed = System.Text.Json.JsonDocument.Parse(row.OrderJson);
+                result.Add(parsed.RootElement);
+            }
+            catch
+            {
+                // Skip malformed JSON rows rather than failing the whole list.
+            }
+        }
+
+        return Ok(result);
     }
 
     [HttpPost("incomplete")]
-    public IActionResult SaveIncompleteOrder([FromBody] object body)
+    public async Task<IActionResult> SaveIncompleteOrder([FromBody] object body)
     {
-        return Ok(body);
+        if (body == null)
+        {
+            return BadRequest(new { Message = "Incomplete order payload cannot be null." });
+        }
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(body));
+            var root = doc.RootElement;
+
+            var orderId = root.TryGetProperty("id", out var idProp) && idProp.ValueKind == System.Text.Json.JsonValueKind.String
+                ? idProp.GetString()?.Trim()
+                : null;
+            var phone = root.TryGetProperty("phone", out var phoneProp) && phoneProp.ValueKind == System.Text.Json.JsonValueKind.String
+                ? phoneProp.GetString()?.Trim()
+                : null;
+
+            if (string.IsNullOrWhiteSpace(orderId))
+            {
+                return BadRequest(new { Message = "Incomplete order 'id' is required." });
+            }
+
+            var existing = await _context.IncompleteOrders
+                .FirstOrDefaultAsync(o => o.OrderId == orderId);
+
+            if (existing != null)
+            {
+                existing.OrderJson = root.GetRawText();
+                existing.Phone = phone ?? string.Empty;
+                existing.UpdatedAtUtc = DateTime.UtcNow;
+            }
+            else
+            {
+                _context.IncompleteOrders.Add(new Ecommerce.Domain.Entities.IncompleteOrder
+                {
+                    OrderId = orderId,
+                    Phone = phone ?? string.Empty,
+                    OrderJson = root.GetRawText()
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(body);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = "Failed to save incomplete order.", Error = ex.Message });
+        }
     }
 
     [HttpDelete("incomplete/{id}")]
-    public IActionResult RemoveIncompleteOrder(string id)
+    public async Task<IActionResult> RemoveIncompleteOrder(string id)
     {
+        var cleanId = Uri.UnescapeDataString(id);
+        var existing = await _context.IncompleteOrders.FirstOrDefaultAsync(o => o.OrderId == cleanId);
+        if (existing != null)
+        {
+            _context.IncompleteOrders.Remove(existing);
+            await _context.SaveChangesAsync();
+        }
         return NoContent();
     }
 

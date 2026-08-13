@@ -80,11 +80,19 @@ public class LandingPagesController : ControllerBase
             if (existing == null) return NotFound();
 
             existing.Title = model.Title;
+            existing.Subtitle = model.Subtitle;
             existing.Slug = model.Slug;
             existing.HeroTitle = model.HeroTitle;
             existing.HeroSubtitle = model.HeroSubtitle;
             existing.HeroImageUrl = model.HeroImageUrl;
+            existing.VideoUrl = model.VideoUrl;
             existing.ContentJson = model.ContentJson;
+            existing.SectionsJson = model.SectionsJson;
+            existing.ReviewsJson = model.ReviewsJson;
+            existing.SpecialPrice = model.SpecialPrice;
+            existing.OldPrice = model.OldPrice;
+            existing.DeliveryCharge = model.DeliveryCharge;
+            existing.CallButtonText = model.CallButtonText;
             existing.IsActive = model.IsActive;
             existing.ProductId = model.ProductId;
             existing.UpdatedAtUtc = DateTime.UtcNow;

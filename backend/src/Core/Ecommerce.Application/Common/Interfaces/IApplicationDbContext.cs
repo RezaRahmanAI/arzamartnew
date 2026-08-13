@@ -17,6 +17,7 @@ public interface IApplicationDbContext
     DbSet<ShippingMethod> ShippingMethods { get; }
     DbSet<Order> Orders { get; }
     DbSet<OrderItem> OrderItems { get; }
+    DbSet<IncompleteOrder> IncompleteOrders { get; }
     DbSet<Coupon> Coupons { get; }
     DbSet<Review> Reviews { get; }
     DbSet<WishlistItem> WishlistItems { get; }

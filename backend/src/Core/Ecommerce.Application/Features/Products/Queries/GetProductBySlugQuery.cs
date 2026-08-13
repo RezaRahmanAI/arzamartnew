@@ -21,6 +21,8 @@ public record ProductDetailDto(
     int ReviewCount,
     string CategoryName,
     string BrandName,
+    bool IsBundle,
+    List<string>? BundleProducts,
     List<ProductImageDto> Images,
     List<ProductVariantDto> Variants
 );
@@ -58,6 +60,8 @@ public class GetProductBySlugQueryHandler : IRequestHandler<GetProductBySlugQuer
                 p.ReviewCount,
                 p.Category != null ? p.Category.Name : "General",
                 p.Brand != null ? p.Brand.Name : "Alzeena",
+                p.IsBundle,
+                p.BundleProducts != null && p.BundleProducts.Length > 0 ? p.BundleProducts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() : null,
                 p.Images.OrderBy(i => i.DisplayOrder).Select(i => new ProductImageDto(i.ImageUrl, i.IsMain)).ToList(),
                 p.Variants.Where(v => v.IsActive).Select(v => new ProductVariantDto(v.Id, v.Name, v.SKU, v.PriceOverride, v.StockQuantity)).ToList()
             ))

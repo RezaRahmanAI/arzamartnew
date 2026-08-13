@@ -168,8 +168,9 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       const target = incomplete.find((o) => o.id === id);
       if (!target) return;
       await addOrder({ ...target, status: "pending", source: "checkout" });
+      await removeIncomplete(id);
     },
-    [incomplete, addOrder]
+    [incomplete, addOrder, removeIncomplete]
   );
 
   const updateStatus = useCallback(async (id: string, status: OrderStatus) => {

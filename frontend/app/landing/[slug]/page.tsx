@@ -18,6 +18,7 @@ import {
   ThumbsUp,
   MessageSquareQuote,
   Check,
+  Disc,
 } from "lucide-react";
 import { landingPagesService, type LandingPageResponse } from "@/lib/api/services/landing-pages.service";
 import { ordersService } from "@/lib/api/services/orders.service";
@@ -61,6 +62,8 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
         res?.landingPage?.heroImageUrl ||
         "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800";
       setSelectedImage(initialImg);
+      const lpCharge = Number(res?.landingPage?.deliveryCharge);
+      if (lpCharge > 0) setShippingFee(lpCharge);
     } catch (err) {
       console.error("Failed to load landing page:", err);
     } finally {
@@ -72,7 +75,9 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
     setCity(newCity);
     const areas = getAreasForCity(newCity);
     setArea(areas[0] || "");
-    setShippingFee(newCity === "Dhaka" ? 60 : 120);
+    const landingCharge = Number(data?.landingPage?.deliveryCharge);
+    const base = landingCharge > 0 ? landingCharge : 60;
+    setShippingFee(newCity === "Dhaka" ? base : base + 60);
   };
 
   const scrollToOrderForm = () => {
@@ -91,7 +96,8 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
 
     setSubmitting(true);
     try {
-      const price = data.product.discountPrice || data.product.basePrice;
+      const lpSpecial = Number(data?.landingPage?.specialPrice);
+      const price = lpSpecial > 0 ? lpSpecial : (data.product.discountPrice || data.product.basePrice);
       const totalAmount = price * quantity + shippingFee;
 
       const orderPayload = {
@@ -153,14 +159,66 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
   }
 
   const { landingPage, product } = data;
-  let customContent = { highlights: [], urgencyMessage: "", videoUrl: "" };
+  let customContent: { highlights?: string[]; urgencyMessage?: string; videoUrl?: string } = {};
   try {
     if (landingPage.contentJson) customContent = JSON.parse(landingPage.contentJson);
   } catch {}
 
-  const activePrice = product ? product.discountPrice || product.basePrice : 0;
-  const basePrice = product ? product.basePrice : 0;
+  type LandingSection = { id?: string; title: string; iconType?: string; items: string[] };
+  type LandingReview = { name: string; rating: number; comment: string; date?: string };
+
+  const parsedSections: LandingSection[] = (() => {
+    if (landingPage.sectionsJson) {
+      try {
+        const arr = JSON.parse(landingPage.sectionsJson);
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+    // Backward-compatible fallback to ContentJson highlights
+    if (customContent.highlights && customContent.highlights.length > 0) {
+      return [
+        {
+          id: "sec-fallback",
+          title: "পণ্যটির বিশেষত্বসমূহ",
+          iconType: "checkmark",
+          items: customContent.highlights,
+        },
+      ];
+    }
+    return [];
+  })();
+
+  const parsedReviews: LandingReview[] = (() => {
+    if (landingPage.reviewsJson) {
+      try {
+        const arr = JSON.parse(landingPage.reviewsJson);
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  })();
+
+  const useLandingPricing = Number(landingPage.specialPrice) > 0;
+  const specialPrice = useLandingPricing
+    ? Number(landingPage.specialPrice)
+    : product
+      ? product.discountPrice || product.basePrice
+      : 0;
+  const oldPrice = useLandingPricing
+    ? Math.max(Number(landingPage.oldPrice), Number(landingPage.specialPrice))
+    : product
+      ? product.basePrice
+      : 0;
+  const activePrice = specialPrice;
+  const basePrice = oldPrice;
   const discountAmount = basePrice > activePrice ? basePrice - activePrice : 0;
+  const videoSrc = landingPage.videoUrl || customContent.videoUrl || "";
+  const ctaText = landingPage.callButtonText || "অর্ডার করুন";
+  const landingDeliveryCharge = Number(landingPage.deliveryCharge) > 0 ? Number(landingPage.deliveryCharge) : null;
   const allImages = product?.images?.map((img) => img.imageUrl) || [landingPage.heroImageUrl].filter(Boolean) as string[];
 
   return (
@@ -191,7 +249,7 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
               onClick={scrollToOrderForm}
               className="rounded-full bg-amber-600 px-4 py-1.5 text-xs font-bold text-white shadow-md hover:bg-amber-700 transition active:scale-95"
             >
-              অর্ডার করুন
+              {ctaText}
             </button>
           </div>
         </div>
@@ -236,12 +294,12 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
             )}
 
             {/* Video Player if videoUrl exists */}
-            {customContent.videoUrl && (
+            {videoSrc && (
               <div className="pt-2">
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">ভিডিও রিভিউ দেখুন:</p>
                 <div className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
                   <iframe
-                    src={customContent.videoUrl}
+                    src={videoSrc}
                     title="Product Video"
                     className="h-full w-full"
                     allowFullScreen
@@ -279,28 +337,13 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
               </div>
             </div>
 
-            {/* Highlights List */}
-            {customContent.highlights?.length > 0 && (
-              <div className="space-y-2.5 pt-1">
-                <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider">পণ্যটির বিশেষত্বসমূহ:</p>
-                {customContent.highlights.map((item: string, idx: number) => (
-                  <div key={idx} className="flex items-start gap-2.5">
-                    <div className="mt-0.5 rounded-full bg-emerald-100 p-0.5 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-                      <Check className="h-3.5 w-3.5 stroke-[3]" />
-                    </div>
-                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{item}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {/* Quick Order CTA */}
             <div className="pt-2 space-y-3">
               <button
                 onClick={scrollToOrderForm}
                 className="w-full rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 py-4 text-center text-base font-extrabold text-white shadow-xl hover:from-amber-700 hover:to-amber-800 transition transform active:scale-95 flex items-center justify-center gap-2"
               >
-                <ShoppingCart className="h-5 w-5" /> সরাসরি অর্ডার করতে এখানে ক্লিক করুন
+                <ShoppingCart className="h-5 w-5" /> {ctaText}
               </button>
               <p className="text-center text-xs text-slate-500 font-medium">
                 🔒 কোনো অগ্রিম টাকা দেওয়ার প্রয়োজন নেই, ডেলিভারি পাওয়ার পর টাকা দিন।
@@ -309,116 +352,145 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
           </div>
         </section>
 
-        {/* 4. Why Choose Us Grid (Arzamart Features) */}
-        <section className="rounded-3xl bg-white p-6 sm:p-8 border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800 space-y-6">
-          <div className="text-center max-w-xl mx-auto">
-            <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">
-              কেন আমাদের থেকেই অর্ডার করবেন?
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">আমরা নিশ্চিত করি সেরা কোয়ালিটি ও ১০০০+ গ্রাহকের বিশ্বস্ত সেবা</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2 dark:bg-slate-800/50 dark:border-slate-800">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                <Truck className="h-6 w-6" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">দ্রুততম ডেলিভারি</h3>
-              <p className="text-xs text-slate-500">ঢাকা সিটিতে ২৪-৪৮ ঘণ্টা এবং সারাদেশে ২-৩ দিনে ডেলিভারি।</p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2 dark:bg-slate-800/50 dark:border-slate-800">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                <PackageCheck className="h-6 w-6" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">পণ্য দেখে নেওয়ার সুযোগ</h3>
-              <p className="text-xs text-slate-500">ডেলিভারিম্যানের সামনে প্যাকেট খুলে চেক করে মূল্য পরিশোধ করবেন।</p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2 dark:bg-slate-800/50 dark:border-slate-800">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                <RotateCcw className="h-6 w-6" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">সহজ রিটার্ন ও এক্সচেঞ্জ</h3>
-              <p className="text-xs text-slate-500">সাইজ বা কোয়ালিটিতে কোনো সমস্যা হলে ৭ দিনে সহজ এক্সচেঞ্জ সুযোগ।</p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2 dark:bg-slate-800/50 dark:border-slate-800">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-                <ThumbsUp className="h-6 w-6" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">১০০% প্রিমিয়াম কোয়ালিটি</h3>
-              <p className="text-xs text-slate-500">প্রতিটি পণ্য মেটেরিয়াল চেক করে সর্বোচ্চ কোয়ালিটি নিশ্চিত করে পাঠানো হয়।</p>
-            </div>
-          </div>
-        </section>
-
-        {/* 5. Customer Reviews Section */}
-        <section className="rounded-3xl bg-white p-6 sm:p-8 border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800 space-y-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800">
-            <div>
-              <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl flex items-center gap-2">
-                <MessageSquareQuote className="h-6 w-6 text-amber-600" /> কাস্টমারদের মূল্যবান মতামত
+        {/* 4. Dynamic Feature Sections (built in admin) */}
+        {parsedSections.length > 0 ? (
+          <section className="space-y-8">
+            {parsedSections.map((section, secIdx) => {
+              const iconType = section.iconType || "checkmark";
+              return (
+                <div
+                  key={section.id || secIdx}
+                  className="rounded-3xl bg-white p-6 sm:p-8 border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800 space-y-5"
+                >
+                  {section.title && (
+                    <div className="text-center max-w-xl mx-auto">
+                      <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">
+                        {section.title}
+                      </h2>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {section.items.map((item: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3 dark:bg-slate-800/50 dark:border-slate-800"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                          {iconType === "checkmark" && <Check className="h-5 w-5 stroke-[3]" />}
+                          {iconType === "bullet" && <Disc className="h-5 w-5" />}
+                          {iconType === "star" && <Star className="h-5 w-5 fill-current" />}
+                          {iconType === "number" && (
+                            <span className="text-sm font-black">{idx + 1}</span>
+                          )}
+                        </div>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 pt-1">
+                          {item}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        ) : (
+          <section className="rounded-3xl bg-white p-6 sm:p-8 border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800 space-y-6">
+            <div className="text-center max-w-xl mx-auto">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">
+                কেন আমাদের থেকেই অর্ডার করবেন?
               </h2>
-              <p className="text-xs text-slate-500 mt-1">আমাদের সন্তুষ্ট গ্রাহকদের সত্য মতামত ও রিভিউ</p>
-            </div>
-            <div className="flex items-center gap-2 bg-amber-50 px-4 py-2 rounded-2xl border border-amber-200 dark:bg-amber-950/40 dark:border-amber-900/50">
-              <div className="flex text-amber-500">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                ))}
-              </div>
-              <span className="text-xs font-extrabold text-amber-900 dark:text-amber-300">4.9 / 5.0 (480+ রিভিউ)</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-3 dark:bg-slate-800/40 dark:border-slate-800">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-sm text-slate-900 dark:text-white">তানভীর হোসেন</span>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md dark:bg-emerald-950 dark:text-emerald-400">Verified Buyer</span>
-              </div>
-              <div className="flex text-amber-400">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 fill-amber-400" />
-                ))}
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                "অর্ডার করার ২ দিনের মাথায় ঢাকায় ডেলিভারি পেয়েছি। কাপড় এবং ফিনিশিং একদম ছবির মতোই সুন্দর। ধন্যবাদ আলযিনাকে!"
-              </p>
+              <p className="text-xs text-slate-500 mt-1">আমরা নিশ্চিত করি সেরা কোয়ালিটি ও ১০০০+ গ্রাহকের বিশ্বস্ত সেবা</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-3 dark:bg-slate-800/40 dark:border-slate-800">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-sm text-slate-900 dark:text-white">রাশেদুল ইসলাম</span>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md dark:bg-emerald-950 dark:text-emerald-400">Verified Buyer</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2 dark:bg-slate-800/50 dark:border-slate-800">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                  <Truck className="h-6 w-6" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">দ্রুততম ডেলিভারি</h3>
+                <p className="text-xs text-slate-500">ঢাকা সিটিতে ২৪-৪৮ ঘণ্টা এবং সারাদেশে ২-৩ দিনে ডেলিভারি।</p>
               </div>
-              <div className="flex text-amber-400">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 fill-amber-400" />
-                ))}
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2 dark:bg-slate-800/50 dark:border-slate-800">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                  <PackageCheck className="h-6 w-6" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">পণ্য দেখে নেওয়ার সুযোগ</h3>
+                <p className="text-xs text-slate-500">ডেলিভারিম্যানের সামনে প্যাকেট খুলে চেক করে মূল্য পরিশোধ করবেন।</p>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                "চিটাগাং এ ডেলিভারি ম্যান সামনে দাঁড়িয়ে রেখে চেক করে নিয়েছি। ১০০% অরিজিনাল কোয়ালিটি পেয়েছি।"
-              </p>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2 dark:bg-slate-800/50 dark:border-slate-800">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+                  <RotateCcw className="h-6 w-6" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">সহজ রিটার্ন ও এক্সচেঞ্জ</h3>
+                <p className="text-xs text-slate-500">সাইজ বা কোয়ালিটিতে কোনো সমস্যা হলে ৭ দিনে সহজ এক্সচেঞ্জ সুযোগ।</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-2 dark:bg-slate-800/50 dark:border-slate-800">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                  <ThumbsUp className="h-6 w-6" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">১০০% প্রিমিয়াম কোয়ালিটি</h3>
+                <p className="text-xs text-slate-500">প্রতিটি পণ্য মেটেরিয়াল চেক করে সর্বোচ্চ কোয়ালিটি নিশ্চিত করে পাঠানো হয়।</p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 5. Customer Reviews Section (dynamic from admin) */}
+        {parsedReviews.length > 0 && (
+          <section className="rounded-3xl bg-white p-6 sm:p-8 border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800 space-y-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl flex items-center gap-2">
+                  <MessageSquareQuote className="h-6 w-6 text-amber-600" /> কাস্টমারদের মূল্যবান মতামত
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">আমাদের সন্তুষ্ট গ্রাহকদের সত্য মতামত ও রিভিউ</p>
+              </div>
+              <div className="flex items-center gap-2 bg-amber-50 px-4 py-2 rounded-2xl border border-amber-200 dark:bg-amber-950/40 dark:border-amber-900/50">
+                <div className="flex text-amber-500">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <span className="text-xs font-extrabold text-amber-900 dark:text-amber-300">
+                  {parsedReviews.length}+ সন্তুষ্ট গ্রাহক
+                </span>
+              </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-3 dark:bg-slate-800/40 dark:border-slate-800">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-sm text-slate-900 dark:text-white">নাসরিন সুলতানা</span>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md dark:bg-emerald-950 dark:text-emerald-400">Verified Buyer</span>
-              </div>
-              <div className="flex text-amber-400">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 fill-amber-400" />
-                ))}
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                "দাম অনুযায়ী ফিনিশিং ও কোয়ালিটি অনেক প্রিমিয়াম। সার্ভিস অনেক ভালো, অবশ্যই আবার অর্ডার করব।"
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {parsedReviews.map((rev, idx) => {
+                const rating = Math.max(1, Math.min(5, Number(rev.rating) || 5));
+                return (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-3 dark:bg-slate-800/40 dark:border-slate-800"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-slate-900 dark:text-white">{rev.name}</span>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md dark:bg-emerald-950 dark:text-emerald-400">
+                        Verified Buyer
+                      </span>
+                    </div>
+                    <div className="flex text-amber-400">
+                      {[...Array(rating)].map((_, i) => (
+                        <Star key={i} className="h-3.5 w-3.5 fill-amber-400" />
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      "{rev.comment}"
+                    </p>
+                    {rev.date && (
+                      <p className="text-[10px] text-slate-400">{rev.date}</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* 6. Arzamart One-Page Order Form */}
         <section id="order-form" className="rounded-3xl border-2 border-amber-600 bg-white p-6 shadow-2xl dark:border-amber-500 dark:bg-slate-900 sm:p-10 scroll-mt-20">

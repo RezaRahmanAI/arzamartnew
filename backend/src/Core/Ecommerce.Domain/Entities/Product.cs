@@ -15,6 +15,8 @@ public class Product : BaseEntity
     public decimal? DiscountPrice { get; set; }
     public bool IsFeatured { get; set; } = false;
     public bool IsActive { get; set; } = true;
+    public bool IsBundle { get; set; } = false;
+    public string? BundleProducts { get; set; }
     public decimal AverageRating { get; set; } = 0;
     public int ReviewCount { get; set; } = 0;
 

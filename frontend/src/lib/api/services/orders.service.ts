@@ -57,7 +57,12 @@ class OrdersService {
         resolvedOrders = [...orders, ...localOnly];
       }
 
-      const resolvedIncomplete = Array.isArray(incomplete) ? incomplete : local.incomplete;
+      let resolvedIncomplete: Order[] = local.incomplete;
+      if (Array.isArray(incomplete)) {
+        const apiIncIds = new Set(incomplete.map((o) => o.id));
+        const localOnlyInc = local.incomplete.filter((o) => !apiIncIds.has(o.id));
+        resolvedIncomplete = [...incomplete, ...localOnlyInc];
+      }
 
       this.saveLocalOrders(resolvedOrders);
       if (Array.isArray(incomplete)) this.saveLocalIncomplete(resolvedIncomplete);

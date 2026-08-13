@@ -4,6 +4,7 @@ using Ecommerce.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Ecommerce.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260813122709_AddIncompleteOrders")]
+    partial class AddIncompleteOrders
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -393,19 +396,12 @@ namespace Ecommerce.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("CallButtonText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ContentJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
-
-                    b.Property<decimal>("DeliveryCharge")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("HeroImageUrl")
                         .IsRequired()
@@ -422,26 +418,11 @@ namespace Ecommerce.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<decimal>("OldPrice")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<Guid?>("ProductId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ReviewsJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SectionsJson")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Slug")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("SpecialPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Subtitle")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
@@ -450,9 +431,6 @@ namespace Ecommerce.Persistence.Migrations
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("VideoUrl")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 

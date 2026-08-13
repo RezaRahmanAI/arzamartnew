@@ -10,6 +10,8 @@ export interface RawApiProduct {
   mainImageUrl?: string;
   shortDescription?: string;
   fullDescription?: string;
+  isBundle?: boolean;
+  bundleProducts?: string[];
   variants?: { name: string; priceOverride?: number; stockQuantity?: number }[];
   images?: { imageUrl?: string }[];
 }
@@ -35,6 +37,8 @@ class ProductsService {
       colors: ["Black", "White", "Navy", "Olive", "Maroon"],
       description: p.shortDescription || p.fullDescription || "",
       purchaseRate: basePrice * 0.7,
+      isBundle: p.isBundle ?? false,
+      bundleProducts: p.bundleProducts ?? undefined,
       sizePrices: p.variants && p.variants.length > 0
         ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.priceOverride ?? basePrice]))
         : {},

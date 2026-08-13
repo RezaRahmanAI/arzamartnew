@@ -19,6 +19,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.BasePrice).HasColumnType("decimal(18,4)");
         builder.Property(p => p.DiscountPrice).HasColumnType("decimal(18,4)");
         builder.Property(p => p.AverageRating).HasColumnType("decimal(3,2)");
+        builder.Property(p => p.BundleProducts).HasMaxLength(2000);
 
         builder.HasIndex(p => new { p.CategoryId, p.BasePrice })
                .IncludeProperties(p => new { p.Name, p.Slug, p.DiscountPrice, p.IsActive });

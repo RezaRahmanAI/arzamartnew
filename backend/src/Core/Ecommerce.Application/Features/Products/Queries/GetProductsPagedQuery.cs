@@ -25,6 +25,8 @@ public record ProductDto(
     string BrandName,
     decimal AverageRating,
     int ReviewCount,
+    bool IsBundle,
+    List<string>? BundleProducts,
     List<ProductVariantDto>? Variants
 );
 
@@ -70,6 +72,8 @@ public class GetProductsPagedQueryHandler : IRequestHandler<GetProductsPagedQuer
                 p.Brand != null ? p.Brand.Name : "Alzeena",
                 p.AverageRating,
                 p.ReviewCount,
+                p.IsBundle,
+                p.BundleProducts != null && p.BundleProducts.Length > 0 ? p.BundleProducts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() : null,
                 p.Variants.Where(v => v.IsActive).Select(v => new ProductVariantDto(v.Id, v.Name, v.SKU, v.PriceOverride, v.StockQuantity)).ToList()
             ))
             .ToListAsync(cancellationToken);
