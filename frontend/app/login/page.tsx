@@ -46,29 +46,16 @@ export default function CustomerLoginPage() {
     }
   };
 
-  const handleSimulateGoogleLogin = (mockType: "existing" | "new") => {
-    if (mockType === "existing") {
-      // Simulates Google Login for a customer already linked with googleId "google-1001" (Nusrat Jahan)
-      const res = loginWithGoogle({
-        googleId: "google-1001",
-        googleEmail: "nusrat@arzamart.com",
-        fullName: "Nusrat Jahan",
-        profileImage: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-      });
-      if (res.success) {
-        router.push("/account");
-      }
-    } else {
-      // Simulates Google Login for a brand new Google user (Case B)
-      const res = loginWithGoogle({
-        googleId: `google-new-${Date.now()}`,
-        googleEmail: "new.google.user@gmail.com",
-        fullName: "Google Authenticated User",
-        profileImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-      });
-      if (res.needsPhoneLinking) {
-        setLinkPhoneInput("+8801700000000"); // Pre-fill sample phone for easy testing
-      }
+  const handleSimulateGoogleLogin = () => {
+    // Simulates Google Login for a customer already linked with googleId "google-1001" (Nusrat Jahan)
+    const res = loginWithGoogle({
+      googleId: "google-1001",
+      googleEmail: "nusrat@arzamart.com",
+      fullName: "Nusrat Jahan",
+      profileImage: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+    });
+    if (res.success) {
+      router.push("/account");
     }
   };
 
@@ -97,7 +84,7 @@ export default function CustomerLoginPage() {
         <div className="space-y-3 pt-2">
           <Button
             type="button"
-            onClick={() => handleSimulateGoogleLogin("existing")}
+            onClick={handleSimulateGoogleLogin}
             className="w-full h-12 text-sm font-bold bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 gap-3 shadow-sm cursor-pointer dark:bg-slate-900 dark:text-white dark:border-slate-700"
           >
             <svg className="size-5" viewBox="0 0 24 24">
@@ -119,15 +106,6 @@ export default function CustomerLoginPage() {
               />
             </svg>
             Continue with Google (Linked Account)
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleSimulateGoogleLogin("new")}
-            className="w-full text-xs text-muted-foreground hover:text-foreground cursor-pointer border-dashed"
-          >
-            Test New Google Account (Triggers Phone Verification)
           </Button>
         </div>
 
