@@ -10,10 +10,12 @@ export interface RawApiProduct {
   mainImageUrl?: string;
   shortDescription?: string;
   fullDescription?: string;
+  badge?: string;
+  purchaseRate?: number;
   isBundle?: boolean;
   bundleProducts?: string[];
   variants?: { name: string; priceOverride?: number; stockQuantity?: number }[];
-  images?: { imageUrl?: string }[];
+  images?: string[];
 }
 
 export interface PagedProductResponse {
@@ -36,7 +38,8 @@ class ProductsService {
       sizes: p.variants && p.variants.length > 0 ? p.variants.map((v) => v.name.replace("Size: ", "")) : ["M", "L", "XL", "XXL"],
       colors: ["Black", "White", "Navy", "Olive", "Maroon"],
       description: p.shortDescription || p.fullDescription || "",
-      purchaseRate: basePrice * 0.7,
+      purchaseRate: p.purchaseRate ?? basePrice * 0.7,
+      badge: p.badge,
       isBundle: p.isBundle ?? false,
       bundleProducts: p.bundleProducts ?? undefined,
       sizePrices: p.variants && p.variants.length > 0
@@ -45,7 +48,7 @@ class ProductsService {
       sizeStock: p.variants && p.variants.length > 0
         ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.stockQuantity ?? 15]))
         : {},
-      images: p.images && p.images.length > 0 ? p.images.map((img) => img.imageUrl || "").filter(Boolean) : [p.mainImageUrl || ""]
+      images: p.images && p.images.length > 0 ? p.images.filter(Boolean) : [p.mainImageUrl || ""]
     };
   }
 

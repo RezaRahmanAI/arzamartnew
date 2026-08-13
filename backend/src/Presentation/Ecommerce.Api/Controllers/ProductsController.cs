@@ -44,7 +44,9 @@ public class ProductsController : ControllerBase
         List<string>? Images,
         bool? IsActive,
         bool? IsBundle,
-        List<string>? BundleProducts
+        List<string>? BundleProducts,
+        decimal? PurchaseRate,
+        string? Badge
     );
 
     [HttpPut("{slug}")]
@@ -65,7 +67,10 @@ public class ProductsController : ControllerBase
             if (dto.Price.HasValue) product.DiscountPrice = dto.Price.Value;
             if (dto.Mrp.HasValue) product.BasePrice = dto.Mrp.Value;
             if (!string.IsNullOrWhiteSpace(dto.Description)) product.ShortDescription = dto.Description;
+            if (!string.IsNullOrWhiteSpace(dto.Description)) product.FullDescription = dto.Description;
             if (dto.IsActive.HasValue) product.IsActive = dto.IsActive.Value;
+            if (dto.PurchaseRate.HasValue) product.PurchaseRate = dto.PurchaseRate.Value;
+            if (dto.Badge != null) product.Badge = dto.Badge.Trim();
             if (dto.IsBundle.HasValue)
             {
                 product.IsBundle = dto.IsBundle.Value;
@@ -271,7 +276,9 @@ public class ProductsController : ControllerBase
             IsBundle = dto.IsBundle,
             BundleProducts = dto.IsBundle && dto.BundleProducts != null && dto.BundleProducts.Count > 0
                 ? string.Join(',', dto.BundleProducts.Select(b => b.Trim()).Where(b => !string.IsNullOrWhiteSpace(b)))
-                : null
+                : null,
+            PurchaseRate = dto.PurchaseRate ?? 0m,
+            Badge = string.IsNullOrWhiteSpace(dto.Badge) ? null : dto.Badge.Trim()
         };
         dbContext.Products.Add(product);
 

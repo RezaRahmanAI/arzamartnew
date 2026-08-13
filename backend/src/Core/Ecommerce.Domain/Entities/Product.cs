@@ -19,6 +19,8 @@ public class Product : BaseEntity
     public string? BundleProducts { get; set; }
     public decimal AverageRating { get; set; } = 0;
     public int ReviewCount { get; set; } = 0;
+    public decimal PurchaseRate { get; set; }
+    public string? Badge { get; set; }
 
     public Brand Brand { get; set; } = null!;
     public Category Category { get; set; } = null!;

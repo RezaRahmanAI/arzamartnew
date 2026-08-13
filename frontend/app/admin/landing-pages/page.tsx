@@ -123,7 +123,7 @@ export default function AdminLandingPagesPage() {
     setSubtitle(p.shortDescription || `${p.name} — প্রিমিয়াম কোয়ালিটি, সেরা দামে`);
     setHeroTitle(p.name);
     setHeroSubtitle(p.shortDescription || "");
-    setHeroImageUrl(p.mainImageUrl || p.images?.[0]?.imageUrl || "");
+    setHeroImageUrl(p.mainImageUrl || p.images?.[0] || "");
     setSlug(generateSlug(p.name) + "-offer");
     const sell = p.discountPrice || p.basePrice || 0;
     const mrp = p.basePrice || (sell > 0 ? Math.round(sell * 1.35) : 0);

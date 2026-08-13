@@ -21,13 +21,18 @@ public record ProductDto(
     decimal BasePrice,
     decimal? DiscountPrice,
     string? MainImageUrl,
+    string? ShortDescription,
+    string? FullDescription,
+    string? Badge,
+    decimal PurchaseRate,
     string CategoryName,
     string BrandName,
     decimal AverageRating,
     int ReviewCount,
     bool IsBundle,
     List<string>? BundleProducts,
-    List<ProductVariantDto>? Variants
+    List<ProductVariantDto>? Variants,
+    List<string>? Images
 );
 
 public class GetProductsPagedQueryHandler : IRequestHandler<GetProductsPagedQuery, Result<PagedResult<ProductDto>>>
@@ -68,13 +73,18 @@ public class GetProductsPagedQueryHandler : IRequestHandler<GetProductsPagedQuer
                 p.BasePrice,
                 p.DiscountPrice,
                 p.Images.Where(i => i.IsMain).Select(i => i.ImageUrl).FirstOrDefault() ?? p.Images.Select(i => i.ImageUrl).FirstOrDefault(),
+                p.ShortDescription,
+                p.FullDescription,
+                p.Badge,
+                p.PurchaseRate,
                 p.Category != null ? p.Category.Name : "General",
                 p.Brand != null ? p.Brand.Name : "Alzeena",
                 p.AverageRating,
                 p.ReviewCount,
                 p.IsBundle,
                 p.BundleProducts != null && p.BundleProducts.Length > 0 ? p.BundleProducts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() : null,
-                p.Variants.Where(v => v.IsActive).Select(v => new ProductVariantDto(v.Id, v.Name, v.SKU, v.PriceOverride, v.StockQuantity)).ToList()
+                p.Variants.Where(v => v.IsActive).Select(v => new ProductVariantDto(v.Id, v.Name, v.SKU, v.PriceOverride, v.StockQuantity)).ToList(),
+                p.Images.Where(i => !i.IsMain).OrderBy(i => i.DisplayOrder).Select(i => i.ImageUrl).ToList()
             ))
             .ToListAsync(cancellationToken);
 
