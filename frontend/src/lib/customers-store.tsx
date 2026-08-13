@@ -27,6 +27,7 @@ export interface CustomerMaster {
   isGoogleVerified: boolean;
   hasPassword: boolean;
   passwordHash?: string | null;
+  defaultNote?: string;
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -57,8 +58,24 @@ type CustomersContextValue = {
     profileImage?: string;
     phone: string;
   }) => { success: boolean; customer?: CustomerMaster; message?: string };
-  updateCustomerProfile: (customerId: string, data: Partial<CustomerMaster>) => void;
-  setCustomerPassword: (phone: string, password: string) => Promise<boolean>;
+  updateCustomerProfile: (customerId: string, data: Partial<CustomerMaster>) => CustomerMaster | null;
+  upsertCustomerFromServer: (profile: {
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    googleId?: string | null;
+    googleEmail?: string | null;
+    profileImage?: string | null;
+    defaultAddress?: string | null;
+    area?: string | null;
+    district?: string;
+    postalCode?: string | null;
+    defaultNote?: string | null;
+    isGuest?: boolean;
+    hasPassword?: boolean;
+  }) => CustomerMaster;
+  setCustomerPassword: (phone: string, password: string) => Promise<CustomerMaster | null>;
   verifyCustomerPassword: (phone: string, password: string) => Promise<boolean>;
 };
 
@@ -222,21 +239,90 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
   );
 
   const updateCustomerProfile = useCallback(
-    (customerId: string, data: Partial<CustomerMaster>) => {
-      const newList = customers.map((c) =>
-        c.customerId === customerId ? { ...c, ...data, updatedAt: new Date().toISOString() } : c
-      );
+    (customerId: string, data: Partial<CustomerMaster>): CustomerMaster | null => {
+      let updatedRecord: CustomerMaster | null = null;
+      const newList = customers.map((c) => {
+        if (c.customerId !== customerId) return c;
+        updatedRecord = { ...c, ...data, updatedAt: new Date().toISOString() };
+        return updatedRecord;
+      });
       saveCustomers(newList);
-      toast.success("Profile updated successfully");
+      return updatedRecord;
+    },
+    [customers]
+  );
+
+  const upsertCustomerFromServer = useCallback(
+    (profile: {
+      id: string;
+      fullName: string;
+      email: string;
+      phone: string;
+      googleId?: string | null;
+      googleEmail?: string | null;
+      profileImage?: string | null;
+      defaultAddress?: string | null;
+      area?: string | null;
+      district?: string;
+      postalCode?: string | null;
+      defaultNote?: string | null;
+      isGuest?: boolean;
+      hasPassword?: boolean;
+    }): CustomerMaster => {
+      const cleanPhone = normalizePhone(profile.phone);
+      const existing = customers.find((c) => normalizePhone(c.mobileNumber) === cleanPhone);
+      const now = new Date().toISOString();
+
+      if (existing) {
+        const updated: CustomerMaster = {
+          ...existing,
+          fullName: profile.fullName || existing.fullName,
+          email: profile.email || existing.email,
+          address: profile.defaultAddress ?? existing.address,
+          area: profile.area ?? existing.area,
+          district: profile.district ?? existing.district,
+          postalCode: profile.postalCode ?? existing.postalCode,
+          googleId: profile.googleId ?? existing.googleId,
+          googleEmail: profile.googleEmail ?? existing.googleEmail,
+          profileImage: profile.profileImage ?? existing.profileImage,
+          defaultNote: profile.defaultNote ?? existing.defaultNote,
+          hasPassword: profile.hasPassword ?? existing.hasPassword,
+          updatedAt: now,
+        };
+        const newList = customers.map((c) => (c.customerId === existing.customerId ? updated : c));
+        saveCustomers(newList);
+        return updated;
+      }
+
+      const newCustomer: CustomerMaster = {
+        customerId: profile.id,
+        fullName: profile.fullName,
+        mobileNumber: cleanPhone,
+        email: profile.email,
+        address: profile.defaultAddress ?? "",
+        area: profile.area ?? undefined,
+        district: profile.district ?? "Dhaka",
+        postalCode: profile.postalCode ?? undefined,
+        googleId: profile.googleId,
+        googleEmail: profile.googleEmail,
+        profileImage: profile.profileImage,
+        isGoogleVerified: !!profile.googleId,
+        hasPassword: !!profile.hasPassword,
+        defaultNote: profile.defaultNote ?? undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+      saveCustomers([newCustomer, ...customers]);
+      return newCustomer;
     },
     [customers]
   );
 
   const setCustomerPassword = useCallback(
-    async (phone: string, password: string): Promise<boolean> => {
+    async (phone: string, password: string): Promise<CustomerMaster | null> => {
       const clean = normalizePhone(phone);
       const existing = customers.find((c) => normalizePhone(c.mobileNumber) === clean);
-      if (!existing) return false;
+      if (!existing) return null;
 
       const passwordHash = await hashPassword(password);
       const updated: CustomerMaster = {
@@ -246,7 +332,7 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
         updatedAt: new Date().toISOString(),
       };
       saveCustomers(customers.map((c) => (c.customerId === existing.customerId ? updated : c)));
-      return true;
+      return updated;
     },
     [customers]
   );
@@ -269,6 +355,7 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
       findCustomerByPhone,
       linkGoogleAccount,
       updateCustomerProfile,
+      upsertCustomerFromServer,
       setCustomerPassword,
       verifyCustomerPassword,
     }),
@@ -279,6 +366,7 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
       findCustomerByPhone,
       linkGoogleAccount,
       updateCustomerProfile,
+      upsertCustomerFromServer,
       setCustomerPassword,
       verifyCustomerPassword,
     ]

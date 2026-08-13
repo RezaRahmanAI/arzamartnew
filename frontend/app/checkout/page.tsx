@@ -17,8 +17,8 @@ import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
 export default function CheckoutPage() {
   const { detailedLines, subtotal, clear } = useCart();
   const { addOrder, saveIncomplete, removeIncomplete, generateNextOrderId } = useOrders();
-  const { findOrCreateByPhone } = useCustomers();
-  const { loginAsCustomer } = useAuth();
+  const { findOrCreateByPhone, findCustomerByPhone } = useCustomers();
+  const { loginAsCustomer, user } = useAuth();
   const { settings } = useSettings();
   const router = useRouter();
   const [placing, setPlacing] = useState(false);
@@ -37,23 +37,21 @@ export default function CheckoutPage() {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(CHECKOUT_PROFILE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (saved.name) setName(saved.name);
-      if (saved.phone) setPhone(saved.phone);
-      if (saved.address) setAddress(saved.address);
-      if (saved.note) setNote(saved.note);
-      if (saved.city) {
-        setSelectedCity(saved.city);
-        const areas = getAreasForCity(saved.city);
-        setSelectedArea(areas[0] || saved.area || "");
-      } else if (saved.area) {
-        setSelectedArea(saved.area);
-      }
+      const saved = raw ? JSON.parse(raw) : null;
+      const master = user?.phone ? findCustomerByPhone(user.phone) : null;
+
+      setName((saved?.name as string) || master?.fullName || "");
+      setPhone((saved?.phone as string) || master?.mobileNumber || "");
+      setAddress((saved?.address as string) || master?.address || "");
+      setNote((saved?.note as string) || master?.defaultNote || "");
+      const city = (saved?.city as string) || master?.district || "Dhaka";
+      setSelectedCity(city);
+      const areas = getAreasForCity(city);
+      setSelectedArea(areas[0] || saved?.area || "");
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [user?.phone]);
 
   useEffect(() => {
     const t = setTimeout(() => {

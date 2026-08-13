@@ -9,9 +9,16 @@ public class Customer : BaseEntity
     public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string? GoogleId { get; set; }
+    public string? GoogleEmail { get; set; }
+    public string? ProfileImage { get; set; }
     public string? DefaultAddress { get; set; }
+    public string? Area { get; set; }
     public string District { get; set; } = "Dhaka";
+    public string? PostalCode { get; set; }
+    public string? DefaultNote { get; set; }
     public bool IsGuest { get; set; } = false;
+    public string? PasswordHash { get; set; }
+    public DateTime? LastLoginAtUtc { get; set; }
 
     public User? User { get; set; }
     public ICollection<Order> Orders { get; set; } = new List<Order>();

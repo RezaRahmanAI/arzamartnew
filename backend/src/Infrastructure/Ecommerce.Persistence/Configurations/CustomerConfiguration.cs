@@ -12,6 +12,14 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(c => c.FullName).IsRequired().HasMaxLength(150);
         builder.Property(c => c.Phone).IsRequired().HasMaxLength(20);
         builder.HasIndex(c => c.Phone).IsUnique();
+        builder.Property(c => c.Email).HasMaxLength(255);
+        builder.Property(c => c.GoogleEmail).HasMaxLength(255);
+        builder.Property(c => c.DefaultAddress).HasMaxLength(500);
+        builder.Property(c => c.Area).HasMaxLength(200);
+        builder.Property(c => c.District).HasMaxLength(100);
+        builder.Property(c => c.PostalCode).HasMaxLength(20);
+        builder.Property(c => c.DefaultNote).HasMaxLength(1000);
+        builder.Property(c => c.PasswordHash).HasMaxLength(256);
 
         builder.HasOne(c => c.User)
                .WithOne()

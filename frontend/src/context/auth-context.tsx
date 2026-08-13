@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useStaffStore, StaffPermissions, StaffRole } from "@/lib/staff-store";
 import { useCustomers, CustomerMaster } from "@/lib/customers-store";
+import { customersService } from "@/lib/api/services/customers.service";
 import { toast } from "sonner";
 
 export interface AuthUser {
@@ -38,6 +39,7 @@ interface AuthContextType {
   cancelPendingGoogle: () => void;
   loginAsCustomer: (customer: CustomerMaster) => AuthUser;
   setPassword: (phone: string, password: string) => Promise<boolean>;
+  changePassword: (phone: string, currentPassword: string, newPassword: string) => Promise<boolean>;
   loginAdmin: (email: string, pass: string) => boolean;
   logout: () => void;
 }
@@ -51,19 +53,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pendingGoogleSession, setPendingGoogleSession] = useState<PendingGoogleSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { staffList } = useStaffStore();
-  const { customers, findCustomerByGoogleId, findCustomerByPhone, linkGoogleAccount, findOrCreateByPhone, setCustomerPassword, verifyCustomerPassword } = useCustomers();
+  const { customers, findCustomerByGoogleId, linkGoogleAccount, findCustomerByPhone, findOrCreateByPhone, setCustomerPassword, verifyCustomerPassword, upsertCustomerFromServer } = useCustomers();
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEY);
       if (saved) {
-        setUser(JSON.parse(saved));
+        const parsed = JSON.parse(saved) as AuthUser;
+        setUser(parsed);
+
+        // Pull the freshest profile from SQL Server so edits made on other
+        // devices show up here. Local-only customers are left untouched.
+        if (parsed?.role === "customer" && parsed.phone) {
+          customersService
+            .getByPhone(parsed.phone)
+            .then((profile) => {
+              if (profile) {
+                const master = upsertCustomerFromServer(profile);
+                setUser((prev) => {
+                  if (prev && prev.id !== master.customerId) {
+                    saveUserSession({
+                      ...prev,
+                      id: master.customerId,
+                      name: master.fullName,
+                      email: master.email || prev.email,
+                      address: master.address || prev.address,
+                      hasPassword: master.hasPassword,
+                    });
+                  }
+                  return prev;
+                });
+              }
+            })
+            .catch(() => {
+              /* offline — keep local session */
+            });
+        }
       }
     } catch (e) {
       console.warn("Failed to load auth session:", e);
     } finally {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveUserSession = (authUser: AuthUser | null) => {
@@ -146,6 +178,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success("Account Verified & Linked Successfully!", {
         description: `Your orders with ${phone} are now permanently linked to Google.`,
       });
+
+      // Best-effort sync to SQL Server so the Google link survives device changes.
+      (async () => {
+        const existing = await customersService.getByPhone(phone);
+        if (existing) {
+          await customersService.linkGoogle(
+            existing.id,
+            pendingGoogleSession.googleId,
+            pendingGoogleSession.googleEmail
+          );
+        } else {
+          const created = await customersService.create({
+            fullName: pendingGoogleSession.fullName,
+            email: pendingGoogleSession.googleEmail,
+            phone,
+            defaultAddress: res.customer?.address || "Dhaka, Bangladesh",
+            district: "Dhaka",
+          });
+          if (created) {
+            await customersService.linkGoogle(
+              created.id,
+              pendingGoogleSession.googleId,
+              pendingGoogleSession.googleEmail
+            );
+          }
+        }
+      })();
+
       return true;
     },
     [pendingGoogleSession, linkGoogleAccount]
@@ -162,6 +222,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
+      // 1) Try the SQL Server backend first (single source of truth for passwords)
+      const result = await customersService.login(emailOrPhone.trim(), pass);
+      if (result.ok) {
+        const master = upsertCustomerFromServer(result.customer);
+        setCustomerSessionFromMaster(master);
+        toast.success("Welcome back!", { description: `Logged in as ${master.fullName}` });
+        return true;
+      }
+
+      // Backend reachable but credentials rejected -> show the server's message.
+      if (!result.isNetworkError) {
+        toast.error("Login failed", { description: result.message });
+        return false;
+      }
+
+      // 2) Backend unreachable -> fall back to offline localStorage verification.
       const query = emailOrPhone.trim();
       const isEmail = query.includes("@");
       const master = isEmail
@@ -191,7 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success("Welcome back!", { description: `Logged in as ${master.fullName}` });
       return true;
     },
-    [customers, findCustomerByPhone, verifyCustomerPassword]
+    [customers, findCustomerByPhone, verifyCustomerPassword, upsertCustomerFromServer]
   );
 
   const setPassword = useCallback(
@@ -205,22 +281,83 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      const ok = await setCustomerPassword(phone, password);
-      if (!ok) {
-        toast.error("Failed to set password");
+      // 1) Persist password hash to SQL Server (works across devices).
+      const result = await customersService.setPassword(phone, password);
+      if (result.ok) {
+        const master = upsertCustomerFromServer(result.customer);
+        setCustomerSessionFromMaster(master);
+        toast.success("Password set successfully!", {
+          description: "You can now sign in with your mobile number and password on any device.",
+        });
+        return true;
+      }
+      if (!result.isNetworkError) {
+        toast.error("Could not set password", { description: result.message });
         return false;
       }
 
-      const updated = findCustomerByPhone(phone);
-      if (updated) {
-        setCustomerSessionFromMaster(updated);
+      // 2) Backend unreachable -> offline-only password (this device only).
+      const updated = await setCustomerPassword(phone, password);
+      if (!updated) {
+        toast.error("Failed to set password");
+        return false;
       }
-      toast.success("Password set successfully!", {
-        description: "You can now sign in with your mobile number and password.",
+      setCustomerSessionFromMaster(updated);
+      toast.success("Password set (offline)", {
+        description: "Saved on this device only. Reconnect to the server to sync it.",
       });
       return true;
     },
-    [setCustomerPassword, findCustomerByPhone]
+    [setCustomerPassword, upsertCustomerFromServer]
+  );
+
+  const changePassword = useCallback(
+    async (phone: string, currentPassword: string, newPassword: string): Promise<boolean> => {
+      if (!phone || !newPassword) {
+        toast.error("Please enter your new password");
+        return false;
+      }
+      if (newPassword.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        return false;
+      }
+
+      // 1) Change password on SQL Server (verifies current password server-side).
+      const result = await customersService.setPassword(phone, newPassword, currentPassword);
+      if (result.ok) {
+        const master = upsertCustomerFromServer(result.customer);
+        setCustomerSessionFromMaster(master);
+        toast.success("Password updated successfully!", {
+          description: "Your password has been changed on all devices.",
+        });
+        return true;
+      }
+      if (!result.isNetworkError) {
+        toast.error("Could not change password", { description: result.message });
+        return false;
+      }
+
+      // 2) Backend unreachable -> offline fallback with local verification.
+      if (currentPassword) {
+        const ok = await verifyCustomerPassword(phone, currentPassword);
+        if (!ok) {
+          toast.error("Current password is incorrect");
+          return false;
+        }
+      }
+
+      const updated = await setCustomerPassword(phone, newPassword);
+      if (!updated) {
+        toast.error("Failed to update password");
+        return false;
+      }
+      setCustomerSessionFromMaster(updated);
+      toast.success("Password updated (offline)", {
+        description: "Saved on this device only. Reconnect to the server to sync it.",
+      });
+      return true;
+    },
+    [verifyCustomerPassword, setCustomerPassword, upsertCustomerFromServer]
   );
 
   const registerCustomer = useCallback(
@@ -240,18 +377,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         address: data.address || "Dhaka, Bangladesh",
       });
 
-      await setCustomerPassword(data.phone, data.password);
-      const updated = findCustomerByPhone(data.phone);
-      if (updated) {
-        setCustomerSessionFromMaster(updated);
-      } else {
-        setCustomerSessionFromMaster(master);
+      // 1) Ensure the customer row exists on SQL Server, then set its password.
+      const createdOnServer = await customersService.create({
+        fullName: data.name,
+        email: data.email,
+        phone: data.phone,
+        defaultAddress: data.address || "Dhaka, Bangladesh",
+        district: "Dhaka",
+      });
+
+      const passwordResult = await customersService.setPassword(data.phone, data.password);
+      if (createdOnServer && passwordResult.ok) {
+        const synced = upsertCustomerFromServer(passwordResult.customer);
+        setCustomerSessionFromMaster(synced);
+        toast.success("Account created successfully!", {
+          description: `Welcome to ARZAMART, ${data.name}`,
+        });
+        return true;
       }
 
-      toast.success("Account created successfully!", { description: `Welcome to ARZAMART, ${data.name}` });
+      // 2) Backend unreachable -> register offline on this device only.
+      const updated = await setCustomerPassword(data.phone, data.password);
+      setCustomerSessionFromMaster(updated ?? master);
+
+      toast.success("Account created (offline)", {
+        description: `Welcome to ARZAMART, ${data.name}. Syncs when the server is reachable.`,
+      });
       return true;
     },
-    [findOrCreateByPhone, setCustomerPassword, findCustomerByPhone]
+    [findOrCreateByPhone, setCustomerPassword, upsertCustomerFromServer]
   );
 
   const loginAdmin = useCallback(
@@ -310,6 +464,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         cancelPendingGoogle,
         loginAsCustomer,
         setPassword,
+        changePassword,
         loginAdmin,
         logout,
       }}

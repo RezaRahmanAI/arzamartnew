@@ -54,7 +54,15 @@ class ApiClient {
       return data as T;
     } catch (err: unknown) {
       if (err instanceof ApiError) throw err;
-      throw new ApiError(err instanceof Error ? err.message : "Network error occurred", 500);
+      const isNetworkError =
+        err instanceof TypeError ||
+        (err instanceof Error && err.message.includes("fetch"));
+      throw new ApiError(
+        isNetworkError ? "Unable to reach the server. Check your connection." : err instanceof Error ? err.message : "Network error occurred",
+        500,
+        undefined,
+        isNetworkError
+      );
     }
   }
 

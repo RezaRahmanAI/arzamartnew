@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, MapPin, Package, Sparkles, Wallet } from "lucide-react";
+import { Heart, MapPin, Package, Sparkles, Wallet, Trash2, ShoppingBag, LogOut, CheckCircle2, KeyRound, Save, User, Phone, FileText, Lock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
@@ -14,21 +14,35 @@ import {
 import { useWishlist } from "@/lib/wishlist";
 import { useAuth } from "@/context/auth-context";
 import { useOrders } from "@/lib/orders";
-import { Trash2, ShoppingBag, LogOut, CheckCircle2, KeyRound } from "lucide-react";
+import { useCustomers } from "@/lib/customers-store";
+import { customersService } from "@/lib/api/services/customers.service";
 import { getImageUrl, handleImageError } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 function AccountContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const { wishlistProducts, removeFromWishlist } = useWishlist();
-  const { user, logout, setPassword } = useAuth();
+  const { user, logout, setPassword, changePassword, loginAsCustomer } = useAuth();
   const { orders } = useOrders();
+  const { updateCustomerProfile, findCustomerByPhone, upsertCustomerFromServer } = useCustomers();
   const [activeTab, setActiveTab] = useState("orders");
+
+  // Profile edit form state
+  const [pName, setPName] = useState("");
+  const [pPhone, setPPhone] = useState("");
+  const [pAddress, setPAddress] = useState("");
+  const [pNote, setPNote] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+
+  // Password state
   const [pass1, setPass1] = useState("");
   const [pass2, setPass2] = useState("");
+  const [curPass, setCurPass] = useState("");
   const [passSaving, setPassSaving] = useState(false);
 
   useEffect(() => {
@@ -36,6 +50,15 @@ function AccountContent() {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
+
+  // Load profile values into the edit form whenever the logged-in user changes
+  useEffect(() => {
+    const master = user?.phone ? findCustomerByPhone(user.phone) : null;
+    setPName(user?.name || "");
+    setPPhone(user?.phone || "");
+    setPAddress(user?.address || master?.address || "");
+    setPNote(master?.defaultNote || "");
+  }, [user?.id, user?.phone]);
 
   const customerInfo = {
     customerId: user?.id || "CUST-1001",
@@ -58,7 +81,73 @@ function AccountContent() {
 
   const spent = displayOrders.reduce((sum, o) => sum + o.total, 0);
 
-  const needsPasswordSetup = !!user && user.role === "customer" && !user.hasPassword;
+  const stats = [
+    { label: "Orders placed", value: String(displayOrders.length), icon: Package },
+    { label: "Total spent", value: formatBDT(spent), icon: Wallet },
+    { label: "Reward points", value: String(customerInfo.points), icon: Sparkles },
+    { label: "Saved items", value: String(wishlistProducts.length), icon: Heart },
+  ];
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!pName.trim() || !pPhone.trim()) {
+      toast.error("Name and phone number are required");
+      return;
+    }
+
+    setProfileSaving(true);
+    const updated = updateCustomerProfile(user.id, {
+      fullName: pName.trim(),
+      mobileNumber: pPhone.trim(),
+      address: pAddress.trim(),
+      defaultNote: pNote.trim(),
+    });
+    if (updated) {
+      loginAsCustomer(updated);
+      toast.success("Profile updated successfully!");
+    } else {
+      setProfileSaving(false);
+      toast.error("Could not update profile. Please refresh and try again.");
+      return;
+    }
+
+    // Best-effort sync to SQL Server so the profile survives device changes.
+    try {
+      const serverProfile = await customersService.getByPhone(pPhone.trim());
+      const payload = {
+        fullName: pName.trim(),
+        phone: pPhone.trim(),
+        email: user.email,
+        defaultAddress: pAddress.trim() || undefined,
+        defaultNote: pNote.trim() || undefined,
+      };
+      if (serverProfile) {
+        const synced = await customersService.updateProfile(serverProfile.id, payload);
+        if (synced) {
+          const master = upsertCustomerFromServer(synced);
+          loginAsCustomer(master);
+        }
+      } else {
+        const created = await customersService.create({
+          fullName: pName.trim(),
+          email: user.email,
+          phone: pPhone.trim(),
+          defaultAddress: pAddress.trim() || "Dhaka, Bangladesh",
+          district: "Dhaka",
+        });
+        if (created) {
+          await customersService.updateProfile(created.id, {
+            defaultNote: pNote.trim() || undefined,
+          });
+        }
+      }
+    } catch {
+      // Offline — local save already succeeded.
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,12 +168,25 @@ function AccountContent() {
     }
   };
 
-  const stats = [
-    { label: "Orders placed", value: String(displayOrders.length), icon: Package },
-    { label: "Total spent", value: formatBDT(spent), icon: Wallet },
-    { label: "Reward points", value: String(customerInfo.points), icon: Sparkles },
-    { label: "Saved items", value: String(wishlistProducts.length), icon: Heart },
-  ];
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pass1 !== pass2) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    if (!user?.phone) {
+      toast.error("No phone number on this account");
+      return;
+    }
+    setPassSaving(true);
+    const ok = await changePassword(user.phone, curPass, pass1);
+    setPassSaving(false);
+    if (ok) {
+      setCurPass("");
+      setPass1("");
+      setPass2("");
+    }
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
@@ -115,49 +217,6 @@ function AccountContent() {
           </div>
         ))}
       </div>
-
-      {needsPasswordSetup && (
-        <form
-          onSubmit={handleSetPassword}
-          className="mt-6 rounded-xl border border-primary/30 bg-primary/5 p-5 shadow-card"
-        >
-          <div className="flex items-start gap-3">
-            <KeyRound className="mt-0.5 size-5 text-primary shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-display text-base font-bold text-foreground">
-                Secure your account with a password
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Your order was placed as a guest. Set a password now so you can sign in later with your
-                mobile number and track your orders.
-              </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Input
-                  type="password"
-                  placeholder="New password (min 6 characters)"
-                  value={pass1}
-                  onChange={(e) => setPass1(e.target.value)}
-                  className="bg-background"
-                  minLength={6}
-                  required
-                />
-                <Input
-                  type="password"
-                  placeholder="Confirm password"
-                  value={pass2}
-                  onChange={(e) => setPass2(e.target.value)}
-                  className="bg-background"
-                  minLength={6}
-                  required
-                />
-              </div>
-              <Button type="submit" disabled={passSaving} className="mt-4 h-10 text-sm font-bold">
-                {passSaving ? "Saving..." : "Set Password"}
-              </Button>
-            </div>
-          </div>
-        </form>
-      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
         <TabsList>
@@ -258,29 +317,213 @@ function AccountContent() {
         </TabsContent>
 
         <TabsContent value="profile" className="mt-5">
-          <div className="space-y-4 rounded-xl border border-border bg-card p-6 shadow-card">
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer ID</p>
-                <p className="text-sm font-bold font-mono text-primary">{customerInfo.customerId}</p>
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Personal information (editable) */}
+            <form onSubmit={handleSaveProfile} className="space-y-4 rounded-xl border border-border bg-card p-6 shadow-card">
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                <div>
+                  <h3 className="flex items-center gap-2 text-base font-bold text-foreground">
+                    <User className="size-4 text-primary" /> Personal Information
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Edit your details — they are pre-filled on your next checkout.
+                  </p>
+                </div>
+                {customerInfo.isGoogleVerified && (
+                  <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full shrink-0">
+                    <CheckCircle2 className="size-3.5" /> Verified
+                  </span>
+                )}
               </div>
-              {customerInfo.isGoogleVerified && (
-                <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                  <CheckCircle2 className="size-3.5" /> Verified Account
-                </span>
-              )}
-            </div>
-            <Row label="Name" value={customerInfo.name} />
-            <Row label="Email" value={customerInfo.email} />
-            <Row label="Phone" value={customerInfo.phone} />
-            <div className="flex gap-3">
-              <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Delivery address
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer ID</p>
+                  <p className="text-sm font-bold font-mono text-primary">{customerInfo.customerId}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Email</p>
+                  <p className="text-sm font-medium">{customerInfo.email}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="pName" className="text-xs font-semibold">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                    <Input
+                      id="pName"
+                      value={pName}
+                      onChange={(e) => setPName(e.target.value)}
+                      className="pl-9 text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="pPhone" className="text-xs font-semibold">Mobile Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                    <Input
+                      id="pPhone"
+                      type="tel"
+                      value={pPhone}
+                      onChange={(e) => setPPhone(e.target.value)}
+                      className="pl-9 text-sm"
+                      required
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Your orders are tracked by this number. Changing it affects how your order history is found.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="pAddress" className="text-xs font-semibold">Delivery Address</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                    <Textarea
+                      id="pAddress"
+                      rows={2}
+                      value={pAddress}
+                      onChange={(e) => setPAddress(e.target.value)}
+                      className="pl-9 text-sm resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="pNote" className="text-xs font-semibold">Default Delivery Note</Label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                    <Textarea
+                      id="pNote"
+                      rows={2}
+                      value={pNote}
+                      onChange={(e) => setPNote(e.target.value)}
+                      placeholder="e.g. Call me before delivery, avoid Saturday..."
+                      className="pl-9 text-sm resize-none"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    This note is pre-filled in the &quot;Note (optional)&quot; field on your checkout form.
+                  </p>
+                </div>
+              </div>
+
+              <Button type="submit" disabled={profileSaving} className="w-full h-10 text-sm font-bold gap-2">
+                <Save className="size-4" /> {profileSaving ? "Saving..." : "Save Profile"}
+              </Button>
+            </form>
+
+            {/* Password & Security */}
+            <div className="space-y-4 rounded-xl border border-border bg-card p-6 shadow-card">
+              <div className="border-b border-border/60 pb-3">
+                <h3 className="flex items-center gap-2 text-base font-bold text-foreground">
+                  <Lock className="size-4 text-primary" /> Password &amp; Security
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {user?.hasPassword
+                    ? "Your account is password protected. You can change your password below."
+                    : "Set a password to sign in later with your mobile number."}
                 </p>
-                <p className="text-sm font-medium">{customerInfo.address}</p>
               </div>
+
+              {user?.hasPassword ? (
+                <form onSubmit={handleChangePassword} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="curPass" className="text-xs font-semibold">Current Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                      <Input
+                        id="curPass"
+                        type="password"
+                        value={curPass}
+                        onChange={(e) => setCurPass(e.target.value)}
+                        className="pl-9 text-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="newPass1" className="text-xs font-semibold">New Password</Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                      <Input
+                        id="newPass1"
+                        type="password"
+                        value={pass1}
+                        onChange={(e) => setPass1(e.target.value)}
+                        className="pl-9 text-sm"
+                        minLength={6}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="newPass2" className="text-xs font-semibold">Confirm New Password</Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                      <Input
+                        id="newPass2"
+                        type="password"
+                        value={pass2}
+                        onChange={(e) => setPass2(e.target.value)}
+                        className="pl-9 text-sm"
+                        minLength={6}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" disabled={passSaving} className="w-full h-10 text-sm font-bold gap-2">
+                    <KeyRound className="size-4" /> {passSaving ? "Updating..." : "Update Password"}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleSetPassword} className="space-y-3">
+                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">You ordered as a guest.</span>{" "}
+                    Set a password now so you can sign in later with your mobile number and track your orders.
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="setPass1" className="text-xs font-semibold">New Password</Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                      <Input
+                        id="setPass1"
+                        type="password"
+                        value={pass1}
+                        onChange={(e) => setPass1(e.target.value)}
+                        className="pl-9 text-sm"
+                        minLength={6}
+                        placeholder="Minimum 6 characters"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="setPass2" className="text-xs font-semibold">Confirm Password</Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                      <Input
+                        id="setPass2"
+                        type="password"
+                        value={pass2}
+                        onChange={(e) => setPass2(e.target.value)}
+                        className="pl-9 text-sm"
+                        minLength={6}
+                        placeholder="Re-enter your password"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" disabled={passSaving} className="w-full h-10 text-sm font-bold gap-2">
+                    <KeyRound className="size-4" /> {passSaving ? "Setting..." : "Set Password"}
+                  </Button>
+                </form>
+              )}
             </div>
           </div>
         </TabsContent>
@@ -300,15 +543,6 @@ function AccountContent() {
           Store admin dashboard
         </Link>
       </div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium">{value}</p>
     </div>
   );
 }
