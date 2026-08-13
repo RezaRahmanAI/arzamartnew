@@ -229,6 +229,13 @@ export function SiteHeader() {
             </form>
           )}
           <Link
+            href="/search"
+            aria-label="Search"
+            className="rounded-md p-2 text-foreground transition-colors hover:bg-secondary md:hidden"
+          >
+            <Search className="size-5" />
+          </Link>
+          <Link
             href="/cart"
             aria-label="Cart"
             className="relative rounded-md p-2 text-foreground transition-colors hover:bg-secondary"
