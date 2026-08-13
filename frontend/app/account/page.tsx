@@ -536,12 +536,6 @@ function AccountContent() {
         >
           Continue shopping
         </Link>
-        <Link
-          href="/admin"
-          className="rounded-full border border-border px-6 py-3 text-sm font-bold text-foreground"
-        >
-          Store admin dashboard
-        </Link>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { customersService } from "@/lib/api/services/customers.service";
 
 export interface CustomerMaster {
   customerId: string;
@@ -88,6 +89,41 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
     } catch {
       setCustomers(initialMockCustomers);
     }
+  }, []);
+
+  // Sync the full customer list from the server so admin search/autofill works
+  // even for customers who only exist in the database (e.g. checkout customers).
+  useEffect(() => {
+    customersService.getAll().then((list) => {
+      if (!list || list.length === 0) return;
+      setCustomers((prev) => {
+        const map = new Map<string, CustomerMaster>(prev.map((c) => [c.customerId, c]));
+        for (const c of list) {
+          const clean = c.phone.trim().replace(/\s+/g, "");
+          const existing = prev.find((x) => x.mobileNumber === clean);
+          map.set(existing ? existing.customerId : c.id, {
+            customerId: existing ? existing.customerId : c.id,
+            fullName: c.fullName,
+            mobileNumber: clean,
+            email: c.email,
+            address: c.defaultAddress || "",
+            area: undefined,
+            district: c.district || "Dhaka",
+            isGoogleVerified: false,
+            hasPassword: false,
+            createdAt: existing ? existing.createdAt : c.createdAtUtc,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+        const merged = Array.from(map.values());
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        } catch {
+          /* ignore */
+        }
+        return merged;
+      });
+    });
   }, []);
 
   const saveCustomers = (newList: CustomerMaster[]) => {
