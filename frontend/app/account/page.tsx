@@ -14,16 +14,22 @@ import {
 import { useWishlist } from "@/lib/wishlist";
 import { useAuth } from "@/context/auth-context";
 import { useOrders } from "@/lib/orders";
-import { Trash2, ShoppingBag, LogOut, CheckCircle2 } from "lucide-react";
+import { Trash2, ShoppingBag, LogOut, CheckCircle2, KeyRound } from "lucide-react";
 import { getImageUrl, handleImageError } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 function AccountContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const { wishlistProducts, removeFromWishlist } = useWishlist();
-  const { user, logout } = useAuth();
+  const { user, logout, setPassword } = useAuth();
   const { orders } = useOrders();
   const [activeTab, setActiveTab] = useState("orders");
+  const [pass1, setPass1] = useState("");
+  const [pass2, setPass2] = useState("");
+  const [passSaving, setPassSaving] = useState(false);
 
   useEffect(() => {
     if (tabParam === "wishlist" || tabParam === "profile" || tabParam === "orders") {
@@ -51,6 +57,27 @@ function AccountContent() {
   const displayOrders = customerOrders.length > 0 ? customerOrders : myOrders;
 
   const spent = displayOrders.reduce((sum, o) => sum + o.total, 0);
+
+  const needsPasswordSetup = !!user && user.role === "customer" && !user.hasPassword;
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pass1 !== pass2) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (!user?.phone) {
+      toast.error("No phone number on this account");
+      return;
+    }
+    setPassSaving(true);
+    const ok = await setPassword(user.phone, pass1);
+    setPassSaving(false);
+    if (ok) {
+      setPass1("");
+      setPass2("");
+    }
+  };
 
   const stats = [
     { label: "Orders placed", value: String(displayOrders.length), icon: Package },
@@ -88,6 +115,49 @@ function AccountContent() {
           </div>
         ))}
       </div>
+
+      {needsPasswordSetup && (
+        <form
+          onSubmit={handleSetPassword}
+          className="mt-6 rounded-xl border border-primary/30 bg-primary/5 p-5 shadow-card"
+        >
+          <div className="flex items-start gap-3">
+            <KeyRound className="mt-0.5 size-5 text-primary shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-display text-base font-bold text-foreground">
+                Secure your account with a password
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your order was placed as a guest. Set a password now so you can sign in later with your
+                mobile number and track your orders.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <Input
+                  type="password"
+                  placeholder="New password (min 6 characters)"
+                  value={pass1}
+                  onChange={(e) => setPass1(e.target.value)}
+                  className="bg-background"
+                  minLength={6}
+                  required
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm password"
+                  value={pass2}
+                  onChange={(e) => setPass2(e.target.value)}
+                  className="bg-background"
+                  minLength={6}
+                  required
+                />
+              </div>
+              <Button type="submit" disabled={passSaving} className="mt-4 h-10 text-sm font-bold">
+                {passSaving ? "Saving..." : "Set Password"}
+              </Button>
+            </div>
+          </div>
+        </form>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-8">
         <TabsList>

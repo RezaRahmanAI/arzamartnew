@@ -1,10 +1,12 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Activity, ShieldCheck, Inbox } from "lucide-react";
 import { useOrders } from "@/lib/orders";
-import { customers, formatBDT, Order } from "@/lib/dashboard-data";
+import { formatBDT, Order } from "@/lib/dashboard-data";
+import { useCustomers } from "@/lib/customers-store";
+import { customersService, type ApiCustomer } from "@/lib/api/services/customers.service";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { OrderInvoiceModal } from "@/components/admin/order-invoice-modal";
 
@@ -20,10 +22,26 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
   const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<Order | null>(null);
 
   const { orders } = useOrders();
-  
-  // Find customer mock data (if available)
-  const customerInfo = customers.find((c) => c.phone === phone);
-  
+  const { findCustomerByPhone } = useCustomers();
+  const [apiCustomers, setApiCustomers] = useState<ApiCustomer[]>([]);
+
+  useEffect(() => {
+    customersService.getAll().then(setApiCustomers);
+  }, []);
+
+  // Find customer record from backend API or local master store
+  const customerInfo = useMemo(() => {
+    const fromApi = apiCustomers.find((c) => c.phone === phone);
+    if (fromApi) {
+      return { name: fromApi.fullName, email: fromApi.email, address: fromApi.defaultAddress || "", district: fromApi.district };
+    }
+    const local = findCustomerByPhone(phone);
+    if (local) {
+      return { name: local.fullName, email: local.email || "", address: local.address, district: local.district || local.area || "" };
+    }
+    return null;
+  }, [apiCustomers, findCustomerByPhone, phone]);
+
   // Filter orders matching this customer's phone
   const customerOrders = useMemo(() => {
     return orders.filter((o) => o.phone === phone).sort((a, b) => {
@@ -32,7 +50,7 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
     });
   }, [orders, phone]);
   
-  // Customer name from orders or customer DB
+  // Customer name from customer record or orders
   const name = customerInfo?.name || (customerOrders.length > 0 ? customerOrders[0].customer : "Unknown Customer");
 
   // Calculate statistics
@@ -111,6 +129,17 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
               <span className="ml-1.5 font-bold text-foreground">{phone}</span>
             </div>
           </div>
+          {customerInfo?.address ? (
+            <div className="text-sm text-muted-foreground mb-1">
+              <span className="font-medium">Address:</span> {customerInfo.address}
+              {customerInfo.district ? `, ${customerInfo.district}` : ""}
+            </div>
+          ) : null}
+          {customerInfo?.email ? (
+            <div className="text-sm text-muted-foreground mb-1">
+              <span className="font-medium">Email:</span> {customerInfo.email}
+            </div>
+          ) : null}
           
           <div className="flex items-center gap-2 text-sm mb-6">
             <span className="text-muted-foreground font-medium">Reviews:</span>

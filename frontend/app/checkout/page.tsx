@@ -9,6 +9,7 @@ import { formatBDT, getSizePrice } from "@/lib/shop-data";
 import { generateOrderId, useOrders, type Order } from "@/lib/orders";
 import { useSettings } from "@/context/settings-context";
 import { useCustomers } from "@/lib/customers-store";
+import { useAuth } from "@/context/auth-context";
 import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
 
 import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
@@ -17,6 +18,7 @@ export default function CheckoutPage() {
   const { detailedLines, subtotal, clear } = useCart();
   const { addOrder, saveIncomplete, removeIncomplete, generateNextOrderId } = useOrders();
   const { findOrCreateByPhone } = useCustomers();
+  const { loginAsCustomer } = useAuth();
   const { settings } = useSettings();
   const router = useRouter();
   const [placing, setPlacing] = useState(false);
@@ -160,6 +162,9 @@ export default function CheckoutPage() {
       address,
       district: selectedCity,
     });
+
+    // Auto-login the customer so their order is linked to their profile
+    loginAsCustomer(customerMaster);
 
     setPlacing(true);
     const orderId = draftId ?? generateNextOrderId();

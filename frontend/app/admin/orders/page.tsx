@@ -435,11 +435,11 @@ export default function AdminOrders() {
                   <TableCell className="text-xs text-muted-foreground">{o.date}</TableCell>
                   <TableCell>
                     <Link
-                      href={`/admin/manual-order?edit=${encodeURIComponent(o.id)}`}
+                      href={`/admin/customers/${encodeURIComponent(o.phone)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium hover:underline hover:text-primary transition-colors block max-w-[120px] truncate group-hover:flex group-hover:items-center group-hover:gap-1"
-                      title={`Open ${o.id} in new tab`}
+                      title={`Open ${o.customer}'s profile in new tab`}
                     >
                       {o.customer}
                       <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 shrink-0" />

@@ -17,6 +17,7 @@ export interface AuthUser {
   googleId?: string | null;
   profileImage?: string | null;
   isGoogleVerified?: boolean;
+  hasPassword?: boolean;
 }
 
 export interface PendingGoogleSession {
@@ -30,11 +31,13 @@ interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   pendingGoogleSession: PendingGoogleSession | null;
-  loginCustomer: (emailOrPhone: string, pass: string) => boolean;
-  registerCustomer: (data: { name: string; email: string; phone: string; password: string; address?: string }) => boolean;
+  loginCustomer: (emailOrPhone: string, pass: string) => Promise<boolean>;
+  registerCustomer: (data: { name: string; email: string; phone: string; password: string; address?: string }) => Promise<boolean>;
   loginWithGoogle: (googleProfile: PendingGoogleSession) => { needsPhoneLinking: boolean; success: boolean };
   verifyAndLinkPhone: (phone: string) => boolean;
   cancelPendingGoogle: () => void;
+  loginAsCustomer: (customer: CustomerMaster) => AuthUser;
+  setPassword: (phone: string, password: string) => Promise<boolean>;
   loginAdmin: (email: string, pass: string) => boolean;
   logout: () => void;
 }
@@ -48,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pendingGoogleSession, setPendingGoogleSession] = useState<PendingGoogleSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { staffList } = useStaffStore();
-  const { findCustomerByGoogleId, linkGoogleAccount, findOrCreateByPhone } = useCustomers();
+  const { customers, findCustomerByGoogleId, findCustomerByPhone, linkGoogleAccount, findOrCreateByPhone, setCustomerPassword, verifyCustomerPassword } = useCustomers();
 
   useEffect(() => {
     try {
@@ -83,10 +86,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       googleId: customer.googleId,
       profileImage: customer.profileImage,
       isGoogleVerified: customer.isGoogleVerified,
+      hasPassword: customer.hasPassword,
     };
     saveUserSession(authUser);
     return authUser;
   };
+
+  const loginAsCustomer = useCallback(
+    (customer: CustomerMaster) => setCustomerSessionFromMaster(customer),
+    []
+  );
 
   const loginWithGoogle = useCallback(
     (googleProfile: PendingGoogleSession) => {
@@ -147,29 +156,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loginCustomer = useCallback(
-    (emailOrPhone: string, pass: string): boolean => {
+    async (emailOrPhone: string, pass: string): Promise<boolean> => {
       if (!emailOrPhone || !pass) {
         toast.error("Please enter email/phone and password");
         return false;
       }
 
-      const master = findOrCreateByPhone(emailOrPhone, {
-        fullName: emailOrPhone.includes("@") ? emailOrPhone.split("@")[0]! : "Customer User",
-        email: emailOrPhone.includes("@") ? emailOrPhone : undefined,
-        address: "Dhaka, Bangladesh",
-      });
+      const query = emailOrPhone.trim();
+      const isEmail = query.includes("@");
+      const master = isEmail
+        ? customers.find(
+            (c) =>
+              c.email?.toLowerCase() === query.toLowerCase() ||
+              c.googleEmail?.toLowerCase() === query.toLowerCase()
+          )
+        : findCustomerByPhone(query);
+
+      if (!master) {
+        toast.error("No account found", {
+          description: "Place an order with this number first, then set a password from your profile.",
+        });
+        return false;
+      }
+
+      if (master.hasPassword) {
+        const ok = await verifyCustomerPassword(master.mobileNumber, pass);
+        if (!ok) {
+          toast.error("Incorrect password", { description: "Try again or use Google sign in." });
+          return false;
+        }
+      }
 
       setCustomerSessionFromMaster(master);
       toast.success("Welcome back!", { description: `Logged in as ${master.fullName}` });
       return true;
     },
-    [findOrCreateByPhone]
+    [customers, findCustomerByPhone, verifyCustomerPassword]
+  );
+
+  const setPassword = useCallback(
+    async (phone: string, password: string): Promise<boolean> => {
+      if (!phone || !password) {
+        toast.error("Please enter a password");
+        return false;
+      }
+      if (password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        return false;
+      }
+
+      const ok = await setCustomerPassword(phone, password);
+      if (!ok) {
+        toast.error("Failed to set password");
+        return false;
+      }
+
+      const updated = findCustomerByPhone(phone);
+      if (updated) {
+        setCustomerSessionFromMaster(updated);
+      }
+      toast.success("Password set successfully!", {
+        description: "You can now sign in with your mobile number and password.",
+      });
+      return true;
+    },
+    [setCustomerPassword, findCustomerByPhone]
   );
 
   const registerCustomer = useCallback(
-    (data: { name: string; email: string; phone: string; password: string; address?: string }): boolean => {
+    async (data: { name: string; email: string; phone: string; password: string; address?: string }): Promise<boolean> => {
       if (!data.name || !data.phone || !data.password) {
         toast.error("Please fill in required fields");
+        return false;
+      }
+      if (data.password.length < 6) {
+        toast.error("Password must be at least 6 characters");
         return false;
       }
 
@@ -179,11 +240,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         address: data.address || "Dhaka, Bangladesh",
       });
 
-      setCustomerSessionFromMaster(master);
-      toast.success("Account created successfully!", { description: `Welcome to ARZAMART, ${master.fullName}` });
+      await setCustomerPassword(data.phone, data.password);
+      const updated = findCustomerByPhone(data.phone);
+      if (updated) {
+        setCustomerSessionFromMaster(updated);
+      } else {
+        setCustomerSessionFromMaster(master);
+      }
+
+      toast.success("Account created successfully!", { description: `Welcome to ARZAMART, ${data.name}` });
       return true;
     },
-    [findOrCreateByPhone]
+    [findOrCreateByPhone, setCustomerPassword, findCustomerByPhone]
   );
 
   const loginAdmin = useCallback(
@@ -230,7 +298,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider
+      <AuthContext.Provider
       value={{
         user,
         isLoading,
@@ -240,6 +308,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginWithGoogle,
         verifyAndLinkPhone,
         cancelPendingGoogle,
+        loginAsCustomer,
+        setPassword,
         loginAdmin,
         logout,
       }}

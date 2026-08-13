@@ -36,10 +36,10 @@ export default function CustomerLoginPage() {
     router.push("/account");
   }
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const success = loginCustomer(identifier, password);
+    const success = await loginCustomer(identifier, password);
     setIsSubmitting(false);
     if (success) {
       router.push("/account");

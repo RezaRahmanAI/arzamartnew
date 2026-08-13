@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
+import { hashPassword, verifyPassword } from "@/lib/password";
 
 export interface CustomerMaster {
   customerId: string;
@@ -24,6 +25,8 @@ export interface CustomerMaster {
   googleEmail?: string | null;
   profileImage?: string | null;
   isGoogleVerified: boolean;
+  hasPassword: boolean;
+  passwordHash?: string | null;
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -55,6 +58,8 @@ type CustomersContextValue = {
     phone: string;
   }) => { success: boolean; customer?: CustomerMaster; message?: string };
   updateCustomerProfile: (customerId: string, data: Partial<CustomerMaster>) => void;
+  setCustomerPassword: (phone: string, password: string) => Promise<boolean>;
+  verifyCustomerPassword: (phone: string, password: string) => Promise<boolean>;
 };
 
 const CustomersContext = createContext<CustomersContextValue | null>(null);
@@ -143,6 +148,7 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
         area: details.area,
         district: details.district,
         isGoogleVerified: false,
+        hasPassword: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -203,6 +209,7 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
         googleEmail: params.googleEmail,
         profileImage: params.profileImage,
         isGoogleVerified: true,
+        hasPassword: false,
         lastLoginAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -225,6 +232,35 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
     [customers]
   );
 
+  const setCustomerPassword = useCallback(
+    async (phone: string, password: string): Promise<boolean> => {
+      const clean = normalizePhone(phone);
+      const existing = customers.find((c) => normalizePhone(c.mobileNumber) === clean);
+      if (!existing) return false;
+
+      const passwordHash = await hashPassword(password);
+      const updated: CustomerMaster = {
+        ...existing,
+        passwordHash,
+        hasPassword: true,
+        updatedAt: new Date().toISOString(),
+      };
+      saveCustomers(customers.map((c) => (c.customerId === existing.customerId ? updated : c)));
+      return true;
+    },
+    [customers]
+  );
+
+  const verifyCustomerPassword = useCallback(
+    async (phone: string, password: string): Promise<boolean> => {
+      const clean = normalizePhone(phone);
+      const existing = customers.find((c) => normalizePhone(c.mobileNumber) === clean);
+      if (!existing || !existing.passwordHash) return false;
+      return verifyPassword(password, existing.passwordHash);
+    },
+    [customers]
+  );
+
   const value = useMemo<CustomersContextValue>(
     () => ({
       customers,
@@ -233,6 +269,8 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
       findCustomerByPhone,
       linkGoogleAccount,
       updateCustomerProfile,
+      setCustomerPassword,
+      verifyCustomerPassword,
     }),
     [
       customers,
@@ -241,6 +279,8 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
       findCustomerByPhone,
       linkGoogleAccount,
       updateCustomerProfile,
+      setCustomerPassword,
+      verifyCustomerPassword,
     ]
   );
 

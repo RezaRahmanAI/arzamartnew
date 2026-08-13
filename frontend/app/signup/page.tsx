@@ -25,9 +25,9 @@ export default function CustomerSignupPage() {
     router.push("/account");
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = registerCustomer(form);
+    const success = await registerCustomer(form);
     if (success) {
       router.push("/account");
     }
