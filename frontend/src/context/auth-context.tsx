@@ -21,22 +21,11 @@ export interface AuthUser {
   hasPassword?: boolean;
 }
 
-export interface PendingGoogleSession {
-  googleId: string;
-  googleEmail: string;
-  fullName: string;
-  profileImage?: string;
-}
-
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
-  pendingGoogleSession: PendingGoogleSession | null;
   loginCustomer: (emailOrPhone: string, pass: string) => Promise<boolean>;
   registerCustomer: (data: { name: string; email: string; phone: string; password: string; address?: string }) => Promise<boolean>;
-  loginWithGoogle: (googleProfile: PendingGoogleSession) => { needsPhoneLinking: boolean; success: boolean };
-  verifyAndLinkPhone: (phone: string) => boolean;
-  cancelPendingGoogle: () => void;
   loginAsCustomer: (customer: CustomerMaster) => AuthUser;
   setPassword: (phone: string, password: string) => Promise<boolean>;
   changePassword: (phone: string, currentPassword: string, newPassword: string) => Promise<boolean>;
@@ -50,10 +39,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [pendingGoogleSession, setPendingGoogleSession] = useState<PendingGoogleSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { staffList } = useStaffStore();
-  const { customers, findCustomerByGoogleId, linkGoogleAccount, findCustomerByPhone, findOrCreateByPhone, setCustomerPassword, verifyCustomerPassword, upsertCustomerFromServer } = useCustomers();
+  const { customers, findCustomerByPhone, findOrCreateByPhone, setCustomerPassword, verifyCustomerPassword, upsertCustomerFromServer } = useCustomers();
 
   useEffect(() => {
     try {
@@ -111,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const authUser: AuthUser = {
       id: customer.customerId,
       name: customer.fullName,
-      email: customer.email || customer.googleEmail || `${customer.mobileNumber}@arzamart.com`,
+      email: customer.email || `${customer.mobileNumber}@arzamart.com`,
       phone: customer.mobileNumber,
       address: customer.address,
       role: "customer",
@@ -128,92 +116,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (customer: CustomerMaster) => setCustomerSessionFromMaster(customer),
     []
   );
-
-  const loginWithGoogle = useCallback(
-    (googleProfile: PendingGoogleSession) => {
-      // Step 1: Check if GoogleId already exists in Customer table
-      const existing = findCustomerByGoogleId(googleProfile.googleId);
-
-      if (existing) {
-        // Case A: GoogleId exists -> Login successful immediately!
-        const authUser = setCustomerSessionFromMaster(existing);
-        toast.success("Google Login Successful!", { description: `Welcome back, ${authUser.name}` });
-        return { needsPhoneLinking: false, success: true };
-      }
-
-      // Case B: GoogleId does not exist -> Require Phone Linking
-      setPendingGoogleSession(googleProfile);
-      return { needsPhoneLinking: true, success: false };
-    },
-    [findCustomerByGoogleId]
-  );
-
-  const verifyAndLinkPhone = useCallback(
-    (phone: string) => {
-      if (!pendingGoogleSession) {
-        toast.error("No active Google login session");
-        return false;
-      }
-
-      if (!phone || phone.trim().length < 6) {
-        toast.error("Please enter a valid mobile number");
-        return false;
-      }
-
-      const res = linkGoogleAccount({
-        googleId: pendingGoogleSession.googleId,
-        googleEmail: pendingGoogleSession.googleEmail,
-        fullName: pendingGoogleSession.fullName,
-        profileImage: pendingGoogleSession.profileImage,
-        phone,
-      });
-
-      if (!res.success || !res.customer) {
-        toast.error(res.message || "Failed to link phone number");
-        return false;
-      }
-
-      setCustomerSessionFromMaster(res.customer);
-      setPendingGoogleSession(null);
-      toast.success("Account Verified & Linked Successfully!", {
-        description: `Your orders with ${phone} are now permanently linked to Google.`,
-      });
-
-      // Best-effort sync to SQL Server so the Google link survives device changes.
-      (async () => {
-        const existing = await customersService.getByPhone(phone);
-        if (existing) {
-          await customersService.linkGoogle(
-            existing.id,
-            pendingGoogleSession.googleId,
-            pendingGoogleSession.googleEmail
-          );
-        } else {
-          const created = await customersService.create({
-            fullName: pendingGoogleSession.fullName,
-            email: pendingGoogleSession.googleEmail,
-            phone,
-            defaultAddress: res.customer?.address || "Dhaka, Bangladesh",
-            district: "Dhaka",
-          });
-          if (created) {
-            await customersService.linkGoogle(
-              created.id,
-              pendingGoogleSession.googleId,
-              pendingGoogleSession.googleEmail
-            );
-          }
-        }
-      })();
-
-      return true;
-    },
-    [pendingGoogleSession, linkGoogleAccount]
-  );
-
-  const cancelPendingGoogle = useCallback(() => {
-    setPendingGoogleSession(null);
-  }, []);
 
   const loginCustomer = useCallback(
     async (emailOrPhone: string, pass: string): Promise<boolean> => {
@@ -242,9 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const isEmail = query.includes("@");
       const master = isEmail
         ? customers.find(
-            (c) =>
-              c.email?.toLowerCase() === query.toLowerCase() ||
-              c.googleEmail?.toLowerCase() === query.toLowerCase()
+            (c) => c.email?.toLowerCase() === query.toLowerCase()
           )
         : findCustomerByPhone(query);
 
@@ -258,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (master.hasPassword) {
         const ok = await verifyCustomerPassword(master.mobileNumber, pass);
         if (!ok) {
-          toast.error("Incorrect password", { description: "Try again or use Google sign in." });
+          toast.error("Incorrect password", { description: "Try again or reset your password." });
           return false;
         }
       }
@@ -447,7 +347,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     saveUserSession(null);
-    setPendingGoogleSession(null);
     toast.info("Logged out successfully");
   }, []);
 
@@ -456,12 +355,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isLoading,
-        pendingGoogleSession,
         loginCustomer,
         registerCustomer,
-        loginWithGoogle,
-        verifyAndLinkPhone,
-        cancelPendingGoogle,
         loginAsCustomer,
         setPassword,
         changePassword,

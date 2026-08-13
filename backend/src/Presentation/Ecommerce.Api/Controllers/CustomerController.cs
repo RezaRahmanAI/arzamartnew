@@ -1,7 +1,6 @@
 using Ecommerce.Application.Common.Helpers;
 using Ecommerce.Application.Common.Interfaces;
 using Ecommerce.Application.Features.Customer.Commands.CreateCustomer;
-using Ecommerce.Application.Features.Customer.Commands.LinkGoogleAccount;
 using Ecommerce.Domain.Entities;
 using Ecommerce.Domain.Enums;
 using MediatR;
@@ -56,13 +55,6 @@ public class CustomerController : ControllerBase
         return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
-    [HttpPost("link-google")]
-    public async Task<IActionResult> LinkGoogleAccount([FromBody] LinkGoogleAccountCommand command)
-    {
-        var result = await _mediator.Send(command);
-        return result.IsSuccess ? Ok(result) : BadRequest(result);
-    }
-
     [HttpGet("by-phone/{phone}")]
     public async Task<IActionResult> GetByPhone(string phone)
     {
@@ -84,8 +76,7 @@ public class CustomerController : ControllerBase
         var query = request.Identifier.Trim();
         var isEmail = query.Contains("@");
         var customer = isEmail
-            ? await _context.Customers.FirstOrDefaultAsync(c =>
-                c.Email.ToLower() == query.ToLower() || c.GoogleEmail != null && c.GoogleEmail.ToLower() == query.ToLower())
+            ? await _context.Customers.FirstOrDefaultAsync(c => c.Email.ToLower() == query.ToLower())
             : await _context.Customers.FirstOrDefaultAsync(c => c.Phone == query);
 
         if (customer == null)
@@ -95,7 +86,7 @@ public class CustomerController : ControllerBase
 
         if (string.IsNullOrEmpty(customer.PasswordHash))
         {
-            return Unauthorized(new { Message = "No password set for this account. Sign in with Google or set a password from your profile." });
+            return Unauthorized(new { Message = "No password set for this account. Set a password from your profile first." });
         }
 
         if (!PasswordHasher.VerifyPassword(request.Password, customer.PasswordHash))

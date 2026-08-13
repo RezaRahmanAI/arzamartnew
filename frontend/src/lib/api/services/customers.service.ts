@@ -100,24 +100,6 @@ class CustomersService {
     }
   }
 
-  public async linkGoogle(
-    customerId: string,
-    googleId: string,
-    googleEmail: string
-  ): Promise<boolean> {
-    if (apiConfig.useMockData) return false;
-    try {
-      await apiClient.post<boolean>("/customer/link-google", {
-        customerId,
-        googleId,
-        googleEmail,
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   public async login(identifier: string, password: string): Promise<ApiCustomerResult> {
     if (apiConfig.useMockData) return { ok: false, message: "Mock mode", isNetworkError: false };
     try {

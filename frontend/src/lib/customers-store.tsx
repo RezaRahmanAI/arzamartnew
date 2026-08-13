@@ -49,15 +49,7 @@ type CustomersContextValue = {
       district?: string;
     }
   ) => CustomerMaster;
-  findCustomerByGoogleId: (googleId: string) => CustomerMaster | undefined;
   findCustomerByPhone: (phone: string) => CustomerMaster | undefined;
-  linkGoogleAccount: (params: {
-    googleId: string;
-    googleEmail: string;
-    fullName: string;
-    profileImage?: string;
-    phone: string;
-  }) => { success: boolean; customer?: CustomerMaster; message?: string };
   updateCustomerProfile: (customerId: string, data: Partial<CustomerMaster>) => CustomerMaster | null;
   upsertCustomerFromServer: (profile: {
     id: string;
@@ -117,13 +109,6 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
     [customers]
   );
 
-  const findCustomerByGoogleId = useCallback(
-    (googleId: string) => {
-      return customers.find((c) => c.googleId === googleId);
-    },
-    [customers]
-  );
-
   const findOrCreateByPhone = useCallback(
     (
       phone: string,
@@ -172,68 +157,6 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
 
       saveCustomers([newCustomer, ...customers]);
       return newCustomer;
-    },
-    [customers]
-  );
-
-  const linkGoogleAccount = useCallback(
-    (params: {
-      googleId: string;
-      googleEmail: string;
-      fullName: string;
-      profileImage?: string;
-      phone: string;
-    }) => {
-      const cleanPhone = normalizePhone(params.phone);
-
-      // Check if googleId is already linked to another customer
-      const existingGoogleUser = customers.find((c) => c.googleId === params.googleId);
-      if (existingGoogleUser && normalizePhone(existingGoogleUser.mobileNumber) !== cleanPhone) {
-        return {
-          success: false,
-          message: "This Google account is already linked to a different phone number.",
-        };
-      }
-
-      const existingByPhone = customers.find((c) => normalizePhone(c.mobileNumber) === cleanPhone);
-
-      if (existingByPhone) {
-        const updated: CustomerMaster = {
-          ...existingByPhone,
-          googleId: params.googleId,
-          googleEmail: params.googleEmail,
-          profileImage: params.profileImage || existingByPhone.profileImage,
-          isGoogleVerified: true,
-          lastLoginAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        const newList = customers.map((c) =>
-          c.customerId === existingByPhone.customerId ? updated : c
-        );
-        saveCustomers(newList);
-        return { success: true, customer: updated };
-      }
-
-      // If phone does not exist yet, create a new verified Customer record
-      const newCustomer: CustomerMaster = {
-        customerId: `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
-        fullName: params.fullName,
-        mobileNumber: cleanPhone,
-        email: params.googleEmail,
-        address: "Dhaka, Bangladesh",
-        googleId: params.googleId,
-        googleEmail: params.googleEmail,
-        profileImage: params.profileImage,
-        isGoogleVerified: true,
-        hasPassword: false,
-        lastLoginAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      saveCustomers([newCustomer, ...customers]);
-      return { success: true, customer: newCustomer };
     },
     [customers]
   );
@@ -351,9 +274,7 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
     () => ({
       customers,
       findOrCreateByPhone,
-      findCustomerByGoogleId,
       findCustomerByPhone,
-      linkGoogleAccount,
       updateCustomerProfile,
       upsertCustomerFromServer,
       setCustomerPassword,
@@ -362,9 +283,7 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
     [
       customers,
       findOrCreateByPhone,
-      findCustomerByGoogleId,
       findCustomerByPhone,
-      linkGoogleAccount,
       updateCustomerProfile,
       upsertCustomerFromServer,
       setCustomerPassword,

@@ -3,7 +3,6 @@ using Ecommerce.Api.Middleware;
 using Ecommerce.Application.Common.Behaviors;
 using Ecommerce.Application.Common.Interfaces;
 using Ecommerce.Application.Features.Products.Queries;
-using Ecommerce.Infrastructure.Auth;
 using Ecommerce.Infrastructure.Authentication;
 using Ecommerce.Infrastructure.Caching;
 using Ecommerce.Infrastructure.Messaging;
@@ -56,7 +55,6 @@ builder.Services.AddResponseCompression(options =>
     options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
     options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
 });
-builder.Services.AddTransient<IGoogleOAuthService, GoogleOAuthService>();
 builder.Services.AddTransient<IEmailService, EmailService>();
 builder.Services.AddTransient<ISmsService, SmsService>();
 
