@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ImageUploader, getImageUrl, handleImageError } from "@/components/image-uploader";
+import { OptImage } from "@/components/opt-image";
 
 export default function AdminBannersPage() {
   const { slides, isLoading, addSlide, updateSlide, deleteSlide } = useBanners();
@@ -102,11 +103,13 @@ export default function AdminBannersPage() {
               }`}
             >
               <div className="relative aspect-[16/9] overflow-hidden bg-secondary">
-                <img
+                <OptImage
                   src={getImageUrl(slide.image)}
                   alt={slide.title}
-                  onError={handleImageError}
                   className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  width={400}
+                  height={225}
+                  sizes="(max-width: 768px) 100vw, 400px"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 <div className="absolute top-3 left-3 flex gap-2">

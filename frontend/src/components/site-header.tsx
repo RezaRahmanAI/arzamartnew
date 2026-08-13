@@ -11,7 +11,8 @@ import { useCategories } from "@/lib/categories-store";
 import { useSettings } from "@/context/settings-context";
 import { useWishlist } from "@/lib/wishlist";
 import { useAuth } from "@/context/auth-context";
-import { getImageUrl, handleImageError } from "@/lib/utils";
+import { getImageUrl } from "@/lib/utils";
+import { OptImage } from "@/components/opt-image";
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -78,10 +79,12 @@ export function SiteHeader() {
             }}
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary"
           >
-            <img
+            <OptImage
               src={getImageUrl(p.image)}
               alt={p.name}
-              onError={handleImageError}
+              width={36}
+              height={36}
+              sizes="36px"
               className="size-9 rounded object-cover shrink-0 bg-muted/20"
             />
             <div className="flex-1 min-w-0 text-left">

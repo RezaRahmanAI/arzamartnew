@@ -12,6 +12,7 @@ import { useReviews } from "@/lib/reviews";
 import { useProducts } from "@/lib/products-store";
 import { formatBDT, getSizePrice, getSizeStock, getColorHex, products as staticProducts } from "@/lib/shop-data";
 import { getImageUrl, handleImageError } from "@/lib/utils";
+import { OptImage } from "@/components/opt-image";
 
 
 export default function ProductPage() {
@@ -149,12 +150,13 @@ export default function ProductPage() {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
           >
-            <img
+            <OptImage
               src={getImageUrl(activeImage)}
               alt={product.name}
-              onError={handleImageError}
               width={800}
               height={800}
+              priority
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="aspect-square size-full object-cover transition-all duration-300"
             />
             {allImages.length > 1 && (
@@ -200,10 +202,12 @@ export default function ProductPage() {
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <img
+                  <OptImage
                     src={getImageUrl(img)}
                     alt={`${product.name} gallery ${idx + 1}`}
-                    onError={handleImageError}
+                    width={64}
+                    height={64}
+                    sizes="64px"
                     className="size-full object-cover"
                   />
                 </button>
@@ -263,7 +267,7 @@ export default function ProductPage() {
                   if (!item) return null;
                   return (
                     <div key={idx} className="flex items-center gap-3 bg-card p-2 rounded-lg border border-border/60">
-                      <img src={getImageUrl(item.image)} alt={item.name} onError={handleImageError} className="size-10 object-cover rounded-md bg-muted/20" />
+                      <OptImage src={getImageUrl(item.image)} alt={item.name} width={40} height={40} sizes="40px" className="size-10 object-cover rounded-md bg-muted/20" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-foreground truncate">{item.name}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">Category: {item.category}</p>

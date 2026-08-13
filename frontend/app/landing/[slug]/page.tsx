@@ -267,6 +267,7 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
                 alt={product?.name || landingPage.title}
                 fill
                 priority
+                sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover transition-transform duration-300 hover:scale-105"
               />
               {discountAmount > 0 && (
@@ -287,7 +288,7 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
                       selectedImage === imgUrl ? "border-amber-600 shadow-md scale-95" : "border-slate-200 opacity-70 hover:opacity-100 dark:border-slate-800"
                     }`}
                   >
-                    <Image src={imgUrl} alt={`Product ${idx}`} fill className="object-cover" />
+                    <Image src={imgUrl} alt={`Product ${idx}`} fill sizes="64px" className="object-cover" />
                   </button>
                 ))}
               </div>

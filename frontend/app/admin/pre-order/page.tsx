@@ -28,6 +28,7 @@ import { CustomerSearchInput } from "@/components/admin/customer-search-input";
 import { useSettings } from "@/context/settings-context";
 import { CITY_AREAS_MAP as INITIAL_CITY_AREAS_MAP, DEFAULT_CITIES, DEFAULT_AREAS } from "@/lib/location-data";
 import { getImageUrl, handleImageError } from "@/lib/utils";
+import { OptImage } from "@/components/opt-image";
 import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
 
 const FALLBACK_SOURCES: Record<string, string[]> = {
@@ -925,11 +926,13 @@ export default function AdminPreOrderPage() {
                           className="cursor-pointer space-y-1.5"
                         >
                           <div className="aspect-square w-full overflow-hidden rounded bg-secondary">
-                            <img
+                            <OptImage
                               src={getImageUrl(product.image)}
                               alt={product.name}
-                              onError={handleImageError}
                               className="size-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              width={200}
+                              height={200}
+                              sizes="200px"
                             />
                           </div>
 
@@ -989,11 +992,13 @@ export default function AdminPreOrderPage() {
 
             <div className="mt-4 flex gap-4">
               <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-secondary border border-border">
-                <img
+                <OptImage
                   src={getImageUrl(selectedProductForModal.image)}
                   alt={selectedProductForModal.name}
-                  onError={handleImageError}
                   className="size-full object-cover"
+                  width={80}
+                  height={80}
+                  sizes="80px"
                 />
               </div>
               <div className="flex flex-col justify-center">

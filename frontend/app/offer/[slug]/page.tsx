@@ -19,7 +19,8 @@ import {
   getComboOffer,
   getProduct,
 } from "@/lib/shop-data";
-import { getImageUrl, handleImageError } from "@/lib/utils";
+import { getImageUrl } from "@/lib/utils";
+import { OptImage } from "@/components/opt-image";
 
 
 export default function OfferPage() {
@@ -76,12 +77,13 @@ export default function OfferPage() {
 
       <div className="mt-4 grid gap-8 lg:grid-cols-2">
         <div className="relative overflow-hidden rounded-2xl border border-border bg-secondary shadow-card">
-          <img
+          <OptImage
             src={getImageUrl(offer.image)}
             alt={offer.title}
-            onError={handleImageError}
             width={800}
             height={800}
+            priority
+            sizes="(max-width: 768px) 100vw, 50vw"
             className="aspect-square size-full object-cover"
           />
           <span className="absolute left-4 top-4 rounded-full gradient-sale px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary-foreground">
@@ -122,11 +124,12 @@ export default function OfferPage() {
                   key={p.slug}
                   className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-card"
                 >
-                  <img
+                  <OptImage
                     src={getImageUrl(p.image)}
                     alt={p.name}
-                    loading="lazy"
-                    onError={handleImageError}
+                    width={56}
+                    height={56}
+                    sizes="56px"
                     className="size-14 rounded-lg object-cover bg-muted/20"
                   />
                   <div className="flex-1">
@@ -227,11 +230,12 @@ export default function OfferPage() {
                 className="group overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-float"
               >
                 <div className="relative aspect-square overflow-hidden bg-secondary">
-                  <img
+                  <OptImage
                     src={getImageUrl(c.image)}
                     alt={c.title}
-                    loading="lazy"
-                    onError={handleImageError}
+                    width={400}
+                    height={400}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <span className="absolute left-3 top-3 rounded-full gradient-sale px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
