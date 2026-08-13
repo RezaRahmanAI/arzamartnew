@@ -46,6 +46,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { getSavedNotesStore } from "@/components/admin/order-notes-modal";
 import type { OutOfStockItem } from "@/components/admin/order-stock-warning-modal";
 import { DateRange } from "react-day-picker";
 import Link from "next/link";
@@ -54,6 +55,7 @@ import { toast } from "sonner";
 
 // Dynamic imports for heavy modal components — reduces initial JS bundle by ~40KB
 const DateRangePicker = dynamic(() => import("@/components/admin/date-range-picker").then(m => m.DateRangePicker), { ssr: false });
+const OrderNotesModal = dynamic(() => import("@/components/admin/order-notes-modal").then(m => m.OrderNotesModal), { ssr: false });
 const OrderTrackingModal = dynamic(() => import("@/components/admin/order-tracking-modal").then(m => m.OrderTrackingModal), { ssr: false });
 const OrderInvoiceModal = dynamic(() => import("@/components/admin/order-invoice-modal").then(m => m.OrderInvoiceModal), { ssr: false });
 const OrderStockWarningModal = dynamic(() => import("@/components/admin/order-stock-warning-modal").then(m => m.OrderStockWarningModal), { ssr: false });
@@ -89,6 +91,7 @@ export default function AdminOrders() {
   const [sourceFilter, setSourceFilter] = useState<"all" | "facebook" | "instagram">("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
+  const [activeNotesOrder, setActiveNotesOrder] = useState<Order | null>(null);
   const [activeTrackingOrder, setActiveTrackingOrder] = useState<Order | null>(null);
   const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<Order | null>(null);
   const [activeEditOrder, setActiveEditOrder] = useState<Order | null>(null);
@@ -513,6 +516,11 @@ export default function AdminOrders() {
                         </Button>
                       )}
 
+                      {o.status === "pending" && (
+                        <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white" onClick={() => setActiveNotesOrder(o)}>
+                          Notes {o.hasNotes || Boolean(o.note) || (getSavedNotesStore()[o.id]?.length ?? 0) > 0 && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}
+                        </Button>
+                      )}
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-600 hover:text-white" onClick={() => setActiveInvoiceOrder(o)}>PDF</Button>
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-600 hover:text-white" onClick={() => setActiveTrackingOrder(o)}>History</Button>
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-green-50 text-green-600 border-green-200 hover:bg-green-600 hover:text-white" onClick={() => window.open(`https://wa.me/${o.phone.replace(/\D/g, "")}`, "_blank")}>WA</Button>
@@ -554,6 +562,7 @@ export default function AdminOrders() {
       </div>
 
       {/* Modals */}
+      <OrderNotesModal isOpen={!!activeNotesOrder} order={activeNotesOrder} onClose={() => setActiveNotesOrder(null)} />
       <OrderTrackingModal isOpen={!!activeTrackingOrder} order={activeTrackingOrder} onClose={() => setActiveTrackingOrder(null)} />
       <OrderInvoiceModal isOpen={!!activeInvoiceOrder} order={activeInvoiceOrder} onClose={() => setActiveInvoiceOrder(null)} />
       
