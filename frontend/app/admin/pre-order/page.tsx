@@ -423,7 +423,7 @@ export default function AdminPreOrderPage() {
   const total = Math.max(0, subtotal + deliveryCharge - discount);
   const due = Math.max(0, total - paid);
 
-  const handleCreatePreOrder = (e: React.FormEvent) => {
+  const handleCreatePreOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) {
       toast.error("Phone number is required");
@@ -501,7 +501,7 @@ export default function AdminPreOrderPage() {
       return;
     }
 
-    addOrder(order);
+    const finalOrderId = await addOrder(order);
 
     // Persist note into localStorage notes store so it shows in Notes modal
     if (note.trim()) {
@@ -513,12 +513,12 @@ export default function AdminPreOrderPage() {
         author: "Pre-Order Creation",
         timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
       };
-      store[order.id] = [...(store[order.id] || []), noteRecord];
+      store[finalOrderId] = [...(store[finalOrderId] || []), noteRecord];
       saveNotesStore(store);
     }
 
     toast.success("Pre-order Created Successfully!", {
-      description: `Pre-order ID: ${order.id} · Customer: ${order.customer}`,
+      description: `Pre-order ID: ${finalOrderId} · Customer: ${order.customer}`,
     });
 
     // Reset form

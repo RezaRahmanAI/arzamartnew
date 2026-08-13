@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { generateOrderId, useOrders, type Order, type OrderItem } from "@/lib/orders";
+import { useOrders, type Order, type OrderItem } from "@/lib/orders";
 import { getSizePrice, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { useSettings } from "@/context/settings-context";
@@ -467,7 +467,7 @@ export default function AdminManualOrder() {
   const due = Math.max(0, total - paid);
 
   // Submit order handler
-  const handleCreateOrder = (e: React.FormEvent) => {
+  const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) {
       toast.error("Phone number is required");
@@ -543,7 +543,7 @@ export default function AdminManualOrder() {
       return;
     }
 
-    addOrder(order);
+    const finalOrderId = await addOrder(order);
 
     // Persist note into localStorage notes store so it shows in Notes modal
     if (note.trim()) {
@@ -555,12 +555,12 @@ export default function AdminManualOrder() {
         author: "Order Creation",
         timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
       };
-      store[order.id] = [...(store[order.id] || []), noteRecord];
+      store[finalOrderId] = [...(store[finalOrderId] || []), noteRecord];
       saveNotesStore(store);
     }
 
     toast.success("Order Created Successfully!", {
-      description: `Order ID: ${order.id} · Customer: ${order.customer}`,
+      description: `Order ID: ${finalOrderId} · Customer: ${order.customer}`,
     });
 
     // Reset form

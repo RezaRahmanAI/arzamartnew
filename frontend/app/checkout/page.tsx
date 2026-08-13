@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/cart";
 import { formatBDT, getSizePrice } from "@/lib/shop-data";
-import { generateOrderId, useOrders, type Order } from "@/lib/orders";
+import { useOrders, type Order } from "@/lib/orders";
 import { useSettings } from "@/context/settings-context";
 import { useCustomers } from "@/lib/customers-store";
 import { useAuth } from "@/context/auth-context";
@@ -147,7 +147,7 @@ export default function CheckoutPage() {
     );
   }
 
-  const submit = (e: React.FormEvent<HTMLFormElement>) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const name = String(formData.get("name") ?? "");
@@ -190,7 +190,7 @@ export default function CheckoutPage() {
       date: new Date().toISOString().slice(0, 10),
       source: "checkout",
     };
-    addOrder(order);
+    const finalOrderId = await addOrder(order);
 
     // Persist checkout note into localStorage notes store for admin Notes modal
     const checkoutNote = String(formData.get("note") ?? "").trim();
@@ -203,16 +203,16 @@ export default function CheckoutPage() {
         author: "Customer (Website)",
         timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
       };
-      store[order.id] = [...(store[order.id] || []), noteRecord];
+      store[finalOrderId] = [...(store[finalOrderId] || []), noteRecord];
       saveNotesStore(store);
     }
 
     if (draftId) removeIncomplete(draftId);
     clear();
     toast.success("Order placed!", {
-      description: `Thanks ${name}, order ${orderId} is confirmed. We'll call to verify.`,
+      description: `Thanks ${name}, order ${finalOrderId} is confirmed. We'll call to verify.`,
     });
-    router.push(`/order-confirmation/${orderId}`);
+    router.push(`/order-confirmation/${finalOrderId}`);
   };
 
   return (

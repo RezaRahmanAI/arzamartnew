@@ -61,15 +61,12 @@ export type Order = {
   hasNotes?: boolean;
 };
 
-export const generateOrderId = (): string =>
-  `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
-
 type OrdersContextValue = {
   orders: Order[];
   incomplete: Order[];
   isLoading: boolean;
   generateNextOrderId: () => string;
-  addOrder: (order: Order) => Promise<void>;
+  addOrder: (order: Order) => Promise<string>;
   saveIncomplete: (order: Order) => Promise<void>;
   removeIncomplete: (id: string) => Promise<void>;
   promoteIncomplete: (id: string) => Promise<void>;
@@ -108,29 +105,37 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     fetchOrdersData();
   }, [fetchOrdersData]);
 
-  const addOrder = useCallback(async (order: Order) => {
-    setOrders((prev) => [order, ...prev]);
-    setIncomplete((prev) => prev.filter((o) => o.id !== order.id));
+    const addOrder = useCallback(
+    async (order: Order): Promise<string> => {
+      let finalId = order.id;
+      setOrders((prev) => [order, ...prev]);
+      setIncomplete((prev) => prev.filter((o) => o.id !== order.id));
 
-    // Increment nextOrderNumber in settings if order.id starts with prefix
-    const prefix = settings?.orders?.orderIdPrefix ?? "ORD-";
-    const currentNum = settings?.orders?.nextOrderNumber ?? 10001;
-    if (order.id.startsWith(prefix)) {
-      const extractedNum = parseInt(order.id.replace(prefix, ""), 10);
-      const nextNum = !isNaN(extractedNum) ? Math.max(currentNum + 1, extractedNum + 1) : currentNum + 1;
-      updateSection("orders", { nextOrderNumber: nextNum });
-      saveSettings({ silent: true });
-    }
-
-    try {
-      const saved = await ordersService.create(order);
-      if (saved && saved.id && saved.id !== order.id) {
-        setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, id: saved.id! } : o)));
+      try {
+        const saved = await ordersService.create(order);
+        if (saved && saved.id && saved.id !== order.id) {
+          finalId = saved.id;
+          setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, id: saved.id! } : o)));
+        }
+      } catch (err) {
+        console.error("Failed to sync order creation with API:", err);
       }
-    } catch (err) {
-      console.error("Failed to sync order creation with API:", err);
-    }
-  }, [settings, updateSection, saveSettings]);
+
+      // Keep nextOrderNumber in settings aligned with the final adopted id so
+      // subsequent orders keep incrementing from the last one.
+      const prefix = settings?.orders?.orderIdPrefix ?? "ORD-";
+      const currentNum = settings?.orders?.nextOrderNumber ?? 10001;
+      if (finalId.startsWith(prefix)) {
+        const extractedNum = parseInt(finalId.replace(prefix, ""), 10);
+        const nextNum = !isNaN(extractedNum) ? Math.max(currentNum + 1, extractedNum + 1) : currentNum + 1;
+        updateSection("orders", { nextOrderNumber: nextNum });
+        saveSettings({ silent: true });
+      }
+
+      return finalId;
+    },
+    [settings, updateSection, saveSettings]
+  );
 
   const saveIncomplete = useCallback(async (order: Order) => {
     setIncomplete((prev) => {

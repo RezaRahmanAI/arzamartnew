@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Ecommerce.Application.Common.Interfaces;
 using Ecommerce.Application.Features.Orders.Commands;
 using Ecommerce.Domain.Entities;
@@ -238,6 +239,149 @@ public class OrdersController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Generates the next sequential order number using the configured
+    /// orderIdPrefix + nextOrderNumber from the persisted system settings.
+    /// Falls back to the highest existing number + 1 for that prefix so IDs
+    /// always keep incrementing even if the settings counter is stale.
+    /// </summary>
+    private async Task<(string number, long storedNext)> ResolveNextOrderNumberAsync(CancellationToken ct, long requested)
+    {
+        var cfg = await LoadOrderNumberConfigAsync(ct);
+
+        // The admin may pass an explicit sequential id (e.g. from settings);
+        // otherwise start from the stored counter.
+        var candidate = requested;
+
+        // Always advance past the highest existing number for the prefix so
+        // a stale counter or a fresh database can never produce a duplicate.
+        var existing = await _context.Orders
+            .AsNoTracking()
+            .Where(o => o.OrderNumber != null && o.OrderNumber.StartsWith(cfg.prefix))
+            .Select(o => o.OrderNumber)
+            .ToListAsync(ct);
+
+        long maxExisting = 0;
+        foreach (var num in existing)
+        {
+            var suffix = num[cfg.prefix.Length..];
+            if (long.TryParse(suffix, out var n) && n > maxExisting)
+            {
+                maxExisting = n;
+            }
+        }
+
+        if (candidate <= maxExisting)
+        {
+            candidate = maxExisting + 1;
+        }
+
+        if (candidate < cfg.storedNext)
+        {
+            candidate = cfg.storedNext;
+        }
+
+        // Guard against duplicate concurrent inserts.
+        var number = $"{cfg.prefix}{candidate}";
+        while (await _context.Orders.AnyAsync(o => o.OrderNumber == number, ct))
+        {
+            candidate++;
+            number = $"{cfg.prefix}{candidate}";
+        }
+
+        return (number, candidate + 1);
+    }
+
+    private async Task<(string prefix, long storedNext)> LoadOrderNumberConfigAsync(CancellationToken ct)
+    {
+        var prefix = "ORD-";
+        long storedNext = 10001;
+
+        var settings = await _context.WebsiteSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        if (settings == null || string.IsNullOrWhiteSpace(settings.SettingsJson))
+        {
+            return (prefix, storedNext);
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(settings.SettingsJson);
+            if (doc.RootElement.TryGetProperty("orders", out var ordersNode) &&
+                ordersNode.ValueKind == JsonValueKind.Object)
+            {
+                if (ordersNode.TryGetProperty("orderIdPrefix", out var p) && p.ValueKind == JsonValueKind.String)
+                {
+                    prefix = p.GetString() ?? prefix;
+                }
+
+                if (ordersNode.TryGetProperty("nextOrderNumber", out var n) && n.ValueKind == JsonValueKind.Number)
+                {
+                    storedNext = n.GetInt64();
+                }
+            }
+        }
+        catch
+        {
+            // Fall back to defaults on malformed settings JSON.
+        }
+
+        return (prefix, storedNext);
+    }
+
+    private async Task PersistNextOrderNumberAsync(long next, CancellationToken ct)
+    {
+        try
+        {
+            var settings = await _context.WebsiteSettings.FirstOrDefaultAsync(ct);
+            if (settings == null || string.IsNullOrWhiteSpace(settings.SettingsJson))
+            {
+                return;
+            }
+
+            using var doc = JsonDocument.Parse(settings.SettingsJson);
+            using var stream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = false }))
+            {
+                if (doc.RootElement.TryGetProperty("orders", out var ordersNode) &&
+                    ordersNode.ValueKind == JsonValueKind.Object)
+                {
+                    writer.WriteStartObject();
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                    {
+                        if (prop.Name == "orders")
+                        {
+                            writer.WriteStartObject("orders");
+                            foreach (var o in ordersNode.EnumerateObject())
+                            {
+                                if (o.Name == "nextOrderNumber")
+                                {
+                                    writer.WriteNumber("nextOrderNumber", next);
+                                }
+                                else
+                                {
+                                    o.Value.WriteTo(writer);
+                                }
+                            }
+                            writer.WriteEndObject();
+                        }
+                        else
+                        {
+                            prop.Value.WriteTo(writer);
+                        }
+                    }
+                    writer.WriteEndObject();
+                }
+            }
+
+            settings.SettingsJson = System.Text.Encoding.UTF8.GetString(stream.ToArray());
+            await _context.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            // Never fail order creation because the counter persistence failed.
+        }
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateOrder([FromBody] FrontendOrderDto dto)
     {
@@ -268,15 +412,17 @@ public class OrdersController : ControllerBase
                 await _context.SaveChangesAsync();
             }
 
-            var orderNum = string.IsNullOrWhiteSpace(dto.Id) ? $"ORD-{Random.Shared.Next(10000, 99999)}" : dto.Id.Trim();
-            if (await _context.Orders.AnyAsync(o => o.OrderNumber == orderNum))
+            // Resolve the next sequential order number (settings prefix + counter),
+            // advancing past any existing numbers so IDs never repeat.
+            long requestedNum = 0;
+            if (!string.IsNullOrWhiteSpace(dto.Id))
             {
-                orderNum = $"ORD-{Random.Shared.Next(10000, 99999)}";
-                while (await _context.Orders.AnyAsync(o => o.OrderNumber == orderNum))
-                {
-                    orderNum = $"ORD-{Random.Shared.Next(10000, 99999)}";
-                }
+                var dash = dto.Id.LastIndexOf('-');
+                long.TryParse(dash >= 0 ? dto.Id[(dash + 1)..] : dto.Id, out requestedNum);
             }
+
+            var (orderNum, nextStored) = await ResolveNextOrderNumberAsync(CancellationToken.None, requestedNum);
+            await PersistNextOrderNumberAsync(nextStored, CancellationToken.None);
 
             var statusStr = dto.Status ?? "pending";
             TryParseOrderStatus(statusStr, out var parsedStatus);

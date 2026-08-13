@@ -115,7 +115,12 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
       };
 
       const res = await ordersService.createOrder(orderPayload);
-      setOrderSuccess(res.orderNumber || "ORD-" + Math.floor(100000 + Math.random() * 900000));
+      if (res.orderNumber) {
+        setOrderSuccess(res.orderNumber);
+      } else {
+        alert("অর্ডার সাবমিট করা যাচ্ছে না। অনুগ্রহ করে আবার চেষ্টা করুন।");
+        return;
+      }
     } catch (err) {
       console.error("Order submission failed:", err);
       alert("অর্ডার সাবমিট করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।");

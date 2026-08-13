@@ -110,7 +110,7 @@ class OrdersService {
     try {
       return await apiClient.post<{ orderNumber?: string }>("/orders", orderPayload);
     } catch {
-      return { orderNumber: "ORD-" + Math.floor(100000 + Math.random() * 900000) };
+      return { orderNumber: undefined };
     }
   }
 
