@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
+import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
 import {
   Lock,
   Mail,
@@ -38,10 +39,20 @@ export default function CustomerLoginPage() {
   const [address, setAddress] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [showRegPass, setShowRegPass] = useState(false);
+  const [city, setCity] = useState("Dhaka");
+  const [area, setArea] = useState(() => getAreasForCity("Dhaka")[0] || "");
 
   if (user && user.role === "customer") {
     router.push("/account");
   }
+
+  const availableAreas = getAreasForCity(city);
+
+  const handleCityChange = (nextCity: string) => {
+    setCity(nextCity);
+    const areas = getAreasForCity(nextCity);
+    setArea(areas[0] || "");
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +72,9 @@ export default function CustomerLoginPage() {
       email: "",
       phone: phone.trim(),
       password: regPassword,
-      address: address.trim() || "Dhaka, Bangladesh",
+      address: address.trim() || `${area}, ${city}`,
+      area,
+      district: city,
     });
     setIsSubmitting(false);
     if (success) {
@@ -203,11 +216,41 @@ export default function CustomerLoginPage() {
                 <MapPin className="absolute left-3 top-3 size-4 text-muted-foreground" />
                 <Input
                   id="su-address"
-                  placeholder="Dhanmondi, Dhaka 1205"
+                  placeholder="House, road, area details"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   className="pl-9 text-sm"
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="su-city" className="text-xs font-semibold">City</Label>
+                <select
+                  id="su-city"
+                  value={city}
+                  onChange={(e) => handleCityChange(e.target.value)}
+                  className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {DEFAULT_CITIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="su-area" className="text-xs font-semibold">Area (Thana / Upazila)</Label>
+                <select
+                  id="su-area"
+                  value={area}
+                  onChange={(e) => setArea(e.target.value)}
+                  className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {availableAreas.map((a) => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

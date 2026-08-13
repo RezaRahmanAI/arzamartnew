@@ -25,7 +25,15 @@ interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   loginCustomer: (emailOrPhone: string, pass: string) => Promise<boolean>;
-  registerCustomer: (data: { name: string; email: string; phone: string; password: string; address?: string }) => Promise<boolean>;
+  registerCustomer: (data: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    address?: string;
+    area?: string;
+    district?: string;
+  }) => Promise<boolean>;
   loginAsCustomer: (customer: CustomerMaster) => AuthUser;
   setPassword: (phone: string, password: string) => Promise<boolean>;
   changePassword: (phone: string, currentPassword: string, newPassword: string) => Promise<boolean>;
@@ -261,7 +269,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const registerCustomer = useCallback(
-    async (data: { name: string; email: string; phone: string; password: string; address?: string }): Promise<boolean> => {
+    async (data: {
+      name: string;
+      email: string;
+      phone: string;
+      password: string;
+      address?: string;
+      area?: string;
+      district?: string;
+    }): Promise<boolean> => {
       if (!data.name || !data.phone || !data.password) {
         toast.error("Please fill in required fields");
         return false;
@@ -271,10 +287,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
+      const district = data.district || "Dhaka";
+
       const master = findOrCreateByPhone(data.phone, {
         fullName: data.name,
         email: data.email,
         address: data.address || "Dhaka, Bangladesh",
+        area: data.area,
+        district,
       });
 
       // 1) Ensure the customer row exists on SQL Server, then set its password.
@@ -283,7 +303,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: data.email,
         phone: data.phone,
         defaultAddress: data.address || "Dhaka, Bangladesh",
-        district: "Dhaka",
+        district,
       });
 
       const passwordResult = await customersService.setPassword(data.phone, data.password);
