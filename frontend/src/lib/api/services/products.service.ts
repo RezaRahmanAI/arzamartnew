@@ -29,6 +29,7 @@ class ProductsService {
     const basePrice = p.basePrice ?? 0;
     const discountPrice = p.discountPrice;
     return {
+      id: p.id,
       slug: p.slug,
       name: p.name,
       category: p.categoryName ? p.categoryName.toLowerCase() : "t-shirts",

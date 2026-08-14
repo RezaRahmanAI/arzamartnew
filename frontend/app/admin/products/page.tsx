@@ -1,6 +1,7 @@
 "use client";
 
-import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw, Search } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw, Search, ExternalLink, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -384,7 +385,27 @@ export default function AdminProducts() {
                     </button>
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-1.5">
+                    <div className="flex justify-end items-center gap-1.5 whitespace-nowrap">
+                      {/* Standard Landing Page */}
+                      <a
+                        href={`/landing/${p.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-slate-100/90 px-2 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-700 hover:text-white dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer shadow-2xs"
+                        title="Open Public Standard Landing Page (New Tab)"
+                      >
+                        Std LP
+                      </a>
+
+                      {/* Custom Landing Page Designer */}
+                      <Link
+                        href={`/admin/landing-pages?productId=${p.id || p.slug}&slug=${p.slug}`}
+                        className="inline-flex items-center justify-center rounded-md border border-cyan-200 bg-cyan-50 px-2 py-1.5 text-xs font-bold text-cyan-700 transition-all hover:bg-cyan-600 hover:text-white dark:border-cyan-900 dark:bg-cyan-950/60 dark:text-cyan-300 dark:hover:bg-cyan-600 cursor-pointer shadow-2xs"
+                        title="Design Custom Landing Page for this Product"
+                      >
+                        CLP
+                      </Link>
+
                       <button
                         type="button"
                         onClick={() => openStockModal(p)}

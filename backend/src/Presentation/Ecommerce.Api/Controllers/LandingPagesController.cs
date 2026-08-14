@@ -33,35 +33,95 @@ public class LandingPagesController : ControllerBase
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Slug == slug && p.IsActive);
 
-        if (page == null) return NotFound(new { message = "Landing page not found." });
-
-        object? product = null;
-        if (page.ProductId.HasValue)
+        if (page != null)
         {
-            var rawProduct = await _context.Products
+            object? product = null;
+            if (page.ProductId.HasValue)
+            {
+                var rawProduct = await _context.Products
+                    .Include(p => p.Images)
+                    .Include(p => p.Variants)
+                    .Include(p => p.Category)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == page.ProductId.Value);
+
+                if (rawProduct != null)
+                {
+                    product = new
+                    {
+                        id = rawProduct.Id,
+                        name = rawProduct.Name,
+                        slug = rawProduct.Slug,
+                        basePrice = rawProduct.BasePrice,
+                        discountPrice = rawProduct.DiscountPrice,
+                        images = rawProduct.Images.Select(i => new { imageUrl = i.ImageUrl, isMain = i.IsMain }),
+                        variants = rawProduct.Variants.Select(v => new { id = v.Id, name = v.Name, sku = v.SKU, priceOverride = v.PriceOverride, stockQuantity = v.StockQuantity }),
+                        category = rawProduct.Category != null ? new { name = rawProduct.Category.Name } : null,
+                    };
+                }
+            }
+
+            return Ok(new { landingPage = page, product });
+        }
+
+        // Automatic Product Fallback for Standard Landing Pages
+        string productSlug = slug.EndsWith("-offer") ? slug[..^6] : slug;
+        Product? fallbackProduct = null;
+        if (Guid.TryParse(slug, out var parsedId))
+        {
+            fallbackProduct = await _context.Products
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
                 .Include(p => p.Category)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == page.ProductId.Value);
-
-            if (rawProduct != null)
-            {
-                product = new
-                {
-                    id = rawProduct.Id,
-                    name = rawProduct.Name,
-                    slug = rawProduct.Slug,
-                    basePrice = rawProduct.BasePrice,
-                    discountPrice = rawProduct.DiscountPrice,
-                    images = rawProduct.Images.Select(i => new { imageUrl = i.ImageUrl, isMain = i.IsMain }),
-                    variants = rawProduct.Variants.Select(v => new { id = v.Id, name = v.Name, sku = v.SKU, priceOverride = v.PriceOverride, stockQuantity = v.StockQuantity }),
-                    category = rawProduct.Category != null ? new { name = rawProduct.Category.Name } : null,
-                };
-            }
+                .FirstOrDefaultAsync(p => p.Id == parsedId && p.IsActive);
         }
 
-        return Ok(new { landingPage = page, product });
+        if (fallbackProduct == null)
+        {
+            fallbackProduct = await _context.Products
+                .Include(p => p.Images)
+                .Include(p => p.Variants)
+                .Include(p => p.Category)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => (p.Slug == slug || p.Slug == productSlug) && p.IsActive);
+        }
+
+        if (fallbackProduct == null)
+        {
+            return NotFound(new { message = "Landing page not found." });
+        }
+
+        var defaultPage = new LandingPage
+        {
+            ProductId = fallbackProduct.Id,
+            Title = fallbackProduct.Name,
+            Subtitle = fallbackProduct.ShortDescription ?? $"{fallbackProduct.Name} — প্রিমিয়াম কোয়ালিটি, সেরা দামে",
+            Slug = fallbackProduct.Slug,
+            HeroTitle = fallbackProduct.Name,
+            HeroSubtitle = fallbackProduct.ShortDescription ?? "সেরা মানের প্রিমিয়াম ফেব্রিক ও স্টাইলিশ ডিজাইন। এখনই অর্ডার করুন!",
+            HeroImageUrl = fallbackProduct.Images.FirstOrDefault(i => i.IsMain)?.ImageUrl ?? fallbackProduct.Images.FirstOrDefault()?.ImageUrl ?? "",
+            SpecialPrice = fallbackProduct.DiscountPrice ?? fallbackProduct.BasePrice,
+            OldPrice = fallbackProduct.DiscountPrice.HasValue ? fallbackProduct.BasePrice : 0,
+            DeliveryCharge = 70,
+            CallButtonText = "অর্ডার করুন",
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        var fallbackProductDto = new
+        {
+            id = fallbackProduct.Id,
+            name = fallbackProduct.Name,
+            slug = fallbackProduct.Slug,
+            basePrice = fallbackProduct.BasePrice,
+            discountPrice = fallbackProduct.DiscountPrice,
+            images = fallbackProduct.Images.Select(i => new { imageUrl = i.ImageUrl, isMain = i.IsMain }),
+            variants = fallbackProduct.Variants.Select(v => new { id = v.Id, name = v.Name, sku = v.SKU, priceOverride = v.PriceOverride, stockQuantity = v.StockQuantity }),
+            category = fallbackProduct.Category != null ? new { name = fallbackProduct.Category.Name } : null,
+        };
+
+        return Ok(new { landingPage = defaultPage, product = fallbackProductDto });
     }
 
     [HttpGet("product/{productId}")]

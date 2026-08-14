@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Plus,
   Edit3,
@@ -16,6 +17,7 @@ import {
   Star,
   Disc,
   Copy,
+  Sparkles,
 } from "lucide-react";
 import { landingPagesService, type LandingPageItem } from "@/lib/api/services/landing-pages.service";
 import { productsService, type RawApiProduct } from "@/lib/api/services/products.service";
@@ -57,9 +59,8 @@ function getProductImageUrl(p: RawApiProduct, fallback = ""): string {
   return fallback;
 }
 
-/* ─── Main Component ─── */
-
-export default function AdminLandingPagesPage() {
+function AdminLandingPagesContent() {
+  const searchParams = useSearchParams();
   const [pages, setPages] = useState<LandingPageItem[]>([]);
   const [products, setProducts] = useState<RawApiProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +92,31 @@ export default function AdminLandingPagesPage() {
     fetchData();
   }, []);
 
+  const openCreateModalForProduct = (p: RawApiProduct) => {
+    setEditingId(null);
+    setProductDropdownOpen(false);
+    autoFillFromProduct(p.id || p.slug);
+    setVideoUrl("");
+    setCallButtonText("অর্ডার করুন");
+    setIsActive(true);
+
+    setSections([
+      {
+        id: "sec-1",
+        type: "features",
+        title: "পণ্যটির বিশেষত্বসমূহ",
+        iconType: "checkmark",
+        items: [
+          "100% Premium Quality Material",
+          "Color Guarantee — Wash after Wash",
+          "সারাদেশে ক্যাশ অন ডেলিভারি",
+        ],
+      },
+    ]);
+
+    setIsModalOpen(true);
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -109,6 +135,29 @@ export default function AdminLandingPagesPage() {
         items = productsRes.items;
       }
       setProducts(items);
+
+      // Check query params to immediately open editor for a requested product
+      const paramProductId = searchParams.get("productId");
+      const paramSlug = searchParams.get("slug");
+      if (paramProductId || paramSlug) {
+        const existing = (landingRes || []).find(
+          (item) =>
+            (paramProductId && (item.productId === paramProductId || item.slug === paramProductId)) ||
+            (paramSlug && (item.slug === paramSlug || item.slug === `${paramSlug}-offer` || item.productId === paramSlug))
+        );
+        if (existing) {
+          openEditModal(existing);
+        } else {
+          const targetProd = items.find(
+            (p) =>
+              (paramProductId && (p.id === paramProductId || p.slug === paramProductId)) ||
+              (paramSlug && p.slug === paramSlug)
+          );
+          if (targetProd) {
+            openCreateModalForProduct(targetProd);
+          }
+        }
+      }
     } catch (err) {
       console.error("Failed to load data:", err);
     } finally {
@@ -1041,5 +1090,19 @@ function SectionItemEditor({
         </>
       )}
     </div>
+  );
+}
+
+export default function AdminLandingPagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 flex items-center justify-center min-h-[400px]">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <AdminLandingPagesContent />
+    </Suspense>
   );
 }
