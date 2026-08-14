@@ -130,7 +130,11 @@ if (Directory.Exists(webrootFolder))
     app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
     {
         FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webrootFolder),
-        RequestPath = ""
+        RequestPath = "",
+        OnPrepareResponse = ctx =>
+        {
+            ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=2592000, immutable";
+        }
     });
 }
 

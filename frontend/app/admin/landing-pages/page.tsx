@@ -79,8 +79,7 @@ export default function AdminLandingPagesPage() {
   const [heroSubtitle, setHeroSubtitle] = useState("");
   const [heroImageUrl, setHeroImageUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
-  const [specialPrice, setSpecialPrice] = useState(0);
-  const [oldPrice, setOldPrice] = useState(0);
+
   const [callButtonText, setCallButtonText] = useState("অর্ডার করুন");
   const [isActive, setIsActive] = useState(true);
 
@@ -129,10 +128,6 @@ export default function AdminLandingPagesPage() {
     setHeroSubtitle(p.shortDescription || "");
     setHeroImageUrl(p.mainImageUrl || getProductImageUrl(p) || "");
     setSlug(generateSlug(p.name) + "-offer");
-    const sell = p.discountPrice || p.basePrice || 0;
-    const mrp = p.basePrice || (sell > 0 ? Math.round(sell * 1.35) : 0);
-    setSpecialPrice(sell);
-    setOldPrice(mrp > sell ? mrp : sell);
   };
 
   /* ─── Modal Openers ─── */
@@ -152,8 +147,6 @@ export default function AdminLandingPagesPage() {
       setHeroTitle("");
       setHeroSubtitle("");
       setHeroImageUrl("");
-      setSpecialPrice(0);
-      setOldPrice(0);
     }
 
     setVideoUrl("");
@@ -188,8 +181,7 @@ export default function AdminLandingPagesPage() {
     setHeroSubtitle(item.heroSubtitle);
     setHeroImageUrl(item.heroImageUrl);
     setVideoUrl(item.videoUrl || "");
-    setSpecialPrice(item.specialPrice || 0);
-    setOldPrice(item.oldPrice || 0);
+
     setCallButtonText(item.callButtonText || "অর্ডার করুন");
     setIsActive(item.isActive);
 
@@ -315,8 +307,6 @@ export default function AdminLandingPagesPage() {
       videoUrl,
       contentJson: JSON.stringify({ highlights: firstSectionItems, videoUrl }),
       sectionsJson: JSON.stringify(sections),
-      specialPrice: Number(specialPrice) || 0,
-      oldPrice: Number(oldPrice) || 0,
       deliveryCharge: 0,
       callButtonText,
       isActive,
@@ -732,85 +722,6 @@ export default function AdminLandingPagesPage() {
               </div>
 
               {/* ── Pricing & Variant Breakdown ── */}
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20 space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-gray-800 dark:text-gray-200">
-                    💰 প্রাইসিং ও ভ্যারিয়েন্ট প্রিভিউ (Size & Color Default Setting)
-                  </label>
-                  {selectedProductObj && (
-                    <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-md">
-                      প্রোডাক্ট লিঙ্কড ✓
-                    </span>
-                  )}
-                </div>
-
-                {/* Size-wise Price & Stock Preview from selected product */}
-                {selectedProductObj?.variants && selectedProductObj.variants.length > 0 && (
-                  <div className="rounded-lg bg-white p-3 border border-emerald-100 dark:bg-gray-900 dark:border-gray-800 space-y-2">
-                    <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400 block">
-                      📏 প্রোডাক্টের সাইজ ও সাইজ অনুযায়ী স্বয়ংক্রিয় নির্ধারিত মূল্য (Size-wise Prices):
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProductObj.variants.map((v, i) => {
-                        const price = v.priceOverride && v.priceOverride > 0
-                          ? v.priceOverride
-                          : (selectedProductObj.discountPrice || selectedProductObj.basePrice || 0);
-                        return (
-                          <div
-                            key={i}
-                            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs dark:border-gray-700 dark:bg-gray-800"
-                          >
-                            <span className="font-extrabold text-gray-800 dark:text-gray-200">
-                              {v.name.replace("Size: ", "")}:
-                            </span>
-                            <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                              ৳{price}
-                            </span>
-                            {v.stockQuantity !== undefined && (
-                              <span className="text-[10px] text-gray-400">
-                                ({v.stockQuantity} pcs)
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1">
-                      মূল / ডিফল্ট অফার প্রাইস (৳)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={specialPrice}
-                      onChange={(e) => setSpecialPrice(Number(e.target.value))}
-                      placeholder="যেমন: 499"
-                      className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold outline-none focus:border-emerald-600 dark:border-gray-800 dark:bg-gray-800 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1">
-                      রেগুলার / MRP প্রাইস (৳) — স্ট্রাইকথ্রু
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={oldPrice}
-                      onChange={(e) => setOldPrice(Number(e.target.value))}
-                      placeholder="যেমন: 990"
-                      className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-bold outline-none focus:border-emerald-600 dark:border-gray-800 dark:bg-gray-800 dark:text-white"
-                    />
-                  </div>
-                </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                  💡 ল্যান্ডিং পেজে কাস্টমার যখন নির্দিষ্ট সাইজ সিলেক্ট করবে, তখন প্রোডাক্টের ওই সাইজের দাম সরাসরি একটিভ হবে। কালারও স্বয়ংক্রিয়ভাবে ডিফল্ট সেট থাকবে।
-                </p>
-              </div>
-
               {/* ── CTA Button Text ── */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
