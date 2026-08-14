@@ -54,6 +54,11 @@ export const landingPagesService = {
   },
 
   async delete(id: number): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`/landingpages/${id}`);
+    try {
+      return await apiClient.delete<{ message: string }>(`/landingpages/${id}`);
+    } catch {
+      // Fallback in case IIS / WebDAV server blocks HTTP DELETE method
+      return await apiClient.post<{ message: string }>(`/landingpages/delete/${id}`);
+    }
   },
 };

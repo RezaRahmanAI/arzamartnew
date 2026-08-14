@@ -123,10 +123,11 @@ public class LandingPagesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [HttpPost("delete/{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         var page = await _context.LandingPages.FindAsync(id);
-        if (page == null) return NotFound();
+        if (page == null) return NotFound(new { message = "Landing page not found." });
 
         _context.LandingPages.Remove(page);
         await _context.SaveChangesAsync(default);
