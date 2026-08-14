@@ -47,6 +47,16 @@ function generateSlug(name: string): string {
     .replace(/\s+/g, "-");
 }
 
+function getProductImageUrl(p: RawApiProduct, fallback = ""): string {
+  if (p.mainImageUrl) return p.mainImageUrl;
+  const imgs = p.images;
+  if (Array.isArray(imgs) && imgs.length > 0) return imgs[0] || fallback;
+  if (typeof imgs === "string" && imgs.trim()) {
+    return imgs.trim().split(/\s+/)[0] || fallback;
+  }
+  return fallback;
+}
+
 /* ─── Main Component ─── */
 
 export default function AdminLandingPagesPage() {
@@ -117,7 +127,7 @@ export default function AdminLandingPagesPage() {
     setSubtitle(p.shortDescription || `${p.name} — প্রিমিয়াম কোয়ালিটি, সেরা দামে`);
     setHeroTitle(p.name);
     setHeroSubtitle(p.shortDescription || "");
-    setHeroImageUrl(p.mainImageUrl || p.images?.[0] || "");
+    setHeroImageUrl(p.mainImageUrl || getProductImageUrl(p) || "");
     setSlug(generateSlug(p.name) + "-offer");
     const sell = p.discountPrice || p.basePrice || 0;
     const mrp = p.basePrice || (sell > 0 ? Math.round(sell * 1.35) : 0);
@@ -454,7 +464,7 @@ export default function AdminLandingPagesPage() {
                       {linkedProduct ? (
                         <div className="flex items-center gap-2">
                           <img
-                            src={linkedProduct.mainImageUrl || linkedProduct.images?.[0] || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"}
+                            src={getProductImageUrl(linkedProduct, "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800")}
                             alt={linkedProduct.name}
                             className="h-7 w-7 rounded-md object-cover border border-gray-200 dark:border-gray-700"
                           />
@@ -555,7 +565,7 @@ export default function AdminLandingPagesPage() {
                     {selectedProductObj ? (
                       <div className="flex items-center gap-3 truncate">
                         <img
-                          src={selectedProductObj.mainImageUrl || selectedProductObj.images?.[0] || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"}
+                          src={getProductImageUrl(selectedProductObj, "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800")}
                           alt={selectedProductObj.name}
                           className="h-8 w-8 rounded-lg object-cover border border-gray-200 dark:border-gray-700 shrink-0"
                           onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
@@ -574,7 +584,7 @@ export default function AdminLandingPagesPage() {
                     <div className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-gray-700 dark:bg-gray-800">
                       {products.map((p) => {
                         const isSelected = p.id === productId || p.slug === productId;
-                        const pImg = p.mainImageUrl || p.images?.[0] || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800";
+                        const pImg = getProductImageUrl(p, "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800");
                         return (
                           <div
                             key={p.slug || p.id}

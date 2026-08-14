@@ -16,7 +16,7 @@ export interface RawApiProduct {
   isBundle?: boolean;
   bundleProducts?: string[];
   variants?: { name: string; priceOverride?: number; stockQuantity?: number }[];
-  images?: string[];
+  images?: string[] | string;
 }
 
 export interface PagedProductResponse {
@@ -49,7 +49,7 @@ class ProductsService {
       sizeStock: p.variants && p.variants.length > 0
         ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.stockQuantity ?? 15]))
         : {},
-      images: p.images && p.images.length > 0 ? p.images.filter(Boolean) : [p.mainImageUrl || ""]
+      images: (() => { const imgs = p.images; if (Array.isArray(imgs) && imgs.length > 0) return imgs.filter(Boolean); if (typeof imgs === "string" && imgs.trim()) return imgs.trim().split(/\s+/).filter(Boolean); return [p.mainImageUrl || ""]; })()
     };
   }
 

@@ -13,6 +13,7 @@ const bricolage = Bricolage_Grotesque({
   variable: "--font-display",
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
+  preload: false,
 });
 
 const dmSans = DM_Sans({
@@ -20,6 +21,7 @@ const dmSans = DM_Sans({
   variable: "--font-body",
   display: "swap",
   weight: ["400", "500", "600", "700"],
+  preload: false,
 });
 
 export const metadata: Metadata = {
