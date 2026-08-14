@@ -17,7 +17,7 @@ import { useOrders } from "@/lib/orders";
 import { useCustomers } from "@/lib/customers-store";
 import { customersService } from "@/lib/api/services/customers.service";
 import { getImageUrl } from "@/lib/utils";
-import { OptImage } from "@/components/opt-image";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -285,13 +285,14 @@ function AccountContent() {
                   </button>
 
                   <Link href={`/product/${p.slug}`} className="block">
-                    <OptImage
+                    <img
                       src={getImageUrl(p.image)}
                       alt={p.name}
                       width={400}
                       height={400}
-                      sizes="(max-width: 640px) 50vw, 25vw"
+                      loading="lazy"
                       className="aspect-square w-full rounded-lg object-cover transition-transform duration-300 group-hover:scale-105 bg-muted/20"
+                      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                     />
                   </Link>
 

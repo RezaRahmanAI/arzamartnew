@@ -20,7 +20,7 @@ import {
 import { landingPagesService, type LandingPageItem } from "@/lib/api/services/landing-pages.service";
 import { productsService, type RawApiProduct } from "@/lib/api/services/products.service";
 import { apiClient } from "@/lib/api/client";
-import { OptImage } from "@/components/opt-image";
+
 
 /* ─── Types ─── */
 
@@ -401,13 +401,14 @@ export default function AdminLandingPagesPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {page.heroImageUrl && (
-                          <OptImage
+                          <img
                             src={page.heroImageUrl}
                             alt={page.title}
                             className="h-10 w-10 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
                             width={40}
                             height={40}
-                            sizes="40px"
+                            loading="lazy"
+                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                           />
                         )}
                         <div>

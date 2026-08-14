@@ -5,7 +5,7 @@ import { formatBDT, type Product, getSizePrice, getColorHex } from "@/lib/shop-d
 import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
 import { getImageUrl, FALLBACK_IMAGE } from "@/lib/utils";
-import { OptImage } from "@/components/opt-image";
+
 import { toast } from "sonner";
 import { ShoppingBag, Minus, Plus, Heart } from "lucide-react";
 import { useState } from "react";
@@ -73,13 +73,14 @@ export function ProductCard({ product }: { product: Product }) {
         className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-float"
       >
         <div className="relative aspect-square overflow-hidden bg-secondary">
-          <OptImage
+          <img
             src={getImageUrl(product.image)}
             alt={product.name}
             width={800}
             height={800}
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            loading="lazy"
             className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
           />
           {product.badge && (
             <span className="absolute left-3 top-3 rounded-full gradient-sale px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
@@ -148,7 +149,7 @@ export function ProductCard({ product }: { product: Product }) {
 
           <div className="mt-4 flex gap-4">
             <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-secondary border border-border">
-              <OptImage src={getImageUrl(product.image)} alt={product.name} width={80} height={80} sizes="80px" className="size-full object-cover" />
+              <img src={getImageUrl(product.image)} alt={product.name} width={80} height={80} loading="lazy" className="size-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }} />
             </div>
             <div className="flex flex-col justify-center">
               <h4 className="text-sm font-semibold text-foreground leading-snug">{product.name}</h4>

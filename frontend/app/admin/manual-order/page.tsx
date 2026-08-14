@@ -28,7 +28,7 @@ import { CustomerSearchInput } from "@/components/admin/customer-search-input";
 import { useSettings } from "@/context/settings-context";
 import { CITY_AREAS_MAP as INITIAL_CITY_AREAS_MAP, DEFAULT_CITIES, DEFAULT_AREAS } from "@/lib/location-data";
 import { getImageUrl, handleImageError } from "@/lib/utils";
-import { OptImage } from "@/components/opt-image";
+
 import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
 
 // Source Pages & Social Pages are now managed from Settings > Social Media Links.
@@ -965,13 +965,14 @@ export default function AdminManualOrder() {
                           className="cursor-pointer space-y-1.5"
                         >
                           <div className="aspect-square w-full overflow-hidden rounded bg-secondary">
-                            <OptImage
+                            <img
                               src={getImageUrl(product.image)}
                               alt={product.name}
                               className="size-full object-cover group-hover:scale-105 transition-transform duration-300"
                               width={200}
                               height={200}
-                              sizes="200px"
+                              loading="lazy"
+                              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                             />
                           </div>
 
@@ -1031,13 +1032,14 @@ export default function AdminManualOrder() {
 
             <div className="mt-4 flex gap-4">
               <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-secondary border border-border">
-                <OptImage
+                <img
                   src={getImageUrl(selectedProductForModal.image)}
                   alt={selectedProductForModal.name}
                   className="size-full object-cover"
                   width={80}
                   height={80}
-                  sizes="80px"
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                 />
               </div>
               <div className="flex flex-col justify-center">

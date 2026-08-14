@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getImageUrl, handleImageError } from "@/lib/utils";
-import { OptImage } from "@/components/opt-image";
+
 import { useEffect, useState } from "react";
 import { useBanners } from "@/lib/banners-store";
 
@@ -42,14 +42,13 @@ export function HeroSlider() {
               i === index ? "opacity-100 z-10" : "pointer-events-none opacity-0 z-0"
             }`}
           >
-            <OptImage
+            <img
               src={getImageUrl(slide.image)}
               alt={slide.title}
               width={1600}
               height={1000}
-              priority
-              sizes="100vw"
               className="size-full object-cover"
+              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
             <div className="absolute inset-0 flex flex-col justify-center gap-3 p-6 sm:p-12">

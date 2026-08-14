@@ -25,7 +25,7 @@ import {
 import { useCategories } from "@/lib/categories-store";
 import { type Category } from "@/lib/shop-data";
 import { ImageUploader, getImageUrl } from "@/components/image-uploader";
-import { OptImage } from "@/components/opt-image";
+
 
 type FormState = {
   name: string;
@@ -133,13 +133,14 @@ export default function CategoriesPage() {
                 <TableRow key={c.slug}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <OptImage
+                      <img
                         src={getImageUrl(c.image)}
                         alt={c.name}
                         className="size-10 rounded-md object-cover bg-muted/20"
                         width={40}
                         height={40}
-                        sizes="40px"
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                       />
                       <span className="font-medium">{c.name}</span>
                     </div>

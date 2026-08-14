@@ -20,7 +20,7 @@ import {
   getProduct,
 } from "@/lib/shop-data";
 import { getImageUrl } from "@/lib/utils";
-import { OptImage } from "@/components/opt-image";
+
 
 
 export default function OfferPage() {
@@ -77,14 +77,13 @@ export default function OfferPage() {
 
       <div className="mt-4 grid gap-8 lg:grid-cols-2">
         <div className="relative overflow-hidden rounded-2xl border border-border bg-secondary shadow-card">
-          <OptImage
+          <img
             src={getImageUrl(offer.image)}
             alt={offer.title}
             width={800}
             height={800}
-            priority
-            sizes="(max-width: 768px) 100vw, 50vw"
             className="aspect-square size-full object-cover"
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
           />
           <span className="absolute left-4 top-4 rounded-full gradient-sale px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary-foreground">
             Combo offer
@@ -124,13 +123,14 @@ export default function OfferPage() {
                   key={p.slug}
                   className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-card"
                 >
-                  <OptImage
+                  <img
                     src={getImageUrl(p.image)}
                     alt={p.name}
                     width={56}
                     height={56}
-                    sizes="56px"
+                    loading="lazy"
                     className="size-14 rounded-lg object-cover bg-muted/20"
+                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                   />
                   <div className="flex-1">
                     <p className="text-sm font-bold text-foreground">{p.name}</p>
@@ -230,13 +230,14 @@ export default function OfferPage() {
                 className="group overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-float"
               >
                 <div className="relative aspect-square overflow-hidden bg-secondary">
-                  <OptImage
+                  <img
                     src={getImageUrl(c.image)}
                     alt={c.title}
                     width={400}
                     height={400}
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    loading="lazy"
                     className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                   />
                   <span className="absolute left-3 top-3 rounded-full gradient-sale px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
                     Combo

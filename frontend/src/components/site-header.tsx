@@ -12,7 +12,7 @@ import { useSettings } from "@/context/settings-context";
 import { useWishlist } from "@/lib/wishlist";
 import { useAuth } from "@/context/auth-context";
 import { getImageUrl } from "@/lib/utils";
-import { OptImage } from "@/components/opt-image";
+
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -79,13 +79,14 @@ export function SiteHeader() {
             }}
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary"
           >
-            <OptImage
+            <img
               src={getImageUrl(p.image)}
               alt={p.name}
               width={36}
               height={36}
-              sizes="36px"
+              loading="lazy"
               className="size-9 rounded object-cover shrink-0 bg-muted/20"
+              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
             />
             <div className="flex-1 min-w-0 text-left">
               <p className="font-semibold text-foreground truncate text-xs">{p.name}</p>

@@ -10,7 +10,7 @@ import { useBanners } from "@/lib/banners-store";
 import { offerBanner as fallbackOfferBanner } from "@/lib/shop-data";
 import { useSettings } from "@/context/settings-context";
 import { getImageUrl, FALLBACK_IMAGE } from "@/components/image-uploader";
-import { OptImage } from "@/components/opt-image";
+
 
 export default function HomePage() {
   const { products } = useProducts();
@@ -64,14 +64,13 @@ export default function HomePage() {
           href={offerBannerData.href}
           className="group relative overflow-hidden rounded-2xl shadow-card h-full min-h-[340px] sm:min-h-[420px] block bg-secondary"
         >
-          <OptImage
+          <img
             src={offerBannerData.image}
             alt={offerBannerData.title}
             width={800}
             height={1000}
-            priority
-            sizes="(max-width: 1024px) 100vw, 33vw"
             className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 p-6">
@@ -113,13 +112,14 @@ export default function HomePage() {
               className="group overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-float"
             >
               <div className="aspect-square overflow-hidden bg-secondary">
-                <OptImage
+                <img
                   src={getImageUrl(c.image)}
                   alt={c.name}
                   width={800}
                   height={800}
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                  loading="lazy"
                   className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                 />
               </div>
               <div className="p-3 text-center">

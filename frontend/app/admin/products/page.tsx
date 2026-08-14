@@ -31,7 +31,7 @@ import { W3ColorPicker } from "@/components/ui/color-picker";
 import { ColorSwatches } from "@/components/ui/color-swatch";
 import { ImageUploader, getImageUrl, handleImageError } from "@/components/image-uploader";
 import { apiClient } from "@/lib/api/client";
-import { OptImage } from "@/components/opt-image";
+
 
 type FormState = {
   slug: string;
@@ -331,13 +331,14 @@ export default function AdminProducts() {
                 <TableRow key={p.slug}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <OptImage
+                      <img
                         src={getImageUrl(p.image)}
                         alt={p.name}
                         className="size-10 rounded-md object-cover bg-muted/20"
                         width={40}
                         height={40}
-                        sizes="40px"
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                       />
                       <span className="font-medium">{p.name}</span>
                     </div>
@@ -471,7 +472,7 @@ export default function AdminProducts() {
                           return (
                             <div key={idx} className="flex items-center gap-2 bg-card p-1.5 rounded border border-border text-xs justify-between">
                               <div className="flex items-center gap-2 min-w-0">
-                                <OptImage src={getImageUrl(p.image)} alt={p.name} className="size-6 object-cover rounded bg-muted/20" width={24} height={24} sizes="24px" />
+                                <img src={getImageUrl(p.image)} alt={p.name} className="size-6 object-cover rounded bg-muted/20" width={24} height={24} loading="lazy" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }} />
                                 <span className="truncate font-medium">{p.name}</span>
                               </div>
                               <Button
@@ -502,7 +503,7 @@ export default function AdminProducts() {
                             className="flex items-center justify-between text-xs py-1 px-1.5 rounded hover:bg-secondary/40"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <OptImage src={getImageUrl(p.image)} alt={p.name} className="size-6 object-cover rounded bg-muted/20" width={24} height={24} sizes="24px" />
+                              <img src={getImageUrl(p.image)} alt={p.name} className="size-6 object-cover rounded bg-muted/20" width={24} height={24} loading="lazy" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }} />
                               <span className="truncate">{p.name}</span>
                             </div>
                             <Button
@@ -578,7 +579,7 @@ export default function AdminProducts() {
               <div className="flex flex-wrap gap-3 items-center">
                 {form.images.map((img, idx) => (
                   <div key={idx} className="relative size-16 rounded-md border border-border overflow-hidden group">
-                    <OptImage src={getImageUrl(img)} alt={`Gallery Preview ${idx + 1}`} className="size-full object-cover" width={64} height={64} sizes="64px" />
+                    <img src={getImageUrl(img)} alt={`Gallery Preview ${idx + 1}`} className="size-full object-cover" width={64} height={64} loading="lazy" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }} />
                     <button
                       type="button"
                       onClick={() => {
@@ -769,13 +770,14 @@ export default function AdminProducts() {
             <div className="space-y-4 py-2">
               {/* Product Info Header */}
               <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-3">
-                <OptImage
+                <img
                   src={getImageUrl(stockModalProduct.image)}
                   alt={stockModalProduct.name}
                   className="size-12 rounded-md object-cover border border-border"
                   width={48}
                   height={48}
-                  sizes="48px"
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                 />
                 <div>
                   <h4 className="font-bold text-sm text-foreground">{stockModalProduct.name}</h4>

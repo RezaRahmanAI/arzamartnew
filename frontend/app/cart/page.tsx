@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useSettings } from "@/context/settings-context";
 import { getImageUrl, handleImageError } from "@/lib/utils";
-import { OptImage } from "@/components/opt-image";
+
 
 export default function CartPage() {
   const { detailedLines, subtotal, add, update, setQty, remove } = useCart();
@@ -98,13 +98,14 @@ export default function CartPage() {
                 key={`${line.slug}-${line.size}-${line.color}`}
                 className="flex gap-4 rounded-xl border border-border bg-card p-3 shadow-card"
               >
-                <OptImage
+                <img
                   src={getImageUrl(line.product.image)}
                   alt={line.product.name}
                   width={96}
                   height={96}
-                  sizes="96px"
+                  loading="lazy"
                   className="size-24 rounded-lg object-cover bg-muted/20"
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                 />
                 <div className="flex-1">
                   <p className="text-sm font-bold text-foreground">{line.product.name}</p>
@@ -199,7 +200,7 @@ export default function CartPage() {
 
             <div className="mt-4 flex gap-4">
               <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-secondary border border-border">
-                <OptImage src={getImageUrl(activeProduct.image)} alt={activeProduct.name} width={80} height={80} sizes="80px" className="size-full object-cover" />
+                <img src={getImageUrl(activeProduct.image)} alt={activeProduct.name} width={80} height={80} loading="lazy" className="size-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }} />
               </div>
               <div className="flex flex-col justify-center">
                 <h4 className="text-sm font-semibold text-foreground leading-snug">{activeProduct.name}</h4>
