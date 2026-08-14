@@ -88,6 +88,9 @@ export default function PublicLandingPage({ params }: { params: Promise<{ slug: 
       if (res?.product?.variants?.length) {
         setSelectedVariant(res.product.variants[0].id);
       }
+      // Set default color
+      setSelectedColor("Black");
+
       const initialImg =
         res?.product?.images?.find((img) => img.isMain)?.imageUrl ||
         res?.product?.images?.[0]?.imageUrl ||
