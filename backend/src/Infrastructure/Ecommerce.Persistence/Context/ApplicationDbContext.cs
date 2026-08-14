@@ -24,7 +24,6 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Coupon> Coupons => Set<Coupon>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
-    public DbSet<LandingPage> LandingPages => Set<LandingPage>();
     public DbSet<Banner> Banners => Set<Banner>();
     public DbSet<WebsiteSettings> WebsiteSettings => Set<WebsiteSettings>();
     public DbSet<Notification> Notifications => Set<Notification>();

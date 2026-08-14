@@ -31,7 +31,6 @@ const items = [
   { title: "Reviews", url: "/admin/reviews", icon: MessageSquare },
   { title: "Customers", url: "/admin/customers", icon: Users },
   { title: "Staff", url: "/admin/staff", icon: UserCog },
-  { title: "Landing Pages", url: "/admin/landing-pages", icon: Globe },
   { title: "Shareable Links", url: "/admin/links", icon: LinkIcon },
   { title: "Settings", url: "/admin/settings", icon: SlidersHorizontal },
 ] as const;
