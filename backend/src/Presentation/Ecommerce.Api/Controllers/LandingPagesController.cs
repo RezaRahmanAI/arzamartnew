@@ -35,15 +35,30 @@ public class LandingPagesController : ControllerBase
 
         if (page == null) return NotFound(new { message = "Landing page not found." });
 
-        Product? product = null;
+        object? product = null;
         if (page.ProductId.HasValue)
         {
-            product = await _context.Products
+            var rawProduct = await _context.Products
                 .Include(p => p.Images)
                 .Include(p => p.Variants)
                 .Include(p => p.Category)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.Id == page.ProductId.Value);
+
+            if (rawProduct != null)
+            {
+                product = new
+                {
+                    id = rawProduct.Id,
+                    name = rawProduct.Name,
+                    slug = rawProduct.Slug,
+                    basePrice = rawProduct.BasePrice,
+                    discountPrice = rawProduct.DiscountPrice,
+                    images = rawProduct.Images.Select(i => new { imageUrl = i.ImageUrl, isMain = i.IsMain }),
+                    variants = rawProduct.Variants.Select(v => new { id = v.Id, name = v.Name, sku = v.SKU, priceOverride = v.PriceOverride, stockQuantity = v.StockQuantity }),
+                    category = rawProduct.Category != null ? new { name = rawProduct.Category.Name } : null,
+                };
+            }
         }
 
         return Ok(new { landingPage = page, product });
