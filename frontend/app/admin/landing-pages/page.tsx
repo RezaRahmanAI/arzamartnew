@@ -327,11 +327,15 @@ export default function AdminLandingPagesPage() {
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this landing page?")) return;
     try {
+      // Optimistic update
+      setPages((prev) => prev.filter((p) => p.id !== id));
       await landingPagesService.delete(id);
-      fetchData();
-    } catch (err) {
+      await fetchData();
+    } catch (err: unknown) {
       console.error("Delete error:", err);
-      alert("Failed to delete landing page.");
+      const msg = err instanceof Error ? err.message : "Failed to delete landing page.";
+      alert(`Delete Error: ${msg}`);
+      await fetchData();
     }
   };
 
