@@ -32,11 +32,11 @@ import { getImageUrl, handleImageError } from "@/lib/utils";
 import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
 
 const FALLBACK_SOURCES: Record<string, string[]> = {
-  "Facebook Page": ["Alzeena Official FB Page"],
-  "Instagram DM": ["Alzeena Main IG (@alzeena.official)"],
+  "Facebook Page": ["Arzamart Official FB Page"],
+  "Instagram DM": ["Arzamart Main IG (@arzamart.official)"],
   "WhatsApp": ["WhatsApp Hotline 1 (01700-000000)"],
-  "TikTok": ["Alzeena Official TikTok (@alzeena.bd)"],
-  "Website": ["Alzeena Main Website (alzeena.com)"],
+  "TikTok": ["Arzamart Official TikTok (@arzamart.bd)"],
+  "Website": ["Arzamart Main Website (arzamart.com)"],
   "Phone Call": ["Hotline 1 (Sales Dept)"],
   "In-Store POS": ["Uttara Branch Outlet"],
 };

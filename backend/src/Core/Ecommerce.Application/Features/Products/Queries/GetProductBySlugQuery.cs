@@ -59,7 +59,7 @@ public class GetProductBySlugQueryHandler : IRequestHandler<GetProductBySlugQuer
                 p.AverageRating,
                 p.ReviewCount,
                 p.Category != null ? p.Category.Name : "General",
-                p.Brand != null ? p.Brand.Name : "Alzeena",
+                p.Brand != null ? p.Brand.Name : "Arzamart",
                 p.IsBundle,
                 p.BundleProducts != null && p.BundleProducts.Length > 0 ? p.BundleProducts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList() : null,
                 p.Images.OrderBy(i => i.DisplayOrder).Select(i => new ProductImageDto(i.ImageUrl, i.IsMain)).ToList(),

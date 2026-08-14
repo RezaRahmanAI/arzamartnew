@@ -32,7 +32,7 @@ const mockStaff: StaffMember[] = [
   {
     id: "st-101",
     name: "Admin User",
-    email: "admin@alzeena.com",
+    email: "admin@arzamart.com",
     role: "Admin",
     status: "Active",
     permissions: {
@@ -48,7 +48,7 @@ const mockStaff: StaffMember[] = [
   {
     id: "st-102",
     name: "Sales Manager",
-    email: "sales@alzeena.com",
+    email: "sales@arzamart.com",
     role: "Manager",
     status: "Active",
     permissions: {
@@ -64,7 +64,7 @@ const mockStaff: StaffMember[] = [
   {
     id: "st-103",
     name: "Content Editor",
-    email: "editor@alzeena.com",
+    email: "editor@arzamart.com",
     role: "Editor",
     status: "Inactive",
     permissions: {

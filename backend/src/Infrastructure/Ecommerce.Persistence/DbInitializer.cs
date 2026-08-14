@@ -10,6 +10,12 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(ApplicationDbContext context)
     {
+        // Always ensure WebsiteSettings exist with default full configuration
+        if (!await context.WebsiteSettings.AnyAsync())
+        {
+            await SeedSettingsAsync(context);
+        }
+
         if (await context.Products.CountAsync() > 0) return; // Skip if products exist
 
         // 1. Seed Admin & Customer Users
@@ -419,6 +425,13 @@ public static class DbInitializer
         context.Coupons.AddRange(welcomeCoupon, eidCoupon);
 
         // 7. Seed Website Settings
+        await SeedSettingsAsync(context);
+    }
+
+    public static async Task SeedSettingsAsync(ApplicationDbContext context)
+    {
+        if (await context.WebsiteSettings.AnyAsync()) return;
+
         var fullSettingsJson = @"
         {
           ""general"": {
@@ -455,8 +468,8 @@ public static class DbInitializer
             ""supportPhone"": ""+880 1700-000000"",
             ""salesPhone"": ""+880 1800-000000"",
             ""whatsAppNumber"": ""+880 1700-000000"",
-            ""emailAddress"": ""info@alzeena.com"",
-            ""supportEmail"": ""support@alzeena.com"",
+            ""emailAddress"": ""info@arzamart.com"",
+            ""supportEmail"": ""support@arzamart.com"",
             ""officeAddress"": ""House 42, Road 11, Block D, Banani, Dhaka-1213, Bangladesh"",
             ""googleMapEmbedUrl"": ""https://maps.google.com/maps?q=Banani,Dhaka&t=&z=13&ie=UTF8&iwloc=&output=embed""
           },
@@ -474,44 +487,44 @@ public static class DbInitializer
           },
           ""socialMedia"": {
             ""platforms"": [
-              { ""id"": ""soc_1"", ""platform"": ""Facebook"", ""url"": ""https://facebook.com/alzeena.official"", ""iconName"": ""Facebook"", ""displayOrder"": 1, ""active"": true },
-              { ""id"": ""soc_2"", ""platform"": ""Instagram"", ""url"": ""https://instagram.com/alzeena.official"", ""iconName"": ""Instagram"", ""displayOrder"": 2, ""active"": true },
-              { ""id"": ""soc_3"", ""platform"": ""TikTok"", ""url"": ""https://tiktok.com/@alzeena.bd"", ""iconName"": ""Music2"", ""displayOrder"": 3, ""active"": true },
+              { ""id"": ""soc_1"", ""platform"": ""Facebook"", ""url"": ""https://facebook.com/arzamart.official"", ""iconName"": ""Facebook"", ""displayOrder"": 1, ""active"": true },
+              { ""id"": ""soc_2"", ""platform"": ""Instagram"", ""url"": ""https://instagram.com/arzamart.official"", ""iconName"": ""Instagram"", ""displayOrder"": 2, ""active"": true },
+              { ""id"": ""soc_3"", ""platform"": ""TikTok"", ""url"": ""https://tiktok.com/@arzamart.bd"", ""iconName"": ""Music2"", ""displayOrder"": 3, ""active"": true },
               { ""id"": ""soc_4"", ""platform"": ""WhatsApp"", ""url"": ""https://wa.me/8801700000000"", ""iconName"": ""MessageCircle"", ""displayOrder"": 4, ""active"": true },
-              { ""id"": ""soc_5"", ""platform"": ""YouTube"", ""url"": ""https://youtube.com/@alzeenabd"", ""iconName"": ""Youtube"", ""displayOrder"": 5, ""active"": true }
+              { ""id"": ""soc_5"", ""platform"": ""YouTube"", ""url"": ""https://youtube.com/@arzamartbd"", ""iconName"": ""Youtube"", ""displayOrder"": 5, ""active"": true }
             ],
             ""sources"": {
-              ""Facebook Page"": [""Alzeena Official FB Page"", ""Alzeena Fashion FB Page""],
-              ""Instagram DM"": [""Alzeena Main IG (@alzeena.official)""],
+              ""Facebook Page"": [""Arzamart Official FB Page"", ""Arzamart Fashion FB Page""],
+              ""Instagram DM"": [""Arzamart Main IG (@arzamart.official)""],
               ""WhatsApp"": [""WhatsApp Hotline 1 (01700-000000)""]
             }
           },
           ""business"": {
-            ""businessName"": ""Alzeena Fashion Limited"",
+            ""businessName"": ""ARZAMART Lifestyle Limited"",
             ""tradeLicenseNumber"": ""TRAD/DNCC/019283/2024"",
             ""binNumber"": ""004928172-0101"",
             ""vatNumber"": ""VAT-BD-928371"",
             ""companyRegistrationNumber"": ""C-192837/2024"",
-            ""businessEmail"": ""billing@alzeena.com"",
+            ""businessEmail"": ""billing@arzamart.com"",
             ""businessPhone"": ""+880 2-9876543""
           },
           ""seo"": {
-            ""defaultMetaTitle"": ""Alzeena | Premium Fashion & Apparel Bangladesh"",
-            ""defaultMetaDescription"": ""Shop the latest premium traditional & contemporary fashion collection online at Alzeena Bangladesh."",
-            ""metaKeywords"": ""fashion, dresses, alzeena, clothing, online shopping bangladesh"",
+            ""defaultMetaTitle"": ""ARZAMART | Everyday Fashion & Apparel Bangladesh"",
+            ""defaultMetaDescription"": ""Shop the latest premium everyday fashion collection online at ARZAMART Bangladesh."",
+            ""metaKeywords"": ""fashion, dresses, arzamart, clothing, online shopping bangladesh"",
             ""openGraphImage"": ""/og-image.jpg"",
             ""twitterCardImage"": ""/twitter-card.jpg"",
             ""robotsTxtOptions"": ""User-agent: *\\nAllow: /\\nDisallow: /admin/"",
             ""googleVerificationCode"": ""google-site-verification=abc123xyz456"",
             ""facebookVerificationCode"": ""fb-domain-verification=fb1234567890"",
-            ""googleAnalyticsId"": ""G-ALZEENA123"",
-            ""googleTagManagerId"": ""GTM-ALZ999"",
+            ""googleAnalyticsId"": ""G-ARZAMART123"",
+            ""googleTagManagerId"": ""GTM-ARZ999"",
             ""facebookPixelId"": ""987654321098"",
-            ""microsoftClarityId"": ""clr_alz888""
+            ""microsoftClarityId"": ""clr_arz888""
           },
           ""footer"": {
-            ""copyrightText"": ""© 2026 Alzeena. All rights reserved. Built with passion in Bangladesh."",
-            ""footerDescription"": ""Alzeena is your premier destination for authentic Bangladeshi fashion and apparel."",
+            ""copyrightText"": ""© 2026 ARZAMART. All rights reserved. Built with passion in Bangladesh."",
+            ""footerDescription"": ""ARZAMART is your premier destination for everyday fashion and apparel."",
             ""footerMenuLinks"": [
               { ""label"": ""About Us"", ""url"": ""/about"" },
               { ""label"": ""Privacy Policy"", ""url"": ""/privacy"" },
@@ -522,6 +535,15 @@ public static class DbInitializer
             ""trustBadges"": [""Secure SSL Payment"", ""Fast Nationwide Delivery"", ""Easy 7-Day Returns""],
             ""showFooterLogo"": true,
             ""enableNewsletterToggle"": true
+          },
+          ""navigation"": {
+            ""headerMenu"": [
+              { ""id"": ""nav_1"", ""label"": ""Panjabi"", ""url"": ""/category/panjabi"", ""type"": ""category"", ""active"": true, ""displayOrder"": 1 },
+              { ""id"": ""nav_2"", ""label"": ""Shirts"", ""url"": ""/category/shirts"", ""type"": ""category"", ""active"": true, ""displayOrder"": 2 },
+              { ""id"": ""nav_3"", ""label"": ""Tees"", ""url"": ""/category/t-shirts"", ""type"": ""category"", ""active"": true, ""displayOrder"": 3 },
+              { ""id"": ""nav_4"", ""label"": ""Pants"", ""url"": ""/category/pants"", ""type"": ""category"", ""active"": true, ""displayOrder"": 4 },
+              { ""id"": ""nav_5"", ""label"": ""Offers"", ""url"": ""/offers"", ""type"": ""custom"", ""active"": true, ""displayOrder"": 5 }
+            ]
           },
           ""orders"": {
             ""minimumOrderAmount"": 200,
@@ -534,17 +556,19 @@ public static class DbInitializer
             ""enableOnlinePayment"": true,
             ""defaultOrderStatus"": ""Pending"",
             ""orderIdPrefix"": ""ORD-"",
-            ""nextOrderNumber"": 10001
+            ""nextOrderNumber"": 10001,
+            ""incompleteOrderIdPrefix"": ""INC-"",
+            ""nextIncompleteOrderNumber"": 5001
           },
           ""notifications"": {
-            ""smsApiKey"": ""sms_live_api_key_alz_8892"",
-            ""smsSenderId"": ""ALZEENA"",
+            ""smsApiKey"": ""sms_live_api_key_arz_8892"",
+            ""smsSenderId"": ""ARZAMART"",
             ""enableSMS"": true,
             ""smtpHost"": ""smtp.mailtrap.io"",
             ""smtpPort"": 587,
-            ""smtpUsername"": ""alzeena_smtp_user"",
+            ""smtpUsername"": ""arzamart_smtp_user"",
             ""smtpPassword"": ""••••••••••••"",
-            ""smtpSenderName"": ""Alzeena Orders"",
+            ""smtpSenderName"": ""ARZAMART Orders"",
             ""whatsAppApiConfig"": ""wa_cloud_api_v18_token"",
             ""whatsAppBusinessNumber"": ""+8801700000000""
           },
@@ -560,7 +584,7 @@ public static class DbInitializer
         var settings = new WebsiteSettings
         {
             SiteName = "ARZAMART",
-            SupportEmail = "support@alzeena.com",
+            SupportEmail = "support@arzamart.com",
             SupportPhone = "+880 1700-000000",
             DeliveryInsideDhaka = "70",
             DeliveryOutsideDhaka = "130",
@@ -568,7 +592,6 @@ public static class DbInitializer
         };
 
         context.WebsiteSettings.Add(settings);
-
         await context.SaveChangesAsync();
     }
 }

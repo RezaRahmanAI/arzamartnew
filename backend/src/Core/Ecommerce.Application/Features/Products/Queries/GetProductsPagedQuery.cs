@@ -78,7 +78,7 @@ public class GetProductsPagedQueryHandler : IRequestHandler<GetProductsPagedQuer
                 p.Badge,
                 p.PurchaseRate,
                 p.Category != null ? p.Category.Name : "General",
-                p.Brand != null ? p.Brand.Name : "Alzeena",
+                p.Brand != null ? p.Brand.Name : "Arzamart",
                 p.AverageRating,
                 p.ReviewCount,
                 p.IsBundle,
