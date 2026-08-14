@@ -20,7 +20,6 @@ import {
 
 const items = [
   { title: "Overview", url: "/admin", icon: BarChart3 },
-  { title: "Hero Banners", url: "/admin/banners", icon: Image },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
   { title: "Incomplete Orders", url: "/admin/incomplete", icon: ClipboardX },
   { title: "Manual Order", url: "/admin/manual-order", icon: PlusCircle },

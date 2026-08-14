@@ -53,8 +53,9 @@ public class ProductsController : ControllerBase
     [HttpPatch("{slug}")]
     public async Task<IActionResult> UpdateProduct(string slug, [FromBody] UpdateProductDto dto, [FromServices] Ecommerce.Application.Common.Interfaces.IApplicationDbContext dbContext)
     {
+        var cleanSlug = slug.Trim().ToLower();
         var product = await dbContext.Products
-            .FirstOrDefaultAsync(p => p.Slug == slug);
+            .FirstOrDefaultAsync(p => p.Slug.ToLower() == cleanSlug || p.Slug.ToLower() == cleanSlug.Replace("-", ""));
 
         if (product == null)
         {
@@ -64,13 +65,35 @@ public class ProductsController : ControllerBase
         if (dto != null)
         {
             if (!string.IsNullOrWhiteSpace(dto.Name)) product.Name = dto.Name.Trim();
-            if (dto.Price.HasValue) product.DiscountPrice = dto.Price.Value;
-            if (dto.Mrp.HasValue) product.BasePrice = dto.Mrp.Value;
-            if (!string.IsNullOrWhiteSpace(dto.Description)) product.ShortDescription = dto.Description;
-            if (!string.IsNullOrWhiteSpace(dto.Description)) product.FullDescription = dto.Description;
+            
+            // BasePrice & DiscountPrice handling
+            if (dto.Mrp.HasValue && dto.Mrp.Value > 0)
+            {
+                product.BasePrice = dto.Mrp.Value;
+            }
+            else if (dto.CompareAt.HasValue && dto.CompareAt.Value > 0)
+            {
+                product.BasePrice = dto.CompareAt.Value;
+            }
+            else if (dto.Price.HasValue && dto.Price.Value > 0 && product.BasePrice == 0)
+            {
+                product.BasePrice = dto.Price.Value;
+            }
+
+            if (dto.Price.HasValue)
+            {
+                product.DiscountPrice = dto.Price.Value;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.Description))
+            {
+                product.ShortDescription = dto.Description;
+                product.FullDescription = dto.Description;
+            }
             if (dto.IsActive.HasValue) product.IsActive = dto.IsActive.Value;
             if (dto.PurchaseRate.HasValue) product.PurchaseRate = dto.PurchaseRate.Value;
-            if (dto.Badge != null) product.Badge = dto.Badge.Trim();
+            if (dto.Badge != null) product.Badge = string.IsNullOrWhiteSpace(dto.Badge) ? null : dto.Badge.Trim();
+            
             if (dto.IsBundle.HasValue)
             {
                 product.IsBundle = dto.IsBundle.Value;
@@ -79,61 +102,111 @@ public class ProductsController : ControllerBase
                     : null;
             }
 
-            // Re-map category if provided (frontend sends the category slug)
+            // Re-map category if provided (frontend sends the category slug or name)
             if (!string.IsNullOrWhiteSpace(dto.Category))
             {
                 var catSlug = dto.Category.Trim().ToLower();
                 var category = await dbContext.Categories
-                    .FirstOrDefaultAsync(c => c.Slug == catSlug || c.Name.ToLower() == catSlug);
+                    .FirstOrDefaultAsync(c => c.Slug.ToLower() == catSlug || c.Name.ToLower() == catSlug);
                 if (category != null)
                 {
                     product.CategoryId = category.Id;
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(dto.Image))
+            // Sync Main and Gallery Images
+            if (!string.IsNullOrWhiteSpace(dto.Image) || (dto.Images != null && dto.Images.Count > 0))
             {
-                var existingMain = await dbContext.ProductImages
-                    .FirstOrDefaultAsync(i => i.ProductId == product.Id && i.IsMain);
-                if (existingMain != null)
+                var currentImages = await dbContext.ProductImages
+                    .Where(i => i.ProductId == product.Id)
+                    .ToListAsync();
+
+                // 1. Main image
+                var mainImgUrl = !string.IsNullOrWhiteSpace(dto.Image) ? dto.Image.Trim() : currentImages.FirstOrDefault(i => i.IsMain)?.ImageUrl;
+                if (!string.IsNullOrWhiteSpace(mainImgUrl))
                 {
-                    existingMain.ImageUrl = dto.Image;
-                }
-                else
-                {
-                    dbContext.ProductImages.Add(new Ecommerce.Domain.Entities.ProductImage
+                    var mainImg = currentImages.FirstOrDefault(i => i.IsMain);
+                    if (mainImg != null)
                     {
-                        ProductId = product.Id,
-                        ImageUrl = dto.Image,
-                        IsMain = true,
-                        DisplayOrder = 1
-                    });
-                }
-                if (dto.Images != null && dto.Images.Count > 0)
-                {
-                    foreach (var (imgUrl, idx) in dto.Images.Select((u, i) => (u, i)).Where(x => !string.IsNullOrWhiteSpace(x.u)))
+                        mainImg.ImageUrl = mainImgUrl;
+                    }
+                    else
                     {
-                        var existingGallery = await dbContext.ProductImages
-                            .FirstOrDefaultAsync(i => i.ProductId == product.Id && !i.IsMain && i.DisplayOrder == idx + 2);
-                        if (existingGallery != null)
+                        dbContext.ProductImages.Add(new Ecommerce.Domain.Entities.ProductImage
                         {
-                            existingGallery.ImageUrl = imgUrl;
-                        }
-                        else
+                            ProductId = product.Id,
+                            ImageUrl = mainImgUrl,
+                            IsMain = true,
+                            DisplayOrder = 1
+                        });
+                    }
+                }
+
+                // 2. Gallery images
+                if (dto.Images != null)
+                {
+                    var galleryImages = currentImages.Where(i => !i.IsMain).ToList();
+                    var newGalleryUrls = dto.Images.Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim()).ToList();
+
+                    // Remove existing gallery images that are no longer in new list
+                    foreach (var oldImg in galleryImages)
+                    {
+                        dbContext.ProductImages.Remove(oldImg);
+                    }
+
+                    // Add new gallery images
+                    for (int i = 0; i < newGalleryUrls.Count; i++)
+                    {
+                        dbContext.ProductImages.Add(new Ecommerce.Domain.Entities.ProductImage
                         {
-                            dbContext.ProductImages.Add(new Ecommerce.Domain.Entities.ProductImage
-                            {
-                                ProductId = product.Id,
-                                ImageUrl = imgUrl,
-                                IsMain = false,
-                                DisplayOrder = idx + 2
-                            });
-                        }
+                            ProductId = product.Id,
+                            ImageUrl = newGalleryUrls[i],
+                            IsMain = false,
+                            DisplayOrder = i + 2
+                        });
                     }
                 }
             }
 
-            if (dto.SizeStock != null && dto.SizeStock.Count > 0)
+            // Sync Sizes and Variants
+            if (dto.Sizes != null && dto.Sizes.Count > 0)
+            {
+                var existingVariants = await dbContext.ProductVariants
+                    .Where(v => v.ProductId == product.Id)
+                    .ToListAsync();
+
+                var requestedSizes = dto.Sizes.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList();
+
+                foreach (var sizeName in requestedSizes)
+                {
+                    var variant = existingVariants.FirstOrDefault(v =>
+                        v.Name.Equals(sizeName, StringComparison.OrdinalIgnoreCase) ||
+                        v.Name.Equals($"Size: {sizeName}", StringComparison.OrdinalIgnoreCase));
+
+                    var price = dto.SizePrices != null && dto.SizePrices.TryGetValue(sizeName, out var p) ? p : (product.DiscountPrice ?? product.BasePrice);
+                    var stock = dto.SizeStock != null && dto.SizeStock.TryGetValue(sizeName, out var s) ? s : 15;
+
+                    if (variant != null)
+                    {
+                        variant.PriceOverride = price;
+                        variant.StockQuantity = Math.Max(0, stock);
+                        variant.IsActive = true;
+                    }
+                    else
+                    {
+                        dbContext.ProductVariants.Add(new Ecommerce.Domain.Entities.ProductVariant
+                        {
+                            ProductId = product.Id,
+                            Name = sizeName,
+                            SKU = string.IsNullOrWhiteSpace(product.SKU) ? $"SKU-{sizeName}" : $"{product.SKU}-{sizeName}",
+                            PriceOverride = price,
+                            StockQuantity = Math.Max(0, stock),
+                            IsActive = true
+                        });
+                    }
+                }
+            }
+            else if (dto.SizeStock != null && dto.SizeStock.Count > 0)
             {
                 var existingVariants = await dbContext.ProductVariants
                     .Where(v => v.ProductId == product.Id)
@@ -141,7 +214,10 @@ public class ProductsController : ControllerBase
 
                 foreach (var (sizeName, qty) in dto.SizeStock)
                 {
-                    var variant = existingVariants.FirstOrDefault(v => v.Name.Equals(sizeName, StringComparison.OrdinalIgnoreCase) || v.Name.Equals($"Size: {sizeName}", StringComparison.OrdinalIgnoreCase));
+                    var variant = existingVariants.FirstOrDefault(v =>
+                        v.Name.Equals(sizeName, StringComparison.OrdinalIgnoreCase) ||
+                        v.Name.Equals($"Size: {sizeName}", StringComparison.OrdinalIgnoreCase));
+
                     if (variant != null)
                     {
                         variant.StockQuantity = Math.Max(0, qty);
@@ -161,33 +237,10 @@ public class ProductsController : ControllerBase
                 }
             }
 
-            // Sync selling prices for existing variants when size-wise prices provided
-            if (dto.SizePrices != null && dto.SizePrices.Count > 0)
-            {
-                var existingVariants = await dbContext.ProductVariants
-                    .Where(v => v.ProductId == product.Id)
-                    .ToListAsync();
-                foreach (var (sizeName, price) in dto.SizePrices)
-                {
-                    var variant = existingVariants.FirstOrDefault(v => v.Name.Equals(sizeName, StringComparison.OrdinalIgnoreCase) || v.Name.Equals($"Size: {sizeName}", StringComparison.OrdinalIgnoreCase));
-                    if (variant != null)
-                    {
-                        variant.PriceOverride = price;
-                    }
-                }
-            }
-
-            try
-            {
-                await dbContext.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                // In case of stale tracking, SaveChanges safely
-            }
+            await dbContext.SaveChangesAsync();
         }
 
-        return Ok(new { success = true, slug });
+        return Ok(new { success = true, slug = product.Slug });
     }
 
     public record CreateProductDto(

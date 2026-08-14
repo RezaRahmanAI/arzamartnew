@@ -30,10 +30,12 @@ import {
   Check,
   AlertCircle,
   Eye,
+  Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { HeroBannersSection } from "@/components/admin/hero-banners-section";
 
-type SettingsCategoryKey = keyof SystemSettings | "auditLogs";
+type SettingsCategoryKey = keyof SystemSettings | "auditLogs" | "heroBanners";
 
 interface CategoryTab {
   key: SettingsCategoryKey;
@@ -44,6 +46,7 @@ interface CategoryTab {
 
 const CATEGORIES: CategoryTab[] = [
   { key: "general", label: "General Settings", description: "Website identity, currency, status & locale settings", icon: Globe },
+  { key: "heroBanners", label: "Hero Banners / Slider", description: "Homepage main banner slides, titles & promo links", icon: ImageIcon },
   { key: "branding", label: "Branding & Appearance", description: "Logos, color palette, typography & theme styling", icon: Palette },
   { key: "contact", label: "Contact Information", description: "Support channels, office address & Google Maps", icon: PhoneCall },
   { key: "shipping", label: "Shipping Settings", description: "Shipping rates, delivery rules & COD availability", icon: Truck },
@@ -1506,6 +1509,12 @@ export default function AdminSettingsPage() {
                     </table>
                   </div>
                 </div>
+              </div>
+            )}
+            {/* 12. Hero Banners / Slider Settings Tab */}
+            {activeTab === "heroBanners" && (
+              <div className="rounded-xl border border-border bg-card p-4 sm:p-6 shadow-card">
+                <HeroBannersSection />
               </div>
             )}
           </div>

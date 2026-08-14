@@ -57,6 +57,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     setProducts((prev) => prev.map((p) => (p.slug === slug ? updated : p)));
     try {
       await productsService.update(slug, updated);
+      // Re-fetch to ensure single source of truth is synced
+      const fresh = await productsService.getAll();
+      if (fresh && fresh.length > 0) {
+        setProducts(fresh);
+      }
     } catch (error) {
       console.error("Failed to sync product update with API:", error);
     }
