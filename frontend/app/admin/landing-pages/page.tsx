@@ -393,7 +393,7 @@ export default function AdminLandingPagesPage() {
               </tr>
             ) : (
               filteredPages.map((page) => {
-                const linkedProduct = products.find((p) => p.slug === page.productId);
+                const linkedProduct = products.find((p) => p.id === page.productId);
                 return (
                   <tr
                     key={page.id}
