@@ -122,6 +122,8 @@ export interface OrderSettings {
   defaultOrderStatus: string;
   orderIdPrefix: string;
   nextOrderNumber: number;
+  incompleteOrderIdPrefix?: string;
+  nextIncompleteOrderNumber?: number;
 }
 
 export interface NotificationSettings {
@@ -379,6 +381,8 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     defaultOrderStatus: "Pending",
     orderIdPrefix: "ORD-",
     nextOrderNumber: 10001,
+    incompleteOrderIdPrefix: "INC-",
+    nextIncompleteOrderNumber: 5001,
   },
   notifications: {
     smsApiKey: "sms_live_api_key_alz_8892",

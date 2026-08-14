@@ -16,7 +16,7 @@ import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
 
 export default function CheckoutPage() {
   const { detailedLines, subtotal, clear } = useCart();
-  const { addOrder, saveIncomplete, removeIncomplete, generateNextOrderId } = useOrders();
+  const { addOrder, saveIncomplete, removeIncomplete, generateNextOrderId, generateNextIncompleteOrderId } = useOrders();
   const { findOrCreateByPhone, findCustomerByPhone } = useCustomers();
   const { loginAsCustomer, user } = useAuth();
   const { settings } = useSettings();
@@ -90,7 +90,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (detailedLines.length === 0) return;
-    const id = draftId ?? generateNextOrderId();
+    const id = draftId ?? generateNextIncompleteOrderId();
     if (!draftId) setDraftId(id);
 
     const interval = setInterval(() => {

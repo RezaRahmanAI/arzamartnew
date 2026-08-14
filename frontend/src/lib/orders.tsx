@@ -66,6 +66,7 @@ type OrdersContextValue = {
   incomplete: Order[];
   isLoading: boolean;
   generateNextOrderId: () => string;
+  generateNextIncompleteOrderId: () => string;
   addOrder: (order: Order) => Promise<string>;
   saveIncomplete: (order: Order) => Promise<void>;
   removeIncomplete: (id: string) => Promise<void>;
@@ -85,6 +86,12 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   const generateNextOrderId = useCallback((): string => {
     const prefix = settings?.orders?.orderIdPrefix ?? "ORD-";
     const nextNum = settings?.orders?.nextOrderNumber ?? 10001;
+    return `${prefix}${nextNum}`;
+  }, [settings]);
+
+  const generateNextIncompleteOrderId = useCallback((): string => {
+    const prefix = settings?.orders?.incompleteOrderIdPrefix ?? "INC-";
+    const nextNum = settings?.orders?.nextIncompleteOrderNumber ?? 5001;
     return `${prefix}${nextNum}`;
   }, [settings]);
 
@@ -147,12 +154,23 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       }
       return [order, ...prev];
     });
+
+    // Increment nextIncompleteOrderNumber if new incomplete order created
+    const incPrefix = settings?.orders?.incompleteOrderIdPrefix ?? "INC-";
+    const currentIncNum = settings?.orders?.nextIncompleteOrderNumber ?? 5001;
+    if (order.id.startsWith(incPrefix)) {
+      const extractedNum = parseInt(order.id.replace(incPrefix, ""), 10);
+      const nextNum = !isNaN(extractedNum) ? Math.max(currentIncNum + 1, extractedNum + 1) : currentIncNum + 1;
+      updateSection("orders", { nextIncompleteOrderNumber: nextNum });
+      saveSettings({ silent: true });
+    }
+
     try {
       await ordersService.saveIncomplete(order);
     } catch (err) {
       console.error("Failed to sync incomplete order with API:", err);
     }
-  }, []);
+  }, [settings, updateSection, saveSettings]);
 
   const removeIncomplete = useCallback(async (id: string) => {
     setIncomplete((prev) => prev.filter((o) => o.id !== id));
@@ -200,6 +218,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       incomplete,
       isLoading,
       generateNextOrderId,
+      generateNextIncompleteOrderId,
       addOrder,
       saveIncomplete,
       removeIncomplete,
@@ -212,6 +231,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       incomplete,
       isLoading,
       generateNextOrderId,
+      generateNextIncompleteOrderId,
       addOrder,
       saveIncomplete,
       removeIncomplete,
