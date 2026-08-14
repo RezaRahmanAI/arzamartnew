@@ -64,6 +64,11 @@ public class LandingPagesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Upsert([FromBody] LandingPage model)
     {
+        if (string.IsNullOrWhiteSpace(model.Title))
+        {
+            return BadRequest(new { message = "Title is required." });
+        }
+
         if (string.IsNullOrWhiteSpace(model.Slug))
         {
             model.Slug = model.Title.ToLower().Replace(" ", "-");

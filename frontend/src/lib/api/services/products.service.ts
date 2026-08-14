@@ -2,6 +2,7 @@ import { apiClient } from "../client";
 import type { Product } from "@/lib/shop-data";
 
 export interface RawApiProduct {
+  id?: string;
   slug: string;
   name: string;
   categoryName?: string;

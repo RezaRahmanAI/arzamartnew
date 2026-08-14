@@ -118,8 +118,9 @@ export default function AdminLandingPagesPage() {
   /* ─── Auto Fill from Product ─── */
 
   const autoFillFromProduct = (pSlug: string) => {
-    const p = products.find((prod) => prod.slug === pSlug);
+    const p = products.find((prod) => prod.slug === pSlug || prod.id === pSlug);
     if (!p) return;
+    setProductId(p.id || "");
     setTitle(p.name);
     setSubtitle(p.shortDescription || `${p.name} — প্রিমিয়াম কোয়ালিটি, সেরা দামে`);
     setHeroTitle(p.name);
@@ -137,7 +138,7 @@ export default function AdminLandingPagesPage() {
   const openCreateModal = () => {
     setEditingId(null);
     const defaultProduct = products[0];
-    setProductId(defaultProduct?.slug || "");
+    setProductId(defaultProduct?.id || "");
 
     if (defaultProduct) {
       autoFillFromProduct(defaultProduct.slug);
@@ -283,7 +284,7 @@ export default function AdminLandingPagesPage() {
       title,
       subtitle,
       slug: slug.trim().toLowerCase().replace(/\s+/g, "-"),
-      productId,
+      productId: productId || undefined,
       heroTitle,
       heroSubtitle,
       heroImageUrl,
@@ -525,7 +526,7 @@ export default function AdminLandingPagesPage() {
                 >
                   <option value="">Select Product...</option>
                   {products.map((p) => (
-                    <option key={p.slug} value={p.slug}>
+                    <option key={p.slug} value={p.id || p.slug}>
                       {p.name} — ৳{p.discountPrice || p.basePrice || 0}
                       {p.variants && p.variants.length > 0
                         ? ` (${p.variants.map((v) => v.name.replace("Size: ", "")).join(", ")})`
