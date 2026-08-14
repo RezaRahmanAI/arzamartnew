@@ -92,9 +92,11 @@ export default function ProductPage() {
     ? (productReviews.reduce((sum, r) => sum + r.rating, 0) / productReviews.length).toFixed(1)
     : null;
 
-  const related = products
-    .filter((p) => p.category === product.category && p.slug !== product.slug)
-    .slice(0, 4);
+  const sameCategory = products
+    .filter((p) => p.category === product.category && p.slug !== product.slug);
+  const otherProducts = products
+    .filter((p) => p.category !== product.category && p.slug !== product.slug);
+  const related = [...sameCategory, ...otherProducts].slice(0, 8);
 
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -620,7 +622,7 @@ export default function ProductPage() {
       {related.length > 0 && (
         <section className="mt-14">
           <h2 className="section-title border-l-4 border-primary">You may also like</h2>
-          <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4">
             {related.map((p) => (
               <ProductCard key={p.slug} product={p} />
             ))}
