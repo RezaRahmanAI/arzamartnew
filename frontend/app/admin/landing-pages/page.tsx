@@ -664,22 +664,8 @@ export default function AdminLandingPagesPage() {
                 </div>
               </div>
 
-              {/* ── Slug ── */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                  ইউনিক শেয়ারেবল লিংক (Slug) *
-                </label>
-                <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 px-3 dark:border-gray-800 dark:bg-gray-800">
-                  <span className="text-xs text-gray-400 font-mono">/landing/</span>
-                  <input
-                    required
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
-                    placeholder="premium-tshirt-offer"
-                    className="h-10 w-full bg-transparent font-mono text-xs font-bold text-gray-900 outline-none dark:text-white"
-                  />
-                </div>
-              </div>
+              {/* ── Slug (auto-generated, hidden) ── */}
+              <input type="hidden" value={slug} />
 
               {/* ── Hero Image with Preview & Video URL ── */}
               <div className="grid gap-4 md:grid-cols-2">
