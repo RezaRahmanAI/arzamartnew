@@ -21,6 +21,7 @@ public interface IApplicationDbContext
     DbSet<Coupon> Coupons { get; }
     DbSet<Review> Reviews { get; }
     DbSet<WishlistItem> WishlistItems { get; }
+    DbSet<CustomLandingPageConfig> CustomLandingPageConfigs { get; }
     DbSet<Banner> Banners { get; }
     DbSet<WebsiteSettings> WebsiteSettings { get; }
     DbSet<Notification> Notifications { get; }

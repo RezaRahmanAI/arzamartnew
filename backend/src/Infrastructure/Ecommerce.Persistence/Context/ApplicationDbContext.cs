@@ -24,6 +24,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Coupon> Coupons => Set<Coupon>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
+    public DbSet<CustomLandingPageConfig> CustomLandingPageConfigs => Set<CustomLandingPageConfig>();
     public DbSet<Banner> Banners => Set<Banner>();
     public DbSet<WebsiteSettings> WebsiteSettings => Set<WebsiteSettings>();
     public DbSet<Notification> Notifications => Set<Notification>();
@@ -45,6 +46,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         {
             b.HasIndex(o => new { o.OrderStatus, o.CreatedAtUtc })
              .HasDatabaseName("IX_Orders_OrderStatus_CreatedAtUtc");
+        });
+
+        modelBuilder.Entity<CustomLandingPageConfig>(b =>
+        {
+            b.HasIndex(c => c.ProductId)
+             .HasDatabaseName("IX_CustomLandingPageConfigs_ProductId");
         });
     }
 }
