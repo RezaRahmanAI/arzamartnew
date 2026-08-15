@@ -15,6 +15,12 @@ frontend_temp_dev/
 publish_backend/
 frontend_publish_light.zip
 
+# Static Web Assets / Uploads / wwwroot
+wwwroot/
+**/wwwroot/
+[Ww]wwroot/
+
+
 # Compiled Binaries & Assemblies
 *.dll
 *.exe
