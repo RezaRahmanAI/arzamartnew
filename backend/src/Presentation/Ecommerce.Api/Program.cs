@@ -104,11 +104,10 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 6. Middleware Pipeline
-app.UseMiddleware<GlobalExceptionMiddleware>();
-
-// Enable CORS early in pipeline so all requests (including preflight and error responses) receive CORS headers
+// 6. Middleware Pipeline — CORS MUST be first so even error responses get CORS headers
 app.UseCors("AllowFrontend");
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
@@ -142,8 +141,6 @@ if (Directory.Exists(webrootFolder))
 }
 
 app.UseRouting();
-
-app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
