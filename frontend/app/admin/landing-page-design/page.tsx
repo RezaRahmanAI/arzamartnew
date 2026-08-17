@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, Suspense } from "react";
+import { useEffect, useState, useTransition, useRef, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -36,6 +36,7 @@ function DesignerContent() {
   const [product, setProduct] = useState<LandingPageProduct | null>(null);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [previewKey, setPreviewKey] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const [config, setConfig] = useState<CustomLandingPageConfig>({
     productId: productId,
@@ -111,6 +112,45 @@ function DesignerContent() {
     loadDesignerData();
   }, [productId, slug]);
 
+  // Send real-time updates to iframe preview on every change
+  const sendPreviewUpdate = useCallback(
+    (updatedConfig: CustomLandingPageConfig, updatedSections: LandingSection[]) => {
+      if (iframeRef.current && iframeRef.current.contentWindow) {
+        iframeRef.current.contentWindow.postMessage(
+          {
+            type: "CLP_PREVIEW_UPDATE",
+            config: updatedConfig,
+            sections: updatedSections,
+            product,
+          },
+          "*"
+        );
+      }
+    },
+    [product]
+  );
+
+  const handleConfigChange = (newConfig: CustomLandingPageConfig) => {
+    setConfig(newConfig);
+    sendPreviewUpdate(newConfig, sections);
+  };
+
+  const handleSectionsChange = (newSections: LandingSection[]) => {
+    setSections(newSections);
+    sendPreviewUpdate(config, newSections);
+  };
+
+  // Listen for iframe ready message to push latest state immediately
+  useEffect(() => {
+    function handleReady(e: MessageEvent) {
+      if (e.data && e.data.type === "CLP_PREVIEW_READY") {
+        sendPreviewUpdate(config, sections);
+      }
+    }
+    window.addEventListener("message", handleReady);
+    return () => window.removeEventListener("message", handleReady);
+  }, [config, sections, sendPreviewUpdate]);
+
   const handleSave = () => {
     if (!product?.id && !productId) {
       toast.error("Cannot save without a valid product ID");
@@ -134,7 +174,8 @@ function DesignerContent() {
     });
   };
 
-  const previewUrl = product?.slug ? `/clp/${product.slug}?preview=true&v=${previewKey}` : "";
+  const previewLookup = product?.slug || slug || productId;
+  const previewUrl = previewLookup ? `/clp/${previewLookup}?preview=true&v=${previewKey}` : "";
 
   const getDeviceFrameClass = () => {
     switch (previewDevice) {
@@ -217,8 +258,8 @@ function DesignerContent() {
             <CustomLandingPageEditor
               config={config}
               sections={sections}
-              onConfigChange={setConfig}
-              onSectionsChange={setSections}
+              onConfigChange={handleConfigChange}
+              onSectionsChange={handleSectionsChange}
               isSaving={isSaving}
               onSave={handleSave}
             />
@@ -279,6 +320,7 @@ function DesignerContent() {
               <div className={`transition-all duration-300 overflow-hidden bg-background ${getDeviceFrameClass()}`}>
                 {previewUrl ? (
                   <iframe
+                    ref={iframeRef}
                     src={previewUrl}
                     className="w-full h-full border-0 bg-background"
                     title="Landing Page Preview"

@@ -112,6 +112,41 @@ export default function CustomLandingPageRoute({
     loadPage();
   }, [slug]);
 
+  // Support real-time postMessage preview updates from Designer
+  useEffect(() => {
+    if (!isPreview) return;
+
+    function handleMessage(event: MessageEvent) {
+      if (event.data && event.data.type === "CLP_PREVIEW_UPDATE") {
+        const { config: newConfig, sections: newSections, product: updatedProduct } = event.data;
+        if (newConfig) {
+          setData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              product: updatedProduct || prev.product,
+              config: {
+                ...prev.config,
+                ...newConfig,
+                sectionsJson: newSections ? JSON.stringify(newSections) : prev.config?.sectionsJson,
+              },
+            };
+          });
+        }
+      }
+    }
+
+    window.addEventListener("message", handleMessage);
+    // Tell parent editor that preview iframe is ready
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: "CLP_PREVIEW_READY" }, "*");
+    }
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
+  }, [isPreview]);
+
   // Real-time Countdown Timer logic
   useEffect(() => {
     const totalMinutes = data?.config?.relativeTimerTotalMinutes ?? 120;
@@ -549,6 +584,18 @@ export default function CustomLandingPageRoute({
                           "দেখে চেক করে রিসিভ করতে পারবেন। পছন্দ না হলে ডেলিভারি চার্জ দিয়ে রিটার্ন করে দিতে পারবেন সহজেই।"}
                       </p>
                     </div>
+                  </div>
+                </section>
+              );
+
+            case "info-banner":
+              return (
+                <section key={sec.id} className="py-6 px-4 md:px-8 bg-amber-500/10 border-y border-amber-500/20 text-center">
+                  <div className="max-w-3xl mx-auto flex items-center justify-center gap-3 text-amber-900 dark:text-amber-200">
+                    <ShieldCheck className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p className="text-xs md:text-sm font-semibold">
+                      {config?.trustBannerText || "পণ্য হাতে পেয়ে দেখে মূল্য পরিশোধের সম্পূর্ণ নিশ্চয়তা!"}
+                    </p>
                   </div>
                 </section>
               );
