@@ -225,12 +225,23 @@ export const DEFAULT_LANDING_SECTIONS: LandingSection[] = [
 ];
 
 export const customLandingPageService = {
-  async getBySlug(slug: string): Promise<LandingPageData> {
-    return apiClient.get<LandingPageData>(`/custom-landing-page/${slug}`);
+  async getBySlug(slug: string): Promise<LandingPageData | null> {
+    try {
+      return await apiClient.get<LandingPageData>(`/custom-landing-page/${encodeURIComponent(slug)}`);
+    } catch (err: unknown) {
+      // If 404 or not found, return null so caller can handle gracefully
+      return null;
+    }
   },
 
   async getConfig(productId: string): Promise<CustomLandingPageConfig | null> {
-    return apiClient.get<CustomLandingPageConfig | null>(`/custom-landing-page/admin/${productId}`);
+    if (!productId) return null;
+    try {
+      return await apiClient.get<CustomLandingPageConfig | null>(`/custom-landing-page/admin/${productId}`);
+    } catch (err: unknown) {
+      // If not configured yet or not found (404), return null instead of throwing error toast
+      return null;
+    }
   },
 
   async getAll(): Promise<LandingPageListItem[]> {

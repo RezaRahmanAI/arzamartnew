@@ -23,6 +23,7 @@ import {
   DEFAULT_LANDING_SECTIONS,
   LandingPageProduct,
 } from "@/lib/api/services/custom-landing-page.service";
+import { productsService } from "@/lib/api/services/products.service";
 import { CustomLandingPageEditor } from "@/components/admin/custom-landing-page-editor";
 
 function DesignerContent() {
@@ -67,7 +68,35 @@ function DesignerContent() {
         setLoading(true);
         // Load public data for product details
         const lookupKey = slug || productId;
-        const pageData = await customLandingPageService.getBySlug(lookupKey);
+        let pageData = await customLandingPageService.getBySlug(lookupKey);
+
+        // Fallback: If not found by custom landing page endpoint, fetch from product endpoint
+        if (!pageData?.product) {
+          const fallbackProduct = await productsService.getBySlug(lookupKey);
+          if (fallbackProduct) {
+            pageData = {
+              product: {
+                id: fallbackProduct.id || productId,
+                name: fallbackProduct.name,
+                slug: fallbackProduct.slug,
+                description: fallbackProduct.description || "",
+                price: fallbackProduct.price,
+                compareAtPrice: fallbackProduct.compareAt,
+                basePrice: fallbackProduct.mrp || fallbackProduct.price,
+                discountPrice: fallbackProduct.price < (fallbackProduct.mrp || fallbackProduct.price) ? fallbackProduct.price : null,
+                imageUrl: fallbackProduct.image || "",
+                images: (fallbackProduct.images || []).map((img, idx) => ({ imageUrl: img, isMain: idx === 0 })),
+                variants: (fallbackProduct.sizes || []).map((s) => ({
+                  id: s,
+                  name: s,
+                  stockQuantity: fallbackProduct.sizeStock?.[s] ?? 10,
+                  priceOverride: fallbackProduct.sizePrices?.[s],
+                })),
+              },
+              config: null,
+            };
+          }
+        }
 
         if (pageData?.product) {
           setProduct(pageData.product);
