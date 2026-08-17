@@ -29,6 +29,8 @@ import {
   DEFAULT_LANDING_SECTIONS,
   RelatedProductItem,
 } from "@/lib/api/services/custom-landing-page.service";
+import { productsService } from "@/lib/api/services/products.service";
+import { products as staticProducts } from "@/lib/shop-data";
 import { CustomSectionRenderer } from "@/components/admin/custom-section-renderer";
 import { settingsService } from "@/lib/api/services/settings.service";
 import { ordersService } from "@/lib/api/services/orders.service";
@@ -78,10 +80,43 @@ export default function CustomLandingPageRoute({
     async function loadPage() {
       try {
         setLoading(true);
-        const [pageData, siteSettings] = await Promise.all([
+        const [fetchedPageData, siteSettings] = await Promise.all([
           customLandingPageService.getBySlug(slug),
           settingsService.get().catch(() => null),
         ]);
+        let pageData = fetchedPageData;
+
+        // Fallback: If custom landing page endpoint returns null (e.g. 404), fetch product via productsService or shop-data
+        if (!pageData?.product) {
+          let rawProduct = await productsService.getBySlug(slug);
+          if (!rawProduct) {
+            rawProduct = staticProducts.find((p) => p.slug === slug || p.name.toLowerCase().replace(/\s+/g, "-") === slug);
+          }
+          if (rawProduct) {
+            pageData = {
+              product: {
+                id: rawProduct.id || slug,
+                name: rawProduct.name,
+                slug: rawProduct.slug,
+                description: rawProduct.description || "",
+                shortDescription: rawProduct.description || "",
+                price: rawProduct.price,
+                compareAtPrice: rawProduct.compareAt || null,
+                basePrice: rawProduct.mrp || rawProduct.price,
+                discountPrice: rawProduct.price < (rawProduct.mrp || rawProduct.price) ? rawProduct.price : null,
+                imageUrl: rawProduct.image || "",
+                images: (rawProduct.images || []).map((img, idx) => ({ imageUrl: img, isMain: idx === 0 })),
+                variants: (rawProduct.sizes || []).map((s) => ({
+                  id: s,
+                  name: s,
+                  stockQuantity: rawProduct.sizeStock?.[s] ?? 10,
+                  priceOverride: rawProduct.sizePrices?.[s],
+                })),
+              },
+              config: null,
+            };
+          }
+        }
 
         setData(pageData);
         setSettings(siteSettings);

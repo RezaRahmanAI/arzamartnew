@@ -11,7 +11,7 @@ export function FloatingActions() {
   const { count } = useCart();
   const { settings } = useSettings();
 
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/admin") || pathname.startsWith("/clp")) {
     return null;
   }
 

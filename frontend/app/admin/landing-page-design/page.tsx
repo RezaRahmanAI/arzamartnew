@@ -24,6 +24,7 @@ import {
   LandingPageProduct,
 } from "@/lib/api/services/custom-landing-page.service";
 import { productsService } from "@/lib/api/services/products.service";
+import { products as staticProducts } from "@/lib/shop-data";
 import { CustomLandingPageEditor } from "@/components/admin/custom-landing-page-editor";
 
 function DesignerContent() {
@@ -70,9 +71,12 @@ function DesignerContent() {
         const lookupKey = slug || productId;
         let pageData = await customLandingPageService.getBySlug(lookupKey);
 
-        // Fallback: If not found by custom landing page endpoint, fetch from product endpoint
+        // Fallback: If not found by custom landing page endpoint, fetch from product endpoint or static shop data
         if (!pageData?.product) {
-          const fallbackProduct = await productsService.getBySlug(lookupKey);
+          let fallbackProduct = await productsService.getBySlug(lookupKey);
+          if (!fallbackProduct) {
+            fallbackProduct = staticProducts.find((p) => p.slug === lookupKey || p.name.toLowerCase().replace(/\s+/g, "-") === lookupKey);
+          }
           if (fallbackProduct) {
             pageData = {
               product: {
@@ -80,8 +84,9 @@ function DesignerContent() {
                 name: fallbackProduct.name,
                 slug: fallbackProduct.slug,
                 description: fallbackProduct.description || "",
+                shortDescription: fallbackProduct.description || "",
                 price: fallbackProduct.price,
-                compareAtPrice: fallbackProduct.compareAt,
+                compareAtPrice: fallbackProduct.compareAt || null,
                 basePrice: fallbackProduct.mrp || fallbackProduct.price,
                 discountPrice: fallbackProduct.price < (fallbackProduct.mrp || fallbackProduct.price) ? fallbackProduct.price : null,
                 imageUrl: fallbackProduct.image || "",
