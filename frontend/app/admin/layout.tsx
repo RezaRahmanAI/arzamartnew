@@ -94,6 +94,10 @@ export default function AdminLayout({
     );
   }
 
+  if (pathname === "/admin/landing-page-design") {
+    return <div className="h-screen w-screen overflow-hidden bg-background">{children}</div>;
+  }
+
   const currentMeta = PAGE_META[pathname] || {
     title: "Dashboard",
     subtitle: "Store administration panel",
