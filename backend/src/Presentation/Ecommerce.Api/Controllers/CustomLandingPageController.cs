@@ -44,8 +44,13 @@ public class CustomLandingPageController : ControllerBase
         
         if (product == null)
         {
-            string productSlug = slug.EndsWith("-offer") ? slug[..^6] : slug;
-            product = await productQuery.FirstOrDefaultAsync(p => p.Slug == slug || p.Slug == productSlug, ct);
+            var cleanSlug = slug.Trim().ToLower();
+            string productSlug = cleanSlug.EndsWith("-offer") ? cleanSlug[..^6] : cleanSlug;
+            product = await productQuery.FirstOrDefaultAsync(p => 
+                p.Slug.ToLower() == cleanSlug || 
+                p.Slug.ToLower() == productSlug ||
+                p.Name.ToLower() == cleanSlug ||
+                p.SKU.ToLower() == cleanSlug, ct);
         }
 
         if (product == null)
