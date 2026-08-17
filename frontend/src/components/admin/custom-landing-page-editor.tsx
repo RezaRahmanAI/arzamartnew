@@ -57,6 +57,13 @@ export function CustomLandingPageEditor({
     e.stopPropagation();
     const updated = sections.map((s) => (s.id === id ? { ...s, visible: !s.visible } : s));
     onSectionsChange(updated);
+
+    const toggled = updated.find((s) => s.id === id);
+    if (toggled?.type === "marquee") {
+      onConfigChange({ ...config, isMarqueeVisible: toggled.visible });
+    } else if (toggled?.type === "countdown") {
+      onConfigChange({ ...config, isTimerVisible: toggled.visible });
+    }
   };
 
   const moveSection = (index: number, direction: "up" | "down", e: React.MouseEvent) => {

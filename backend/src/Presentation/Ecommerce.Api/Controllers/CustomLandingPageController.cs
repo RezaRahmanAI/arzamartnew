@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Ecommerce.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/[controller]")]
-[Route("api/[controller]")]
+[Route("api/v1/custom-landing-page")]
+[Route("api/custom-landing-page")]
 public class CustomLandingPageController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
@@ -144,7 +144,6 @@ public class CustomLandingPageController : ControllerBase
     /// Admin endpoint: Get config by ProductId
     /// </summary>
     [HttpGet("admin/{productId:guid}")]
-    [HttpGet("/api/admin/custom-landing-page/{productId:guid}")]
     public async Task<IActionResult> GetConfig(Guid productId, CancellationToken ct = default)
     {
         var config = await _context.CustomLandingPageConfigs
@@ -187,7 +186,6 @@ public class CustomLandingPageController : ControllerBase
     /// Admin endpoint: Get all custom landing pages status overview
     /// </summary>
     [HttpGet("admin/all")]
-    [HttpGet("/api/admin/custom-landing-page/all")]
     public async Task<IActionResult> GetAllLandingPages(CancellationToken ct = default)
     {
         var products = await _context.Products
@@ -238,7 +236,6 @@ public class CustomLandingPageController : ControllerBase
     /// Admin endpoint: Save / Update Custom Landing Page Config
     /// </summary>
     [HttpPost("admin")]
-    [HttpPost("/api/admin/custom-landing-page")]
     public async Task<IActionResult> SaveConfig([FromBody] CustomLandingPageConfigUpdateDto dto, CancellationToken ct = default)
     {
         if (dto.ProductId == Guid.Empty)
@@ -337,7 +334,6 @@ public class CustomLandingPageController : ControllerBase
     /// Admin endpoint: Delete/Reset Custom Landing Page Config
     /// </summary>
     [HttpDelete("admin/{productId:guid}")]
-    [HttpDelete("/api/admin/custom-landing-page/{productId:guid}")]
     public async Task<IActionResult> DeleteConfig(Guid productId, CancellationToken ct = default)
     {
         var config = await _context.CustomLandingPageConfigs

@@ -385,35 +385,35 @@ export default function CustomLandingPageRoute({
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20">
       {/* 1. Scrolling Marquee Bar */}
       {isMarquee && (
-        <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-primary text-white py-2 px-4 overflow-hidden relative shadow-sm text-xs md:text-sm font-bold">
+        <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-primary text-white py-1.5 md:py-2 px-3 md:px-4 overflow-hidden relative shadow-sm text-[11px] md:text-sm font-bold">
           <div className="flex whitespace-nowrap animate-marquee">
-            <span className="mx-4">{marqueeText}</span>
-            <span className="mx-4">{marqueeText}</span>
-            <span className="mx-4">{marqueeText}</span>
+            <span className="mx-3 md:mx-4">{marqueeText}</span>
+            <span className="mx-3 md:mx-4">{marqueeText}</span>
+            <span className="mx-3 md:mx-4">{marqueeText}</span>
           </div>
         </div>
       )}
 
       {/* 2. Sticky Countdown Urgency Bar */}
       {isTimer && (
-        <div className="sticky top-0 z-50 bg-slate-950/95 backdrop-blur-md text-white py-2.5 px-4 border-b border-slate-800 shadow-md">
-          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
-            <div className="flex items-center gap-2">
-              <Clock className="size-4 text-amber-400 animate-pulse" />
-              <span className="text-xs md:text-sm font-bold text-slate-100">{timerTitle}</span>
+        <div className="sticky top-0 z-50 bg-slate-950/95 backdrop-blur-md text-white py-2 md:py-2.5 px-3 md:px-4 border-b border-slate-800 shadow-md">
+          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1.5 md:gap-2 text-center sm:text-left">
+            <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
+              <Clock className="size-3.5 md:size-4 text-amber-400 animate-pulse shrink-0" />
+              <span className="text-[11px] md:text-sm font-bold text-slate-100 truncate">{timerTitle}</span>
             </div>
 
             {/* Timer Clock */}
-            <div className="flex items-center gap-1.5 font-mono text-xs font-black">
-              <div className="bg-slate-900 border border-slate-700 px-2 py-1 rounded-md text-amber-400">
+            <div className="flex items-center gap-1 md:gap-1.5 font-mono text-[10px] md:text-xs font-black shrink-0">
+              <div className="bg-slate-900 border border-slate-700 px-1.5 md:px-2 py-0.5 md:py-1 rounded-md text-amber-400">
                 {String(timeLeft.hours).padStart(2, "0")}h
               </div>
               <span className="text-slate-500">:</span>
-              <div className="bg-slate-900 border border-slate-700 px-2 py-1 rounded-md text-amber-400">
+              <div className="bg-slate-900 border border-slate-700 px-1.5 md:px-2 py-0.5 md:py-1 rounded-md text-amber-400">
                 {String(timeLeft.minutes).padStart(2, "0")}m
               </div>
               <span className="text-slate-500">:</span>
-              <div className="bg-slate-900 border border-slate-700 px-2 py-1 rounded-md text-amber-400">
+              <div className="bg-slate-900 border border-slate-700 px-1.5 md:px-2 py-0.5 md:py-1 rounded-md text-amber-400">
                 {String(timeLeft.seconds).padStart(2, "0")}s
               </div>
             </div>

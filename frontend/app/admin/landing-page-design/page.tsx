@@ -214,9 +214,9 @@ function DesignerContent() {
   const getDeviceFrameClass = () => {
     switch (previewDevice) {
       case "mobile":
-        return "w-[375px] h-[720px] max-h-[88vh] rounded-[36px] border-[10px] border-slate-900 shadow-2xl";
+        return "w-[375px] h-[720px] max-h-[88vh] rounded-[20px] border-[6px] border-slate-900 shadow-2xl";
       case "tablet":
-        return "w-[768px] h-[820px] max-h-[88vh] rounded-[24px] border-[10px] border-slate-900 shadow-2xl";
+        return "w-[768px] h-[820px] max-h-[88vh] rounded-[16px] border-[6px] border-slate-900 shadow-2xl";
       default:
         return "w-full h-full max-h-[92vh] rounded-xl border border-border shadow-lg";
     }
