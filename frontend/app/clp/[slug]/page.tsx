@@ -34,6 +34,7 @@ import { products as staticProducts } from "@/lib/shop-data";
 import { CustomSectionRenderer } from "@/components/admin/custom-section-renderer";
 import { settingsService } from "@/lib/api/services/settings.service";
 import { ordersService } from "@/lib/api/services/orders.service";
+import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
 
 import { SystemSettings } from "@/types/settings";
 
@@ -69,7 +70,8 @@ export default function CustomLandingPageRoute({
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
-  const [deliveryZone, setDeliveryZone] = useState<"inside" | "outside">("inside");
+  const [selectedCity, setSelectedCity] = useState("Dhaka");
+  const [selectedArea, setSelectedArea] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -239,6 +241,14 @@ export default function CustomLandingPageRoute({
     );
   }, [settings]);
 
+  const availableAreas = useMemo(() => getAreasForCity(selectedCity), [selectedCity]);
+
+  const handleCityChange = (city: string) => {
+    setSelectedCity(city);
+    const areas = getAreasForCity(city);
+    setSelectedArea(areas[0] || "");
+  };
+
   const deliveryCharge = useMemo(() => {
     const freeThreshold = data?.config?.freeShippingThresholdQuantity;
     const totalQty = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -247,8 +257,8 @@ export default function CustomLandingPageRoute({
       return 0; // Free delivery milestone reached!
     }
 
-    return deliveryZone === "inside" ? insideDhakaFee : outsideDhakaFee;
-  }, [deliveryZone, insideDhakaFee, outsideDhakaFee, selectedItems, data?.config?.freeShippingThresholdQuantity]);
+    return selectedCity === "Dhaka" ? insideDhakaFee : outsideDhakaFee;
+  }, [selectedCity, insideDhakaFee, outsideDhakaFee, selectedItems, data?.config?.freeShippingThresholdQuantity]);
 
   const subtotal = useMemo(() => {
     return selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -328,7 +338,8 @@ export default function CustomLandingPageRoute({
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         shippingAddress: customerAddress.trim(),
-        shippingZone: deliveryZone === "inside" ? "Inside Dhaka" : "Outside Dhaka",
+        city: selectedCity,
+        area: selectedArea,
         deliveryCharge: deliveryCharge,
         subtotal: subtotal,
         totalAmount: grandTotal,
@@ -899,54 +910,58 @@ export default function CustomLandingPageRoute({
                         </div>
                       </div>
 
-                      {/* 3. Delivery Zone Selection */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-foreground">ডেলিভারি এলাকা *</label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setDeliveryZone("inside")}
-                            className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                              deliveryZone === "inside"
-                                ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
-                                : "border-border bg-background text-muted-foreground"
-                            }`}
+                      {/* 3. City & Area Selection */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-foreground">শহর / জেলা *</label>
+                          <select
+                            value={selectedCity}
+                            onChange={(e) => handleCityChange(e.target.value)}
+                            className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                           >
-                            <p className="text-xs">ঢাকার ভিতরে</p>
-                            <p className="text-sm font-bold text-foreground">
-                              ৳{insideDhakaFee}
-                            </p>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setDeliveryZone("outside")}
-                            className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                              deliveryZone === "outside"
-                                ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
-                                : "border-border bg-background text-muted-foreground"
-                            }`}
+                            {DEFAULT_CITIES.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-foreground">থানা / উপজেলা *</label>
+                          <select
+                            value={selectedArea}
+                            onChange={(e) => setSelectedArea(e.target.value)}
+                            className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                           >
-                            <p className="text-xs">ঢাকার বাইরে</p>
-                            <p className="text-sm font-bold text-foreground">
-                              ৳{outsideDhakaFee}
-                            </p>
-                          </button>
+                            {availableAreas.map((a) => (
+                              <option key={a} value={a}>{a}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
 
                       {/* 4. Full Address */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-foreground">
-                          পূর্ণাঙ্গ ঠিকানা (বাসা/রোড/এলাকা/জেলা) *
+                          পূর্ণাঙ্গ ঠিকানা (বাসা/রোড/এলাকা) *
                         </label>
                         <textarea
                           required
                           rows={2}
                           value={customerAddress}
                           onChange={(e) => setCustomerAddress(e.target.value)}
-                          placeholder="আপনার সম্পূর্ণ ঠিকানা লিখুন..."
+                          placeholder="বাসা নম্বর, রোড, এলাকার বিস্তারিত লিখুন..."
                           className="w-full px-3.5 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary resize-none"
+                        />
+                      </div>
+
+                      {/* 5. Note */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-foreground">নোট (ঐচ্ছিক)</label>
+                        <input
+                          type="text"
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          placeholder="অর্ডার সম্পর্কে কিছু জানাতে চাইলে লিখুন..."
+                          className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                         />
                       </div>
 
