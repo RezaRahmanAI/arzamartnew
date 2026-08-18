@@ -305,7 +305,7 @@ export default function CustomLandingPageRoute({
   };
 
   const scrollToOrderForm = () => {
-    const el = document.getElementById("order-form");
+    const el = document.getElementById("section-order-form");
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
     }
@@ -441,9 +441,13 @@ export default function CustomLandingPageRoute({
       <main className="divide-y divide-border/60">
         {activeSections.map((sec) => {
           switch (sec.type) {
-            case "hero":
+            case "hero": {
+              const heroIdx = activeSections.findIndex((s) => s.id === sec.id);
+              const nextSec = activeSections.slice(heroIdx + 1).find((s) => s.visible);
+              const nextSectionId = nextSec ? `section-${nextSec.id}` : "order-form";
+
               return (
-                <section key={sec.id} className="py-8 md:py-12 px-4 bg-gradient-to-b from-primary/5 to-transparent text-center">
+                <section key={sec.id} id={`section-${sec.id}`} className="py-8 md:py-12 px-4 bg-gradient-to-b from-primary/5 to-transparent text-center">
                   <div className="max-w-3xl mx-auto space-y-4">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs md:text-sm font-bold border border-primary/20">
                       <Sparkles className="size-4" />
@@ -461,7 +465,10 @@ export default function CustomLandingPageRoute({
                     <div className="pt-2">
                       <button
                         type="button"
-                        onClick={scrollToOrderForm}
+                        onClick={() => {
+                          const el = document.getElementById(nextSectionId);
+                          if (el) el.scrollIntoView({ behavior: "smooth" });
+                        }}
                         className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-base cursor-pointer"
                       >
                         <span>অর্ডার করতে এখানে চাপুন</span>
@@ -471,10 +478,11 @@ export default function CustomLandingPageRoute({
                   </div>
                 </section>
               );
+            }
 
             case "product-hero":
               return (
-                <section key={sec.id} className="py-10 px-4 md:px-8 bg-card">
+                <section key={sec.id} id={`section-${sec.id}`} className="py-10 px-4 md:px-8 bg-card">
                   <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-8 items-center">
                     {/* Product Image */}
                     <div className="relative rounded-2xl overflow-hidden border border-border shadow-xl bg-background aspect-square max-w-md mx-auto w-full">
@@ -585,7 +593,7 @@ export default function CustomLandingPageRoute({
               const discountPercent = hasDiscount ? Math.round(((mrp - sizePrice) / mrp) * 100) : 0;
 
               return (
-                <section key={sec.id} className="py-8 px-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-center">
+                <section key={sec.id} id={`section-${sec.id}`} className="py-8 px-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-center">
                   <div className="max-w-2xl mx-auto space-y-3">
                     <h3 className="text-xl md:text-2xl font-black">
                       {config?.promoText || "🔥 আজকের স্পেশাল কম্বো অফার!"}
@@ -636,7 +644,7 @@ export default function CustomLandingPageRoute({
 
             case "trust-banner":
               return (
-                <section key={sec.id} className="py-8 px-4 md:px-8 bg-card">
+                <section key={sec.id} id={`section-${sec.id}`} className="py-8 px-4 md:px-8 bg-card">
                   <div className="max-w-4xl mx-auto p-6 bg-muted/40 rounded-2xl border border-border flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
                     <div className="size-14 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
                       <ShieldCheck className="size-7" />
@@ -654,7 +662,7 @@ export default function CustomLandingPageRoute({
 
             case "info-banner":
               return (
-                <section key={sec.id} className="py-6 px-4 md:px-8 bg-amber-500/10 border-y border-amber-500/20 text-center">
+                <section key={sec.id} id={`section-${sec.id}`} className="py-6 px-4 md:px-8 bg-amber-500/10 border-y border-amber-500/20 text-center">
                   <div className="max-w-3xl mx-auto flex items-center justify-center gap-3 text-amber-900 dark:text-amber-200">
                     <ShieldCheck className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
                     <p className="text-xs md:text-sm font-semibold">
@@ -667,7 +675,7 @@ export default function CustomLandingPageRoute({
             case "product-select":
               if (!relatedProducts || relatedProducts.length === 0) return null;
               return (
-                <section key={sec.id} className="py-10 px-4 md:px-8 bg-background">
+                <section key={sec.id} id={`section-${sec.id}`} className="py-10 px-4 md:px-8 bg-background">
                   <div className="max-w-5xl mx-auto space-y-6">
                     <div className="text-center space-y-1">
                       <h3 className="text-xl md:text-2xl font-black text-foreground">
@@ -778,7 +786,7 @@ export default function CustomLandingPageRoute({
 
             case "reviews":
               return (
-                <section key={sec.id} className="py-10 px-4 md:px-8 bg-card">
+                <section key={sec.id} id={`section-${sec.id}`} className="py-10 px-4 md:px-8 bg-card">
                   <div className="max-w-4xl mx-auto space-y-6">
                     <div className="text-center space-y-1">
                       <div className="flex items-center justify-center gap-1 text-amber-400">
@@ -846,7 +854,7 @@ export default function CustomLandingPageRoute({
 
             case "order-form":
               return (
-                <section key={sec.id} id="order-form" className="py-12 px-4 md:px-8 bg-muted/30">
+                <section key={sec.id} id={`section-${sec.id}`} className="py-12 px-4 md:px-8 bg-muted/30">
                   <div className="max-w-3xl mx-auto bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
                     {/* Form Header */}
                     <div className="bg-primary text-primary-foreground p-6 text-center space-y-1">
