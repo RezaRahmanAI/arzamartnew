@@ -24,6 +24,7 @@ import {
   LandingPageProduct,
 } from "@/lib/api/services/custom-landing-page.service";
 import { productsService } from "@/lib/api/services/products.service";
+import { apiClient } from "@/lib/api/client";
 import { products as staticProducts } from "@/lib/shop-data";
 import { CustomLandingPageEditor } from "@/components/admin/custom-landing-page-editor";
 
@@ -297,6 +298,23 @@ function DesignerContent() {
               onSectionsChange={handleSectionsChange}
               isSaving={isSaving}
               onSave={handleSave}
+              product={product}
+              onSyncProductPrices={async (sizePrices: Record<string, number>) => {
+                if (!product?.id || !product?.slug) return;
+                try {
+                  const updatedVariants = (product.variants || []).map((v) => ({
+                    ...v,
+                    priceOverride: sizePrices[v.name] ?? v.priceOverride,
+                  }));
+                  await apiClient.put(`/products/${product.slug}`, {
+                    ...product,
+                    variants: updatedVariants,
+                  });
+                  setProduct({ ...product, variants: updatedVariants });
+                } catch (err) {
+                  console.error("Failed to sync product prices:", err);
+                }
+              }}
             />
           </div>
 

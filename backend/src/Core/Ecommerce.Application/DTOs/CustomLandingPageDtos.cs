@@ -25,6 +25,7 @@ public class CustomLandingPageConfigDto
     public string? FeaturedProductName { get; set; }
     public decimal? PromoPrice { get; set; }
     public decimal? OriginalPrice { get; set; }
+    public string? SizePricesJson { get; set; }
     public string? PromoText { get; set; }
     public int? FreeShippingThresholdQuantity { get; set; }
 
@@ -57,6 +58,7 @@ public class CustomLandingPageConfigUpdateDto
     public string? FeaturedProductName { get; set; }
     public decimal? PromoPrice { get; set; }
     public decimal? OriginalPrice { get; set; }
+    public string? SizePricesJson { get; set; }
     public string? PromoText { get; set; }
     public int? FreeShippingThresholdQuantity { get; set; }
 

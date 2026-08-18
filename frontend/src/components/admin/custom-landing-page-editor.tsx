@@ -36,6 +36,8 @@ interface CustomLandingPageEditorProps {
   onSectionsChange: (newSections: LandingSection[]) => void;
   isSaving?: boolean;
   onSave?: () => void;
+  product?: { id?: string; name?: string; slug?: string; variants?: { id: string; name: string; priceOverride?: number }[]; price?: number; compareAtPrice?: number | null } | null;
+  onSyncProductPrices?: (sizePrices: Record<string, number>) => void;
 }
 
 export function CustomLandingPageEditor({
@@ -45,6 +47,8 @@ export function CustomLandingPageEditor({
   onSectionsChange,
   isSaving,
   onSave,
+  product,
+  onSyncProductPrices,
 }: CustomLandingPageEditorProps) {
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -340,27 +344,11 @@ export function CustomLandingPageEditor({
 
                   {/* Discount CTA Editor */}
                   {sec.type === "discount-cta" && (
-                    <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                    <div className="space-y-2 pt-1 text-xs">
+                      {/* MRP / Original Price */}
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-muted-foreground uppercase">
-                          অফার মূল্য (৳)
-                        </label>
-                        <input
-                          type="number"
-                          value={config.promoPrice || ""}
-                          onChange={(e) =>
-                            onConfigChange({
-                              ...config,
-                              promoPrice: parseFloat(e.target.value) || undefined,
-                            })
-                          }
-                          placeholder="ডিসকাউন্ট রেট"
-                          className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-muted-foreground uppercase">
-                          আগের মূল্য (৳)
+                          MRP / আগের মূল্য (৳)
                         </label>
                         <input
                           type="number"
@@ -371,7 +359,83 @@ export function CustomLandingPageEditor({
                               originalPrice: parseFloat(e.target.value) || undefined,
                             })
                           }
-                          placeholder="রেগুলার প্রাইস"
+                          placeholder="যেমন: ১২০০"
+                          className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        {!config.originalPrice && product?.compareAtPrice && (
+                          <p className="text-[10px] text-muted-foreground italic">
+                            প্রোডাক্ট MRP থেকে: ৳{product.compareAtPrice.toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Size-wise Selling Prices */}
+                      {product?.variants && product.variants.length > 0 && (
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                            সাইজ অনুযায়ী বিক্রয় মূল্য (৳)
+                          </label>
+                          <div className="space-y-1">
+                            {product.variants.map((v) => {
+                              const currentPrice = config.sizePrices?.[v.name] ?? v.priceOverride ?? product.price ?? 0;
+                              return (
+                                <div key={v.id} className="flex items-center gap-2">
+                                  <span className="w-16 text-[11px] font-semibold text-muted-foreground truncate">
+                                    {v.name}
+                                  </span>
+                                  <input
+                                    type="number"
+                                    value={currentPrice || ""}
+                                    onChange={(e) => {
+                                      const newPrice = parseFloat(e.target.value) || 0;
+                                      const newSizePrices = { ...(config.sizePrices || {}), [v.name]: newPrice };
+                                      onConfigChange({ ...config, sizePrices: newSizePrices });
+                                      onSyncProductPrices?.(newSizePrices);
+                                    }}
+                                    placeholder="৳"
+                                    className="flex-1 h-7 px-2 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground italic">
+                            মান পরিবর্তন করলে প্রোডাক্ট সাইজ প্রাইসও আপডেট হবে
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Promo Text */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                          অফার টেক্সট
+                        </label>
+                        <input
+                          type="text"
+                          value={config.promoText || ""}
+                          onChange={(e) =>
+                            onConfigChange({ ...config, promoText: e.target.value })
+                          }
+                          placeholder="🔥 আজকের স্পেশাল কম্বো অফার!"
+                          className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+
+                      {/* Free Shipping Threshold */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                          ফ্রি ডেলিভারি কোয়ান্টিটি
+                        </label>
+                        <input
+                          type="number"
+                          value={config.freeShippingThresholdQuantity || ""}
+                          onChange={(e) =>
+                            onConfigChange({
+                              ...config,
+                              freeShippingThresholdQuantity: parseInt(e.target.value) || null,
+                            })
+                          }
+                          placeholder="যেমন: 2"
                           className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </div>

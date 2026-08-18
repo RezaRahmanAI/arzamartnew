@@ -17,6 +17,8 @@ export interface CustomLandingPageConfig {
   featuredProductName?: string;
   promoPrice?: number;
   originalPrice?: number;
+  sizePrices?: Record<string, number>;
+  sizePricesJson?: string;
   promoText?: string;
   freeShippingThresholdQuantity?: number | null;
   isMarqueeVisible?: boolean;
@@ -227,9 +229,12 @@ export const DEFAULT_LANDING_SECTIONS: LandingSection[] = [
 export const customLandingPageService = {
   async getBySlug(slug: string): Promise<LandingPageData | null> {
     try {
-      return await apiClient.get<LandingPageData>(`/custom-landing-page/${encodeURIComponent(slug)}`);
+      const data = await apiClient.get<LandingPageData>(`/custom-landing-page/${encodeURIComponent(slug)}`);
+      if (data?.config?.sizePricesJson) {
+        data.config.sizePrices = JSON.parse(data.config.sizePricesJson);
+      }
+      return data;
     } catch (err: unknown) {
-      // If 404 or not found, return null so caller can handle gracefully
       return null;
     }
   },
@@ -237,9 +242,12 @@ export const customLandingPageService = {
   async getConfig(productId: string): Promise<CustomLandingPageConfig | null> {
     if (!productId) return null;
     try {
-      return await apiClient.get<CustomLandingPageConfig | null>(`/custom-landing-page/admin/${productId}`);
+      const data = await apiClient.get<CustomLandingPageConfig | null>(`/custom-landing-page/admin/${productId}`);
+      if (data?.sizePricesJson) {
+        data.sizePrices = JSON.parse(data.sizePricesJson);
+      }
+      return data;
     } catch (err: unknown) {
-      // If not configured yet or not found (404), return null instead of throwing error toast
       return null;
     }
   },
@@ -249,7 +257,11 @@ export const customLandingPageService = {
   },
 
   async saveConfig(config: Partial<CustomLandingPageConfig>): Promise<CustomLandingPageConfig> {
-    return apiClient.post<CustomLandingPageConfig>("/custom-landing-page/admin", config);
+    const payload = { ...config };
+    if (config.sizePrices) {
+      payload.sizePricesJson = JSON.stringify(config.sizePrices);
+    }
+    return apiClient.post<CustomLandingPageConfig>("/custom-landing-page/admin", payload);
   },
 
   async deleteConfig(productId: string): Promise<{ message: string }> {

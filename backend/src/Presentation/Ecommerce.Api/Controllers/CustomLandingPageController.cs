@@ -81,9 +81,10 @@ public class CustomLandingPageController : ControllerBase
                 TrustBannerDescription = config.TrustBannerDescription,
                 IsFeaturedOrderVisible = config.IsFeaturedOrderVisible,
                 FeaturedProductName = config.FeaturedProductName,
-                PromoPrice = config.PromoPrice,
-                OriginalPrice = config.OriginalPrice,
-                PromoText = config.PromoText,
+            PromoPrice = config.PromoPrice,
+            OriginalPrice = config.OriginalPrice,
+            SizePricesJson = config.SizePricesJson,
+            PromoText = config.PromoText,
                 FreeShippingThresholdQuantity = config.FreeShippingThresholdQuantity,
                 IsMarqueeVisible = config.IsMarqueeVisible,
                 MarqueeText = config.MarqueeText,
@@ -265,6 +266,7 @@ public class CustomLandingPageController : ControllerBase
                 FeaturedProductName = dto.FeaturedProductName,
                 PromoPrice = dto.PromoPrice,
                 OriginalPrice = dto.OriginalPrice,
+                SizePricesJson = dto.SizePricesJson,
                 PromoText = dto.PromoText,
                 FreeShippingThresholdQuantity = dto.FreeShippingThresholdQuantity,
                 IsMarqueeVisible = dto.IsMarqueeVisible,
@@ -290,6 +292,7 @@ public class CustomLandingPageController : ControllerBase
             config.FeaturedProductName = dto.FeaturedProductName;
             config.PromoPrice = dto.PromoPrice;
             config.OriginalPrice = dto.OriginalPrice;
+            config.SizePricesJson = dto.SizePricesJson;
             config.PromoText = dto.PromoText;
             config.FreeShippingThresholdQuantity = dto.FreeShippingThresholdQuantity;
             config.IsMarqueeVisible = dto.IsMarqueeVisible;
@@ -318,6 +321,7 @@ public class CustomLandingPageController : ControllerBase
             FeaturedProductName = config.FeaturedProductName,
             PromoPrice = config.PromoPrice,
             OriginalPrice = config.OriginalPrice,
+            SizePricesJson = config.SizePricesJson,
             PromoText = config.PromoText,
             FreeShippingThresholdQuantity = config.FreeShippingThresholdQuantity,
             IsMarqueeVisible = config.IsMarqueeVisible,

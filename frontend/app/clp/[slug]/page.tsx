@@ -576,13 +576,45 @@ export default function CustomLandingPageRoute({
                 </section>
               );
 
-            case "discount-cta":
+            case "discount-cta": {
+              const mrp = config?.originalPrice || product.compareAtPrice || product.basePrice || product.price;
+              const sizePrice = config?.sizePrices?.[selectedMainSize]
+                || product.variants?.find((v) => v.name === selectedMainSize)?.priceOverride
+                || product.price;
+              const hasDiscount = mrp > sizePrice;
+              const discountPercent = hasDiscount ? Math.round(((mrp - sizePrice) / mrp) * 100) : 0;
+
               return (
                 <section key={sec.id} className="py-8 px-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-center">
                   <div className="max-w-2xl mx-auto space-y-3">
                     <h3 className="text-xl md:text-2xl font-black">
-                      🔥 আজকের স্পেশাল কম্বো অফার!
+                      {config?.promoText || "🔥 আজকের স্পেশাল কম্বো অফার!"}
                     </h3>
+
+                    {/* Price Display */}
+                    <div className="flex items-center justify-center gap-3 pt-1">
+                      {hasDiscount && (
+                        <span className="text-lg text-emerald-200 line-through font-medium">
+                          ৳{mrp.toLocaleString()}
+                        </span>
+                      )}
+                      <span className="text-3xl font-black">
+                        ৳{sizePrice.toLocaleString()}
+                      </span>
+                      {hasDiscount && (
+                        <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">
+                          {discountPercent}% ছাড়
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Selected Size */}
+                    {selectedMainSize && (
+                      <p className="text-xs text-emerald-200">
+                        সাইজ: <span className="font-bold text-white">{selectedMainSize}</span>
+                      </p>
+                    )}
+
                     <p className="text-xs md:text-sm text-emerald-100 leading-relaxed">
                       {config?.freeShippingThresholdQuantity
                         ? `যেকোনো ${config.freeShippingThresholdQuantity}টি প্রোডাক্ট অর্ডার করলেই ফ্রি হোম ডেলিভারি!`
@@ -594,12 +626,13 @@ export default function CustomLandingPageRoute({
                         onClick={scrollToOrderForm}
                         className="bg-white text-emerald-800 font-black px-6 py-2.5 rounded-full hover:bg-emerald-50 shadow-md transition-all text-xs md:text-sm cursor-pointer"
                       >
-                        অফারটি উপভোগ করুন
+                        অর্ডার করতে এখানে চাপুন
                       </button>
                     </div>
                   </div>
                 </section>
               );
+            }
 
             case "trust-banner":
               return (
