@@ -2,6 +2,7 @@
 
 import { LandingSection, CustomField } from "@/lib/api/services/custom-landing-page.service";
 import { CheckCircle2, ArrowRight } from "lucide-react";
+import { getImageUrl, handleImageError } from "@/lib/utils";
 
 interface CustomSectionRendererProps {
   section: LandingSection;
@@ -67,10 +68,11 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
             {getField("image") && getFieldValue("image") && (
               <div className="pt-2">
                 <img
-                  src={getFieldValue("image")}
+                  src={getImageUrl(getFieldValue("image"))}
                   alt="Section banner"
                   className="w-full max-w-2xl mx-auto rounded-2xl shadow-xl border border-border object-cover"
                   loading="lazy"
+                  onError={handleImageError}
                 />
               </div>
             )}
@@ -133,10 +135,11 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
                     className="aspect-square rounded-xl overflow-hidden bg-muted border border-border group"
                   >
                     <img
-                      src={imgUrl}
+                      src={getImageUrl(imgUrl)}
                       alt={`Gallery item ${idx + 1}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
+                      onError={handleImageError}
                     />
                   </div>
                 ))}
@@ -204,10 +207,11 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
             {getField("image") && getFieldValue("image") && (
               <div className="rounded-2xl overflow-hidden bg-muted border border-border shadow-md">
                 <img
-                  src={getFieldValue("image")}
+                  src={getImageUrl(getFieldValue("image"))}
                   alt="Section showcase"
                   className="w-full h-auto object-cover"
                   loading="lazy"
+                  onError={handleImageError}
                 />
               </div>
             )}

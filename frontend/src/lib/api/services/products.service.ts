@@ -78,8 +78,32 @@ class ProductsService {
 
   public async getBySlug(slug: string): Promise<Product | undefined> {
     try {
-      const p = await apiClient.get<RawApiProduct>(`/products/${slug}`);
-      return p ? this.mapApiProductToFrontend(p) : undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await apiClient.get<any>(`/products/${slug}`);
+      const raw = response?.value || response;
+      if (!raw) return undefined;
+
+      // Extract main image and gallery
+      let mainImg = raw.mainImageUrl;
+      const gallery: string[] = [];
+
+      if (Array.isArray(raw.images)) {
+        for (const img of raw.images) {
+          const url = typeof img === "string" ? img : img?.imageUrl;
+          if (url) {
+            if (img?.isMain && !mainImg) mainImg = url;
+            gallery.push(url);
+          }
+        }
+      }
+
+      const p: RawApiProduct = {
+        ...raw,
+        mainImageUrl: mainImg || (gallery.length > 0 ? gallery[0] : undefined),
+        images: gallery.length > 0 ? gallery : (mainImg ? [mainImg] : undefined)
+      };
+
+      return this.mapApiProductToFrontend(p);
     } catch {
       return undefined;
     }

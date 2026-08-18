@@ -31,7 +31,7 @@ import {
 } from "@/lib/api/services/custom-landing-page.service";
 import { productsService } from "@/lib/api/services/products.service";
 import { products as staticProducts } from "@/lib/shop-data";
-import { getImageUrl } from "@/lib/utils";
+import { getImageUrl, handleImageError } from "@/lib/utils";
 import { CustomSectionRenderer } from "@/components/admin/custom-section-renderer";
 import { settingsService } from "@/lib/api/services/settings.service";
 import { ordersService } from "@/lib/api/services/orders.service";
@@ -96,6 +96,7 @@ export default function CustomLandingPageRoute({
             rawProduct = staticProducts.find((p) => p.slug === slug || p.name.toLowerCase().replace(/\s+/g, "-") === slug);
           }
           if (rawProduct) {
+            const rawMainImg = rawProduct.image || (rawProduct.images && rawProduct.images.length > 0 ? rawProduct.images[0] : "");
             pageData = {
               product: {
                 id: rawProduct.id || slug,
@@ -107,8 +108,8 @@ export default function CustomLandingPageRoute({
                 compareAtPrice: rawProduct.compareAt || null,
                 basePrice: rawProduct.mrp || rawProduct.price,
                 discountPrice: rawProduct.price < (rawProduct.mrp || rawProduct.price) ? rawProduct.price : null,
-                imageUrl: rawProduct.image || "",
-                images: (rawProduct.images || []).map((img, idx) => ({ imageUrl: img, isMain: idx === 0 })),
+                imageUrl: rawMainImg,
+                images: (rawProduct.images || (rawMainImg ? [rawMainImg] : [])).map((img, idx) => ({ imageUrl: img, isMain: idx === 0 })),
                 variants: (rawProduct.sizes || []).map((s) => ({
                   id: s,
                   name: s,
@@ -118,6 +119,12 @@ export default function CustomLandingPageRoute({
               },
               config: null,
             };
+          }
+        } else if (pageData.product && !pageData.product.imageUrl) {
+          // If product exists from API but imageUrl is empty, pick from images list
+          const firstImg = pageData.product.images?.find((i) => i.isMain)?.imageUrl || pageData.product.images?.[0]?.imageUrl || "";
+          if (firstImg) {
+            pageData.product.imageUrl = firstImg;
           }
         }
 
@@ -492,6 +499,7 @@ export default function CustomLandingPageRoute({
                           src={getImageUrl(product.imageUrl)}
                           alt={product.name}
                           className="w-full h-full object-cover"
+                          onError={handleImageError}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -708,6 +716,7 @@ export default function CustomLandingPageRoute({
                                   src={getImageUrl(p.imageUrl)}
                                   alt={p.name}
                                   className="w-full h-full object-cover"
+                                  onError={handleImageError}
                                 />
                                 {isSelected && (
                                   <div className="absolute top-2 right-2 size-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md">
@@ -884,6 +893,7 @@ export default function CustomLandingPageRoute({
                                   src={getImageUrl(item.imageUrl)}
                                   alt={item.name}
                                   className="size-10 rounded-md object-cover border border-border shrink-0"
+                                  onError={handleImageError}
                                 />
                                 <div className="min-w-0">
                                   <p className="font-bold text-foreground truncate">{item.name}</p>

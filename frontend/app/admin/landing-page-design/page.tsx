@@ -80,6 +80,7 @@ function DesignerContent() {
             fallbackProduct = staticProducts.find((p) => p.slug === lookupKey || p.name.toLowerCase().replace(/\s+/g, "-") === lookupKey);
           }
           if (fallbackProduct) {
+            const fallbackMainImg = fallbackProduct.image || (fallbackProduct.images && fallbackProduct.images.length > 0 ? fallbackProduct.images[0] : "");
             pageData = {
               product: {
                 id: fallbackProduct.id || productId,
@@ -91,8 +92,8 @@ function DesignerContent() {
                 compareAtPrice: fallbackProduct.compareAt || null,
                 basePrice: fallbackProduct.mrp || fallbackProduct.price,
                 discountPrice: fallbackProduct.price < (fallbackProduct.mrp || fallbackProduct.price) ? fallbackProduct.price : null,
-                imageUrl: fallbackProduct.image || "",
-                images: (fallbackProduct.images || []).map((img, idx) => ({ imageUrl: img, isMain: idx === 0 })),
+                imageUrl: fallbackMainImg,
+                images: (fallbackProduct.images || (fallbackMainImg ? [fallbackMainImg] : [])).map((img, idx) => ({ imageUrl: img, isMain: idx === 0 })),
                 variants: (fallbackProduct.sizes || []).map((s) => ({
                   id: s,
                   name: s,
@@ -102,6 +103,11 @@ function DesignerContent() {
               },
               config: null,
             };
+          }
+        } else if (pageData.product && !pageData.product.imageUrl) {
+          const firstImg = pageData.product.images?.find((i) => i.isMain)?.imageUrl || pageData.product.images?.[0]?.imageUrl || "";
+          if (firstImg) {
+            pageData.product.imageUrl = firstImg;
           }
         }
 
