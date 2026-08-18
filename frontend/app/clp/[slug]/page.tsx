@@ -156,7 +156,12 @@ export default function CustomLandingPageRoute({
         const { config: newConfig, sections: newSections, product: updatedProduct } = event.data;
         if (newConfig) {
           setData((prev) => {
-            if (!prev) return prev;
+            if (!prev) {
+              return {
+                product: updatedProduct || { id: "", name: "", slug: "", description: "", shortDescription: "", price: 0, basePrice: 0, imageUrl: "", images: [], variants: [] },
+                config: { ...newConfig, sectionsJson: newSections ? JSON.stringify(newSections) : undefined },
+              };
+            }
             return {
               ...prev,
               product: updatedProduct || prev.product,
