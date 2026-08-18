@@ -98,7 +98,17 @@ class ApiClient {
     return this.request<T>(endpoint, { ...options, method: "DELETE" });
   }
 
-  public async uploadFile(file: File, folder: string = "products"): Promise<{ url: string }> {
+  public async uploadFile(file: File, folder: string = "products"): Promise<{
+    url: string;
+    relativeUrl?: string;
+    variants?: { large: string; medium: string; thumb: string };
+    width?: number;
+    height?: number;
+    format?: string;
+    originalSize?: number;
+    optimizedSize?: number;
+    compressionRatio?: number;
+  }> {
     const url = `${this.baseUrl}/uploads`;
     const token = this.getAuthToken();
     const formData = new FormData();
@@ -117,7 +127,8 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new ApiError(`Upload failed with status ${response.status}`, response.status);
+      const errJson = await response.json().catch(() => null);
+      throw new ApiError(errJson?.message || `Upload failed with status ${response.status}`, response.status);
     }
 
     const data = await response.json();

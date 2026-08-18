@@ -496,8 +496,12 @@ export default function CustomLandingPageRoute({
                     <div className="relative rounded-2xl overflow-hidden border border-border shadow-xl bg-background aspect-square max-w-md mx-auto w-full">
                       {product.imageUrl ? (
                         <img
-                          src={getImageUrl(product.imageUrl)}
+                          src={getImageUrl(product.imageUrl, "large")}
                           alt={product.name}
+                          width={600}
+                          height={600}
+                          fetchPriority="high"
+                          decoding="async"
                           className="w-full h-full object-cover"
                           onError={handleImageError}
                         />
@@ -713,8 +717,12 @@ export default function CustomLandingPageRoute({
                               {/* Product Thumbnail */}
                               <div className="aspect-square rounded-lg overflow-hidden bg-muted border border-border relative">
                                 <img
-                                  src={getImageUrl(p.imageUrl)}
+                                  src={getImageUrl(p.imageUrl, "medium")}
                                   alt={p.name}
+                                  width={300}
+                                  height={300}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-full h-full object-cover"
                                   onError={handleImageError}
                                 />
@@ -890,8 +898,12 @@ export default function CustomLandingPageRoute({
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <img
-                                  src={getImageUrl(item.imageUrl)}
+                                  src={getImageUrl(item.imageUrl, "thumb")}
                                   alt={item.name}
+                                  width={40}
+                                  height={40}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="size-10 rounded-md object-cover border border-border shrink-0"
                                   onError={handleImageError}
                                 />

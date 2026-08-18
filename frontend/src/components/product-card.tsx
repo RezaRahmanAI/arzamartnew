@@ -74,13 +74,14 @@ export function ProductCard({ product }: { product: Product }) {
       >
         <div className="relative aspect-square overflow-hidden bg-secondary">
           <img
-            src={getImageUrl(product.image)}
+            src={getImageUrl(product.image, "medium")}
             alt={product.name}
-            width={800}
-            height={800}
+            width={400}
+            height={400}
             loading="lazy"
+            decoding="async"
             className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE; }}
           />
           {product.badge && (
             <span className="absolute left-3 top-3 rounded-full gradient-sale px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
@@ -149,7 +150,7 @@ export function ProductCard({ product }: { product: Product }) {
 
           <div className="mt-4 flex gap-4">
             <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-secondary border border-border">
-              <img src={getImageUrl(product.image)} alt={product.name} width={80} height={80} loading="lazy" className="size-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }} />
+              <img src={getImageUrl(product.image, "thumb")} alt={product.name} width={80} height={80} loading="lazy" className="size-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE; }} />
             </div>
             <div className="flex flex-col justify-center">
               <h4 className="text-sm font-semibold text-foreground leading-snug">{product.name}</h4>

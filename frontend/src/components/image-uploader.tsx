@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Loader2, Upload, Trash2 } from "lucide-react";
+import { Loader2, Upload, Trash2, Sparkles } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { apiConfig } from "@/lib/api/config";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 import { getImageUrl, FALLBACK_IMAGE, handleImageError } from "@/lib/utils";
 export { getImageUrl, FALLBACK_IMAGE, handleImageError };
@@ -41,22 +42,22 @@ export function ImageUploader({
       const res = await apiClient.uploadFile(file, folder);
       if (res && res.url) {
         onChange(res.url);
+        if (res.compressionRatio && res.compressionRatio > 0) {
+          toast.success(`Image auto-optimized to WebP (${res.compressionRatio}% size reduced)!`);
+        } else {
+          toast.success("Image uploaded and optimized!");
+        }
       } else {
         throw new Error("Invalid response");
       }
-    } catch {
-      // Fallback to base64 Data URL if offline or upload endpoint unavailable
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        onChange(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload and optimize image");
     } finally {
       setIsUploading(false);
     }
   };
 
-  const previewSrc = getImageUrl(value);
+  const previewSrc = getImageUrl(value, "thumb");
 
   return (
     <div className="space-y-1.5">

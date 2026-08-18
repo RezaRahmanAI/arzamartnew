@@ -7,9 +7,11 @@ public class LocalFileStorageService : IStorageService
 {
     private readonly string _webRootPath;
     private readonly string _uploadBasePath;
+    private readonly IImageOptimizationService _imageOptimizer;
 
-    public LocalFileStorageService(IWebHostEnvironment env)
+    public LocalFileStorageService(IWebHostEnvironment env, IImageOptimizationService imageOptimizer)
     {
+        _imageOptimizer = imageOptimizer;
         var contentRoot = env.ContentRootPath;
         if (!string.IsNullOrEmpty(env.WebRootPath) && Directory.Exists(env.WebRootPath))
         {
@@ -38,6 +40,13 @@ public class LocalFileStorageService : IStorageService
 
     public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string folderName, CancellationToken ct = default)
     {
+        // If it's an image, optimize automatically
+        if (_imageOptimizer.IsValidImageSignature(fileStream))
+        {
+            var result = await _imageOptimizer.ProcessAndSaveImageAsync(fileStream, fileName, folderName, ct);
+            return result.RelativeUrl;
+        }
+
         var targetFolder = Path.Combine(_uploadBasePath, folderName);
         if (!Directory.Exists(targetFolder))
         {
@@ -56,6 +65,11 @@ public class LocalFileStorageService : IStorageService
         return $"/uploads/{folderName}/{uniqueFileName}";
     }
 
+    public async Task<ImageUploadResult> UploadAndOptimizeImageAsync(Stream fileStream, string fileName, string folderName, CancellationToken ct = default)
+    {
+        return await _imageOptimizer.ProcessAndSaveImageAsync(fileStream, fileName, folderName, ct);
+    }
+
     public Task DeleteFileAsync(string fileUrl, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(fileUrl)) return Task.CompletedTask;
@@ -68,6 +82,16 @@ public class LocalFileStorageService : IStorageService
             File.Delete(fullPath);
         }
 
+        // Also clean up sibling variants (-large, -medium, -thumb) if applicable
+        if (fullPath.EndsWith("-large.webp", StringComparison.OrdinalIgnoreCase))
+        {
+            var mediumPath = fullPath.Replace("-large.webp", "-medium.webp", StringComparison.OrdinalIgnoreCase);
+            var thumbPath = fullPath.Replace("-large.webp", "-thumb.webp", StringComparison.OrdinalIgnoreCase);
+            if (File.Exists(mediumPath)) File.Delete(mediumPath);
+            if (File.Exists(thumbPath)) File.Delete(thumbPath);
+        }
+
         return Task.CompletedTask;
     }
 }
+

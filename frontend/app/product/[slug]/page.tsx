@@ -11,7 +11,7 @@ import { useWishlist } from "@/lib/wishlist";
 import { useReviews } from "@/lib/reviews";
 import { useProducts } from "@/lib/products-store";
 import { formatBDT, getSizePrice, getSizeStock, getColorHex, products as staticProducts } from "@/lib/shop-data";
-import { getImageUrl, handleImageError } from "@/lib/utils";
+import { getImageUrl, handleImageError, FALLBACK_IMAGE } from "@/lib/utils";
 
 
 
@@ -153,12 +153,14 @@ export default function ProductPage() {
             onMouseLeave={() => setIsPaused(false)}
           >
             <img
-              src={getImageUrl(activeImage)}
+              src={getImageUrl(activeImage, "large")}
               alt={product.name}
               width={800}
               height={800}
+              fetchPriority="high"
+              decoding="async"
               className="aspect-square size-full object-cover transition-all duration-300"
-              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
+              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE; }}
             />
             {allImages.length > 1 && (
               <>
@@ -204,13 +206,14 @@ export default function ProductPage() {
                   }`}
                 >
                   <img
-                    src={getImageUrl(img)}
+                    src={getImageUrl(img, "thumb")}
                     alt={`${product.name} gallery ${idx + 1}`}
                     width={64}
                     height={64}
                     loading="lazy"
+                    decoding="async"
                     className="size-full object-cover"
-                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
+                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE; }}
                   />
                 </button>
               ))}

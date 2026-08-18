@@ -46,7 +46,9 @@ builder.Services.AddValidatorsFromAssembly(typeof(GetProductsPagedQuery).Assembl
 // 3. Infrastructure External Services
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+builder.Services.AddSingleton<IImageOptimizationService, ImageOptimizationService>();
 builder.Services.AddSingleton<IStorageService, LocalFileStorageService>();
+
 
 // 3.1. Response Compression (Brotli & Gzip)
 builder.Services.AddResponseCompression(options =>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getImageUrl, handleImageError } from "@/lib/utils";
+import { getImageUrl, handleImageError, FALLBACK_IMAGE } from "@/lib/utils";
 
 import { useEffect, useState } from "react";
 import { useBanners } from "@/lib/banners-store";
@@ -43,12 +43,15 @@ export function HeroSlider() {
             }`}
           >
             <img
-              src={getImageUrl(slide.image)}
+              src={getImageUrl(slide.image, "large")}
               alt={slide.title}
               width={1600}
               height={1000}
+              loading={i === 0 ? "eager" : "lazy"}
+              fetchPriority={i === 0 ? "high" : "low"}
+              decoding="async"
               className="size-full object-cover"
-              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
+              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE; }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
             <div className="absolute inset-0 flex flex-col justify-center gap-3 p-6 sm:p-12">
