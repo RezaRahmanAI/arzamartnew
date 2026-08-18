@@ -421,26 +421,6 @@ export default function CustomLandingPageRoute({
         </div>
       )}
 
-      {/* 3. Header Branding Bar */}
-      <header className="py-4 px-4 md:px-8 border-b border-border bg-card">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl md:text-2xl font-black tracking-tight text-foreground">
-              {settings?.general?.websiteName || "ALZEENA"}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={scrollToOrderForm}
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-xs md:text-sm font-bold px-5 py-2.5 rounded-full hover:opacity-90 shadow-sm transition-all cursor-pointer"
-          >
-            <ShoppingBag className="size-4" />
-            <span>অর্ডার করুন</span>
-          </button>
-        </div>
-      </header>
-
       {/* 4. Render Active Sections */}
       <main className="divide-y divide-border/60">
         {activeSections.map((sec) => {
