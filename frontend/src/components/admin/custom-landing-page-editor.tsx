@@ -36,7 +36,7 @@ interface CustomLandingPageEditorProps {
   onSectionsChange: (newSections: LandingSection[]) => void;
   isSaving?: boolean;
   onSave?: () => void;
-  product?: { id?: string; name?: string; slug?: string; variants?: { id: string; name: string; priceOverride?: number }[]; price?: number; compareAtPrice?: number | null } | null;
+  product?: { id?: string; name?: string; slug?: string; imageUrl?: string; description?: string; shortDescription?: string; variants?: { id: string; name: string; priceOverride?: number }[]; price?: number; compareAtPrice?: number | null } | null;
   onSyncProductPrices?: (sizePrices: Record<string, number>) => void;
 }
 
@@ -313,6 +313,40 @@ export function CustomLandingPageEditor({
                   {/* Product Hero Editor */}
                   {sec.type === "product-hero" && (
                     <div className="space-y-3 pt-1 text-xs">
+                      {/* Live Preview Card */}
+                      {product && (
+                        <div className="rounded-lg border border-border bg-background overflow-hidden">
+                          <div className="grid grid-cols-2 gap-0">
+                            {/* Image */}
+                            <div className="aspect-square bg-muted/40 relative overflow-hidden">
+                              {product.imageUrl ? (
+                                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-[10px]">No Image</div>
+                              )}
+                            </div>
+                            {/* Details */}
+                            <div className="p-2 space-y-1.5 flex flex-col justify-center">
+                              <span className="text-[9px] font-bold text-primary uppercase tracking-widest">
+                                {config?.productDetailsTitle || "🔥 প্রোডাক্ট ডিটেইলস"}
+                              </span>
+                              <p className="text-[11px] font-black text-foreground leading-tight">
+                                {config?.featuredProductName || product.name}
+                              </p>
+                              {(product.shortDescription || product.description) && (
+                                <p className="text-[9px] text-muted-foreground leading-snug line-clamp-3">
+                                  {product.shortDescription || product.description}
+                                </p>
+                              )}
+                              <span className="text-[8px] font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded inline-block w-fit">
+                                ক্যাশ অন ডেলিভারি
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Editable Fields */}
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-muted-foreground uppercase">
                           কাস্টম প্রোডাক্ট শিরোনাম (ঐচ্ছিক)
@@ -323,6 +357,7 @@ export function CustomLandingPageEditor({
                           onChange={(e) =>
                             onConfigChange({ ...config, featuredProductName: e.target.value })
                           }
+                          placeholder={product?.name || "প্রোডাক্ট নাম"}
                           className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </div>
@@ -336,6 +371,7 @@ export function CustomLandingPageEditor({
                           onChange={(e) =>
                             onConfigChange({ ...config, productDetailsTitle: e.target.value })
                           }
+                          placeholder="🔥 প্রোডাক্ট ডিটেইলস"
                           className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </div>
