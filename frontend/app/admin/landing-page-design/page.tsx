@@ -45,6 +45,7 @@ function DesignerContent() {
     isTimerVisible: true,
     relativeTimerTotalMinutes: 120,
     headerTitle: "অফারটি শেষ হতে মাত্র কিছুক্ষণ বাকি আছে!",
+    promoText: "🔥 বিশেষ ধামাকা অফার!",
     isProductDetailsVisible: true,
     productDetailsTitle: "🔥 প্রোডাক্ট ডিটেইলস",
     isFabricVisible: true,
