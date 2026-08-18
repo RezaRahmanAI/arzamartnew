@@ -26,6 +26,7 @@ import {
   LandingSection,
   CustomLandingPageConfig,
 } from "@/lib/api/services/custom-landing-page.service";
+import { getImageUrl } from "@/lib/utils";
 import { CustomSectionEditor } from "./custom-section-editor";
 import { AddComponentModal } from "./add-component-modal";
 
@@ -320,7 +321,7 @@ export function CustomLandingPageEditor({
                             {/* Image */}
                             <div className="aspect-square bg-muted/40 relative overflow-hidden">
                               {product.imageUrl ? (
-                                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                                <img src={getImageUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-[10px]">No Image</div>
                               )}

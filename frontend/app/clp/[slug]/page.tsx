@@ -31,6 +31,7 @@ import {
 } from "@/lib/api/services/custom-landing-page.service";
 import { productsService } from "@/lib/api/services/products.service";
 import { products as staticProducts } from "@/lib/shop-data";
+import { getImageUrl } from "@/lib/utils";
 import { CustomSectionRenderer } from "@/components/admin/custom-section-renderer";
 import { settingsService } from "@/lib/api/services/settings.service";
 import { ordersService } from "@/lib/api/services/orders.service";
@@ -488,7 +489,7 @@ export default function CustomLandingPageRoute({
                     <div className="relative rounded-2xl overflow-hidden border border-border shadow-xl bg-background aspect-square max-w-md mx-auto w-full">
                       {product.imageUrl ? (
                         <img
-                          src={product.imageUrl}
+                          src={getImageUrl(product.imageUrl)}
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />
@@ -704,7 +705,7 @@ export default function CustomLandingPageRoute({
                               {/* Product Thumbnail */}
                               <div className="aspect-square rounded-lg overflow-hidden bg-muted border border-border relative">
                                 <img
-                                  src={p.imageUrl}
+                                  src={getImageUrl(p.imageUrl)}
                                   alt={p.name}
                                   className="w-full h-full object-cover"
                                 />
@@ -880,7 +881,7 @@ export default function CustomLandingPageRoute({
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <img
-                                  src={item.imageUrl}
+                                  src={getImageUrl(item.imageUrl)}
                                   alt={item.name}
                                   className="size-10 rounded-md object-cover border border-border shrink-0"
                                 />
