@@ -216,7 +216,6 @@ export function createDefaultFields(layoutType: string): CustomField[] {
 export const DEFAULT_LANDING_SECTIONS: LandingSection[] = [
   { id: "marquee", type: "marquee", label: "💬 Marquee Bar", visible: true, icon: "MessageSquare" },
   { id: "countdown", type: "countdown", label: "⏱ Countdown Bar", visible: true, icon: "Clock" },
-  { id: "hero", type: "hero", label: "🎯 Hero / Offer", visible: true, icon: "Sparkles" },
   { id: "product-hero", type: "product-hero", label: "🛍 Product Hero", visible: true, icon: "ShoppingBag" },
   { id: "discount-cta", type: "discount-cta", label: "💚 Discount CTA", visible: true, icon: "Percent" },
   { id: "info-banner", type: "info-banner", label: "🟡 Info Banner", visible: true, icon: "Info" },
