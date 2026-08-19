@@ -175,6 +175,8 @@ _ = Task.Run(async () =>
             await db.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[LandingPages]') AND name = 'ProductId') ALTER TABLE [LandingPages] ADD [ProductId] uniqueidentifier NULL;");
             await db.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[CustomLandingPageConfigs]') AND name = 'CustomHeroImageUrl') ALTER TABLE [CustomLandingPageConfigs] ADD [CustomHeroImageUrl] nvarchar(max) NULL;");
             await db.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[CustomLandingPageConfigs]') AND name = 'CustomHeroDescription') ALTER TABLE [CustomLandingPageConfigs] ADD [CustomHeroDescription] nvarchar(max) NULL;");
+            await db.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[CustomLandingPageConfigs]') AND name = 'CustomHeroBgColor') ALTER TABLE [CustomLandingPageConfigs] ADD [CustomHeroBgColor] nvarchar(100) NULL;");
+            await db.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[CustomLandingPageConfigs]') AND name = 'CustomHeroTextColor') ALTER TABLE [CustomLandingPageConfigs] ADD [CustomHeroTextColor] nvarchar(100) NULL;");
         }
         catch
         {

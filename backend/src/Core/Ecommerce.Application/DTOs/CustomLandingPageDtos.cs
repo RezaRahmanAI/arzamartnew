@@ -34,6 +34,8 @@ public class CustomLandingPageConfigDto
 
     public string? CustomHeroImageUrl { get; set; }
     public string? CustomHeroDescription { get; set; }
+    public string? CustomHeroBgColor { get; set; }
+    public string? CustomHeroTextColor { get; set; }
 
     public string? SectionsJson { get; set; }
     public DateTime CreatedAtUtc { get; set; }
@@ -70,6 +72,8 @@ public class CustomLandingPageConfigUpdateDto
 
     public string? CustomHeroImageUrl { get; set; }
     public string? CustomHeroDescription { get; set; }
+    public string? CustomHeroBgColor { get; set; }
+    public string? CustomHeroTextColor { get; set; }
 
     public string? SectionsJson { get; set; }
 }

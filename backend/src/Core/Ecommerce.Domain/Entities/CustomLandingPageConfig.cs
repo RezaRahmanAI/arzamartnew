@@ -40,6 +40,8 @@ public class CustomLandingPageConfig : BaseEntity
     // Product Details / Custom Hero Image & Content Override
     public string? CustomHeroImageUrl { get; set; }
     public string? CustomHeroDescription { get; set; }
+    public string? CustomHeroBgColor { get; set; } = "#9333ea"; // Default modern vibrant purple matching user design
+    public string? CustomHeroTextColor { get; set; } = "#ffffff";
 
     // Dynamic Sections JSON
     public string? SectionsJson { get; set; }

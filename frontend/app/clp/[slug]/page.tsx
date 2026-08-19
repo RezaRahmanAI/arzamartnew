@@ -488,79 +488,89 @@ export default function CustomLandingPageRoute({
               );
             }
 
-            case "product-hero":
+            case "product-hero": {
+              const heroBgColor = config?.customHeroBgColor || "#9333ea";
+              const isDefaultPurple = !config?.customHeroBgColor || config.customHeroBgColor.toLowerCase() === "#9333ea" || config.customHeroBgColor.toLowerCase() === "#a855f7";
+
               return (
-                <section key={sec.id} id={`section-${sec.id}`} className="py-10 px-4 md:px-8 bg-card">
-                  <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-8 items-center">
-                    {/* Product Image */}
-                    <div className="relative rounded-2xl overflow-hidden border border-border shadow-xl bg-background aspect-square max-w-md mx-auto w-full">
-                      {(config?.customHeroImageUrl || product.imageUrl) ? (
-                        <img
-                          src={getImageUrl(config?.customHeroImageUrl || product.imageUrl, "large")}
-                          alt={config?.featuredProductName || product.name}
-                          width={600}
-                          height={600}
-                          fetchPriority="high"
-                          decoding="async"
-                          className="w-full h-full object-cover"
-                          onError={handleImageError}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                          <Package className="size-16" />
-                        </div>
-                      )}
-
-                      {/* Discount Badge */}
-                      {product.compareAtPrice && product.compareAtPrice > product.price && (
-                        <div className="absolute top-4 left-4 bg-rose-600 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
-                          <BadgePercent className="size-3.5" />
-                          <span>
-                            ৳{Math.round(product.compareAtPrice - product.price)} ছাড়
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Product Details */}
-                    <div className="space-y-5">
+                <section
+                  key={sec.id}
+                  id={`section-${sec.id}`}
+                  className="py-12 md:py-16 px-4 md:px-8 text-white relative overflow-hidden transition-colors"
+                  style={{
+                    backgroundColor: heroBgColor,
+                    backgroundImage: isDefaultPurple
+                      ? "radial-gradient(circle at 20% 50%, rgba(217, 70, 239, 0.3) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.4) 0%, transparent 60%)"
+                      : undefined
+                  }}
+                >
+                  <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-10 md:gap-14 items-center">
+                    {/* Left: Product Details & Description (Matching Image) */}
+                    <div className="space-y-6 order-2 md:order-1">
                       <div>
-                        <span className="text-xs font-bold text-primary uppercase tracking-widest">
-                          {config?.productDetailsTitle || "🔥 প্রোডাক্ট ডিটেইলস"}
-                        </span>
-                        <h2 className="text-2xl md:text-3xl font-black text-foreground mt-1.5">
-                          {config?.featuredProductName || product.name}
+                        {config?.productDetailsTitle && (
+                          <span className="inline-block text-xs font-bold uppercase tracking-widest text-amber-300 bg-black/20 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10 mb-2">
+                            {config.productDetailsTitle}
+                          </span>
+                        )}
+                        <h2 className="text-2xl md:text-4xl font-black text-white leading-tight tracking-tight drop-shadow-sm">
+                          🔥 {config?.featuredProductName || product.name}
                         </h2>
                       </div>
 
-                      {/* Description */}
-                      <div className="text-sm md:text-base text-muted-foreground leading-relaxed whitespace-pre-line bg-muted/20 p-4 rounded-xl border border-border/60">
-                        {config?.customHeroDescription || product.shortDescription || product.description || "প্রিমিয়াম কোয়ালিটি এবং আধুনিক ডিজাইনের নির্ভরযোগ্য সমাধান।"}
+                      {/* Description / Feature Points */}
+                      <div className="text-sm md:text-base text-white/95 leading-relaxed whitespace-pre-line bg-black/15 backdrop-blur-md p-5 rounded-2xl border border-white/15 shadow-inner">
+                        {config?.customHeroDescription || product.shortDescription || product.description || "✨ সফট ও কমফোর্টেবল\n✨ স্মার্ট ও এলিগ্যান্ট ডিজাইন\n✨ Regular Fit — ডেইলি ইউজ ও আউটিং এর জন্য পারফেক্ট\n✨ দীর্ঘ সময় পরলেও আরামদায়ক ও স্টাইলিশ লুক"}
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 border border-emerald-500/20">
-                          <CheckCircle2 className="size-3.5" />
-                          <span>সারা দেশে ক্যাশ অন ডেলিভারি</span>
-                        </span>
-                        <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 border border-primary/20">
-                          <Truck className="size-3.5" />
-                          <span>দ্রুততম হোম ডেলিভারি</span>
-                        </span>
+                      {/* CTA Order Button matching user screenshot */}
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={scrollToOrderForm}
+                          className="bg-white text-purple-900 hover:bg-slate-100 font-extrabold px-8 py-3.5 rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all text-base flex items-center justify-center gap-2 cursor-pointer border-2 border-white/50"
+                        >
+                          <ShoppingBag className="size-5 text-purple-700" />
+                          <span>অর্ডার করতে ক্লিক করুন</span>
+                        </button>
                       </div>
+                    </div>
 
-                      <button
-                        type="button"
-                        onClick={scrollToOrderForm}
-                        className="w-full bg-primary text-primary-foreground font-bold py-3.5 rounded-xl hover:opacity-90 shadow-md transition-all text-center flex items-center justify-center gap-2 text-sm cursor-pointer"
-                      >
-                        <ShoppingBag className="size-4" />
-                        <span>অর্ডার করতে নিচে যান</span>
-                      </button>
+                    {/* Right: Product Showcase Poster/Image */}
+                    <div className="order-1 md:order-2 flex justify-center">
+                      <div className="relative rounded-2xl overflow-hidden border-2 border-white/30 shadow-2xl bg-black/10 backdrop-blur-sm aspect-[4/5] sm:aspect-square max-w-md w-full">
+                        {(config?.customHeroImageUrl || product.imageUrl) ? (
+                          <img
+                            src={getImageUrl(config?.customHeroImageUrl || product.imageUrl, "large")}
+                            alt={config?.featuredProductName || product.name}
+                            width={600}
+                            height={600}
+                            fetchPriority="high"
+                            decoding="async"
+                            className="w-full h-full object-cover"
+                            onError={handleImageError}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/70">
+                            <Package className="size-16" />
+                          </div>
+                        )}
+
+                        {/* Discount Badge */}
+                        {product.compareAtPrice && product.compareAtPrice > product.price && (
+                          <div className="absolute top-4 right-4 bg-rose-600 text-white text-xs font-black px-3.5 py-1.5 rounded-full shadow-xl flex items-center gap-1 border border-white/20">
+                            <BadgePercent className="size-4" />
+                            <span>
+                              ৳{Math.round(product.compareAtPrice - product.price)} ছাড়
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </section>
               );
+            }
 
             case "discount-cta": {
               const mrp = config?.originalPrice || product.compareAtPrice || product.basePrice || product.price;

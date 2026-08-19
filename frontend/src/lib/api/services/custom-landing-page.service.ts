@@ -25,6 +25,8 @@ export interface CustomLandingPageConfig {
   marqueeText?: string;
   customHeroImageUrl?: string;
   customHeroDescription?: string;
+  customHeroBgColor?: string;
+  customHeroTextColor?: string;
   sectionsJson?: string;
   createdAtUtc?: string;
   updatedAtUtc?: string;

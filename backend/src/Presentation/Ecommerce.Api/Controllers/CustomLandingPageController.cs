@@ -90,6 +90,8 @@ public class CustomLandingPageController : ControllerBase
                 MarqueeText = config.MarqueeText,
                 CustomHeroImageUrl = config.CustomHeroImageUrl,
                 CustomHeroDescription = config.CustomHeroDescription,
+                CustomHeroBgColor = config.CustomHeroBgColor,
+                CustomHeroTextColor = config.CustomHeroTextColor,
                 SectionsJson = config.SectionsJson,
                 CreatedAtUtc = config.CreatedAtUtc,
                 UpdatedAtUtc = config.UpdatedAtUtc
@@ -179,6 +181,8 @@ public class CustomLandingPageController : ControllerBase
             MarqueeText = config.MarqueeText,
             CustomHeroImageUrl = config.CustomHeroImageUrl,
             CustomHeroDescription = config.CustomHeroDescription,
+            CustomHeroBgColor = config.CustomHeroBgColor,
+            CustomHeroTextColor = config.CustomHeroTextColor,
             SectionsJson = config.SectionsJson,
             CreatedAtUtc = config.CreatedAtUtc,
             UpdatedAtUtc = config.UpdatedAtUtc
@@ -230,6 +234,8 @@ public class CustomLandingPageController : ControllerBase
                     PromoText = cfg.PromoText,
                     CustomHeroImageUrl = cfg.CustomHeroImageUrl,
                     CustomHeroDescription = cfg.CustomHeroDescription,
+                    CustomHeroBgColor = cfg.CustomHeroBgColor,
+                    CustomHeroTextColor = cfg.CustomHeroTextColor,
                     SectionsJson = cfg.SectionsJson,
                     UpdatedAtUtc = cfg.UpdatedAtUtc
                 } : null
@@ -279,6 +285,8 @@ public class CustomLandingPageController : ControllerBase
                 MarqueeText = dto.MarqueeText,
                 CustomHeroImageUrl = dto.CustomHeroImageUrl,
                 CustomHeroDescription = dto.CustomHeroDescription,
+                CustomHeroBgColor = dto.CustomHeroBgColor,
+                CustomHeroTextColor = dto.CustomHeroTextColor,
                 SectionsJson = dto.SectionsJson,
                 CreatedAtUtc = DateTime.UtcNow
             };
@@ -307,6 +315,8 @@ public class CustomLandingPageController : ControllerBase
             config.MarqueeText = dto.MarqueeText;
             config.CustomHeroImageUrl = dto.CustomHeroImageUrl;
             config.CustomHeroDescription = dto.CustomHeroDescription;
+            config.CustomHeroBgColor = dto.CustomHeroBgColor;
+            config.CustomHeroTextColor = dto.CustomHeroTextColor;
             config.SectionsJson = dto.SectionsJson;
             config.UpdatedAtUtc = DateTime.UtcNow;
         }
@@ -338,6 +348,8 @@ public class CustomLandingPageController : ControllerBase
             MarqueeText = config.MarqueeText,
             CustomHeroImageUrl = config.CustomHeroImageUrl,
             CustomHeroDescription = config.CustomHeroDescription,
+            CustomHeroBgColor = config.CustomHeroBgColor,
+            CustomHeroTextColor = config.CustomHeroTextColor,
             SectionsJson = config.SectionsJson,
             CreatedAtUtc = config.CreatedAtUtc,
             UpdatedAtUtc = config.UpdatedAtUtc

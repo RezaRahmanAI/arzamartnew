@@ -357,6 +357,51 @@ export function CustomLandingPageEditor({
                         </div>
                       )}
 
+                      {/* Background Color Picker */}
+                      <div className="p-2.5 rounded-lg border border-border bg-muted/20 space-y-2">
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase flex items-center justify-between">
+                          <span>সেকশন ব্যাকগ্রাউন্ড কালার</span>
+                          <span className="text-[10px] font-mono text-foreground font-normal">{config.customHeroBgColor || "#9333ea"}</span>
+                        </label>
+                        
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={config.customHeroBgColor || "#9333ea"}
+                            onChange={(e) =>
+                              onConfigChange({ ...config, customHeroBgColor: e.target.value })
+                            }
+                            className="size-8 rounded border border-border cursor-pointer bg-transparent p-0.5"
+                          />
+                          
+                          {/* Quick Color Presets */}
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            {[
+                              { label: "Purple (ছবি অনুযায়ী)", color: "#9333ea" },
+                              { label: "Magenta / Rose", color: "#c026d3" },
+                              { label: "Deep Violet", color: "#6b21a8" },
+                              { label: "Emerald Green", color: "#059669" },
+                              { label: "Navy Blue", color: "#1e3a8a" },
+                              { label: "Dark Slate", color: "#0f172a" },
+                              { label: "Fire Red", color: "#dc2626" },
+                            ].map((p) => (
+                              <button
+                                key={p.color}
+                                type="button"
+                                title={p.label}
+                                onClick={() => onConfigChange({ ...config, customHeroBgColor: p.color })}
+                                className={`size-6 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
+                                  (config.customHeroBgColor || "#9333ea").toLowerCase() === p.color.toLowerCase()
+                                    ? "border-white ring-2 ring-primary scale-110"
+                                    : "border-border"
+                                }`}
+                                style={{ backgroundColor: p.color }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Custom Image Uploader */}
                       <div className="p-2.5 rounded-lg border border-border bg-muted/20 space-y-2">
                         <ImageUploader
