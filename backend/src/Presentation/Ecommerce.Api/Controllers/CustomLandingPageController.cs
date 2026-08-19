@@ -89,6 +89,7 @@ public class CustomLandingPageController : ControllerBase
                 IsMarqueeVisible = config.IsMarqueeVisible,
                 MarqueeText = config.MarqueeText,
                 CustomHeroImageUrl = config.CustomHeroImageUrl,
+                CustomHeroDescription = config.CustomHeroDescription,
                 SectionsJson = config.SectionsJson,
                 CreatedAtUtc = config.CreatedAtUtc,
                 UpdatedAtUtc = config.UpdatedAtUtc
@@ -177,6 +178,7 @@ public class CustomLandingPageController : ControllerBase
             IsMarqueeVisible = config.IsMarqueeVisible,
             MarqueeText = config.MarqueeText,
             CustomHeroImageUrl = config.CustomHeroImageUrl,
+            CustomHeroDescription = config.CustomHeroDescription,
             SectionsJson = config.SectionsJson,
             CreatedAtUtc = config.CreatedAtUtc,
             UpdatedAtUtc = config.UpdatedAtUtc
@@ -227,6 +229,7 @@ public class CustomLandingPageController : ControllerBase
                     MarqueeText = cfg.MarqueeText,
                     PromoText = cfg.PromoText,
                     CustomHeroImageUrl = cfg.CustomHeroImageUrl,
+                    CustomHeroDescription = cfg.CustomHeroDescription,
                     SectionsJson = cfg.SectionsJson,
                     UpdatedAtUtc = cfg.UpdatedAtUtc
                 } : null
@@ -275,6 +278,7 @@ public class CustomLandingPageController : ControllerBase
                 IsMarqueeVisible = dto.IsMarqueeVisible,
                 MarqueeText = dto.MarqueeText,
                 CustomHeroImageUrl = dto.CustomHeroImageUrl,
+                CustomHeroDescription = dto.CustomHeroDescription,
                 SectionsJson = dto.SectionsJson,
                 CreatedAtUtc = DateTime.UtcNow
             };
@@ -302,6 +306,7 @@ public class CustomLandingPageController : ControllerBase
             config.IsMarqueeVisible = dto.IsMarqueeVisible;
             config.MarqueeText = dto.MarqueeText;
             config.CustomHeroImageUrl = dto.CustomHeroImageUrl;
+            config.CustomHeroDescription = dto.CustomHeroDescription;
             config.SectionsJson = dto.SectionsJson;
             config.UpdatedAtUtc = DateTime.UtcNow;
         }
@@ -332,6 +337,7 @@ public class CustomLandingPageController : ControllerBase
             IsMarqueeVisible = config.IsMarqueeVisible,
             MarqueeText = config.MarqueeText,
             CustomHeroImageUrl = config.CustomHeroImageUrl,
+            CustomHeroDescription = config.CustomHeroDescription,
             SectionsJson = config.SectionsJson,
             CreatedAtUtc = config.CreatedAtUtc,
             UpdatedAtUtc = config.UpdatedAtUtc

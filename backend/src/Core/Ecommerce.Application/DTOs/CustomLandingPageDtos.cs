@@ -33,6 +33,7 @@ public class CustomLandingPageConfigDto
     public string? MarqueeText { get; set; }
 
     public string? CustomHeroImageUrl { get; set; }
+    public string? CustomHeroDescription { get; set; }
 
     public string? SectionsJson { get; set; }
     public DateTime CreatedAtUtc { get; set; }
@@ -68,6 +69,7 @@ public class CustomLandingPageConfigUpdateDto
     public string? MarqueeText { get; set; }
 
     public string? CustomHeroImageUrl { get; set; }
+    public string? CustomHeroDescription { get; set; }
 
     public string? SectionsJson { get; set; }
 }

@@ -24,6 +24,7 @@ export interface CustomLandingPageConfig {
   isMarqueeVisible?: boolean;
   marqueeText?: string;
   customHeroImageUrl?: string;
+  customHeroDescription?: string;
   sectionsJson?: string;
   createdAtUtc?: string;
   updatedAtUtc?: string;

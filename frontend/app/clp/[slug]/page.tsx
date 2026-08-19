@@ -522,66 +522,31 @@ export default function CustomLandingPageRoute({
                       )}
                     </div>
 
-                    {/* Product Details & Variant Picker */}
-                    <div className="space-y-6">
+                    {/* Product Details */}
+                    <div className="space-y-5">
                       <div>
                         <span className="text-xs font-bold text-primary uppercase tracking-widest">
                           {config?.productDetailsTitle || "🔥 প্রোডাক্ট ডিটেইলস"}
                         </span>
-                        <h2 className="text-2xl md:text-3xl font-black text-foreground mt-1">
+                        <h2 className="text-2xl md:text-3xl font-black text-foreground mt-1.5">
                           {config?.featuredProductName || product.name}
                         </h2>
                       </div>
 
-                      {/* Price Section */}
-                      <div className="flex items-baseline gap-3 p-4 bg-muted/40 rounded-xl border border-border">
-                        <span className="text-3xl font-black text-primary">
-                          ৳{product.price.toLocaleString()}
-                        </span>
-                        {product.compareAtPrice && product.compareAtPrice > product.price && (
-                          <span className="text-lg text-muted-foreground line-through font-medium">
-                            ৳{product.compareAtPrice.toLocaleString()}
-                          </span>
-                        )}
-                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded ml-auto">
-                          ক্যাশ অন ডেলিভারি
-                        </span>
+                      {/* Description */}
+                      <div className="text-sm md:text-base text-muted-foreground leading-relaxed whitespace-pre-line bg-muted/20 p-4 rounded-xl border border-border/60">
+                        {config?.customHeroDescription || product.shortDescription || product.description || "প্রিমিয়াম কোয়ালিটি এবং আধুনিক ডিজাইনের নির্ভরযোগ্য সমাধান।"}
                       </div>
 
-                      {/* Variants / Size Picker */}
-                      {product.variants && product.variants.length > 0 && (
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                            সাইজ / ভ্যারিয়েন্ট সিলেক্ট করুন:
-                          </label>
-                          <div className="flex flex-wrap gap-2">
-                            {product.variants.map((v) => {
-                              const isSelected = selectedMainSize === v.name;
-                              return (
-                                <button
-                                  key={v.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedMainSize(v.name);
-                                    updateItemSize(product.id, v.name);
-                                  }}
-                                  className={`px-4 py-2 rounded-lg border font-bold text-xs transition-all cursor-pointer ${
-                                    isSelected
-                                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                                      : "border-border bg-card text-foreground hover:border-primary/50"
-                                  }`}
-                                >
-                                  {v.name}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Description */}
-                      <div className="text-xs md:text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                        {product.description}
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 border border-emerald-500/20">
+                          <CheckCircle2 className="size-3.5" />
+                          <span>সারা দেশে ক্যাশ অন ডেলিভারি</span>
+                        </span>
+                        <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 border border-primary/20">
+                          <Truck className="size-3.5" />
+                          <span>দ্রুততম হোম ডেলিভারি</span>
+                        </span>
                       </div>
 
                       <button
@@ -590,7 +555,7 @@ export default function CustomLandingPageRoute({
                         className="w-full bg-primary text-primary-foreground font-bold py-3.5 rounded-xl hover:opacity-90 shadow-md transition-all text-center flex items-center justify-center gap-2 text-sm cursor-pointer"
                       >
                         <ShoppingBag className="size-4" />
-                        <span>সরাসরি অর্ডার ফর্ম-এ যান</span>
+                        <span>অর্ডার করতে নিচে যান</span>
                       </button>
                     </div>
                   </div>

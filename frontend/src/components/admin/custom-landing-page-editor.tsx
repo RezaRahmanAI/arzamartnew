@@ -344,9 +344,9 @@ export function CustomLandingPageEditor({
                               <p className="text-[11px] font-black text-foreground leading-tight">
                                 {config?.featuredProductName || product.name}
                               </p>
-                              {(product.shortDescription || product.description) && (
+                              {(config.customHeroDescription || product.shortDescription || product.description) && (
                                 <p className="text-[9px] text-muted-foreground leading-snug line-clamp-3">
-                                  {product.shortDescription || product.description}
+                                  {config.customHeroDescription || product.shortDescription || product.description}
                                 </p>
                               )}
                               <span className="text-[8px] font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded inline-block w-fit">
@@ -382,6 +382,20 @@ export function CustomLandingPageEditor({
                       {/* Editable Fields */}
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                          সেকশন শিরোনাম (ঐচ্ছিক)
+                        </label>
+                        <input
+                          type="text"
+                          value={config.productDetailsTitle || ""}
+                          onChange={(e) =>
+                            onConfigChange({ ...config, productDetailsTitle: e.target.value })
+                          }
+                          placeholder="🔥 প্রোডাক্ট ডিটেইলস"
+                          className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase">
                           কাস্টম প্রোডাক্ট শিরোনাম (ঐচ্ছিক)
                         </label>
                         <input
@@ -396,17 +410,20 @@ export function CustomLandingPageEditor({
                       </div>
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-muted-foreground uppercase">
-                          সেকশন শিরোনাম
+                          কাস্টম বর্ণনা / ডেসক্রিপশন (ঐচ্ছিক)
                         </label>
-                        <input
-                          type="text"
-                          value={config.productDetailsTitle || ""}
+                        <textarea
+                          rows={3}
+                          value={config.customHeroDescription || ""}
                           onChange={(e) =>
-                            onConfigChange({ ...config, productDetailsTitle: e.target.value })
+                            onConfigChange({ ...config, customHeroDescription: e.target.value })
                           }
-                          placeholder="🔥 প্রোডাক্ট ডিটেইলস"
-                          className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder={product?.shortDescription || product?.description || "কাস্টম ডেসক্রিপশন লিখুন..."}
+                          className="w-full p-2 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed"
                         />
+                        <p className="text-[10px] text-muted-foreground">
+                          * এটি শুধু এই ল্যান্ডিং পেজে দেখাবে, আসল প্রোডাক্টের ডাটায় কোনো পরিবর্তন হবে না।
+                        </p>
                       </div>
                     </div>
                   )}
