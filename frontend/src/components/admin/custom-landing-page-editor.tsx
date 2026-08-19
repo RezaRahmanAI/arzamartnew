@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -21,11 +21,14 @@ import {
   Star,
   CheckCircle2,
   Layers,
+  Search,
 } from "lucide-react";
 import {
   LandingSection,
   CustomLandingPageConfig,
 } from "@/lib/api/services/custom-landing-page.service";
+import { productsService } from "@/lib/api/services/products.service";
+import { Product, products as staticProducts } from "@/lib/shop-data";
 import { ImageUploader } from "@/components/image-uploader";
 import { getImageUrl } from "@/lib/utils";
 import { CustomSectionEditor } from "./custom-section-editor";
@@ -54,6 +57,24 @@ export function CustomLandingPageEditor({
 }: CustomLandingPageEditorProps) {
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [availableStoreProducts, setAvailableStoreProducts] = useState<Product[]>([]);
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const prods = await productsService.getAll();
+        if (Array.isArray(prods) && prods.length > 0) {
+          setAvailableStoreProducts(prods);
+        } else {
+          setAvailableStoreProducts(staticProducts);
+        }
+      } catch {
+        setAvailableStoreProducts(staticProducts);
+      }
+    }
+    loadProducts();
+  }, []);
 
   const toggleExpand = (id: string) => {
     setExpandedSectionId((prev) => (prev === id ? null : id));
@@ -591,14 +612,135 @@ export function CustomLandingPageEditor({
                     </div>
                   )}
 
-                  {/* Custom Dynamic Section (Layout A-E) */}
-                  {sec.type === "custom" && (
-                    <CustomSectionEditor section={sec} onChange={handleCustomSectionChange} />
+                  {/* Product Selection Section Editor */}
+                  {sec.type === "product-select" && (
+                    <div className="space-y-3 pt-1 text-xs">
+                      <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-900 dark:text-blue-200 space-y-1">
+                        <p className="font-bold flex items-center gap-1.5">
+                          <Boxes className="size-4 text-blue-600 dark:text-blue-400" />
+                          পণ্য নির্বাচন কনফিগারেশন
+                        </p>
+                        <p className="text-[11px] leading-relaxed text-blue-800/80 dark:text-blue-300/80">
+                          নিচের তালিকা থেকে যেসব পণ্য সিলেক্ট করবেন, শুধুমাত্র সেই পণ্যগুলোই কাস্টমার ল্যান্ডিং পেজে দেখতে পাবেন। মূল প্রোডাক্টটি ডিফল্টভাবে থাকবে।
+                        </p>
+                      </div>
+
+                      {/* Section Title & Subtitle */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                          সেকশন শিরোনাম
+                        </label>
+                        <input
+                          type="text"
+                          value={(sec.settings?.sectionTitle as string) || "পণ্য নির্বাচন করুন"}
+                          onChange={(e) => {
+                            const updatedSec = {
+                              ...sec,
+                              settings: { ...sec.settings, sectionTitle: e.target.value },
+                            };
+                            onSectionsChange(sections.map((s) => (s.id === sec.id ? updatedSec : s)));
+                          }}
+                          placeholder="পণ্য নির্বাচন করুন"
+                          className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+
+                      {/* Search & Actions */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                            পণ্য তালিকা ({availableStoreProducts.length})
+                          </label>
+                          <span className="text-[11px] font-bold text-primary">
+                            {((sec.settings?.selectedProductIds as string[]) || []).length}টি সিলেক্টেড
+                          </span>
+                        </div>
+
+                        <div className="relative">
+                          <Search className="size-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+                          <input
+                            type="text"
+                            value={productSearchQuery}
+                            onChange={(e) => setProductSearchQuery(e.target.value)}
+                            placeholder="প্রোডাক্ট খুঁজুন..."
+                            className="w-full h-8 pl-8 pr-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+
+                        {/* Product Checkboxes List */}
+                        <div className="max-h-60 overflow-y-auto space-y-1.5 border border-border rounded-lg p-2 bg-background/50 divide-y divide-border/40">
+                          {availableStoreProducts
+                            .filter((p) =>
+                              p.name.toLowerCase().includes(productSearchQuery.toLowerCase())
+                            )
+                            .map((p) => {
+                              const isMainProduct = p.id === product?.id || p.slug === product?.slug;
+                              const selectedIds = (sec.settings?.selectedProductIds as string[]) || [];
+                              const isChecked = isMainProduct || selectedIds.includes(p.id || p.slug);
+
+                              return (
+                                <label
+                                  key={p.id || p.slug}
+                                  className={`flex items-center gap-2.5 p-1.5 rounded-md hover:bg-muted/40 cursor-pointer transition-colors ${
+                                    isMainProduct ? "bg-emerald-500/10 border border-emerald-500/20" : ""
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    disabled={isMainProduct}
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      const pId = p.id || p.slug;
+                                      let newSelected: string[];
+                                      if (e.target.checked) {
+                                        newSelected = [...selectedIds, pId];
+                                      } else {
+                                        newSelected = selectedIds.filter((id) => id !== pId);
+                                      }
+                                      const updatedSec = {
+                                        ...sec,
+                                        settings: { ...sec.settings, selectedProductIds: newSelected },
+                                      };
+                                      onSectionsChange(sections.map((s) => (s.id === sec.id ? updatedSec : s)));
+                                    }}
+                                    className="rounded border-border text-primary focus:ring-primary size-4 cursor-pointer"
+                                  />
+                                  <img
+                                    src={getImageUrl(p.image || (p.images?.[0] ?? ""), "thumb")}
+                                    alt={p.name}
+                                    width={32}
+                                    height={32}
+                                    className="size-8 rounded object-cover border border-border shrink-0 bg-background"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <p className="font-bold text-foreground text-xs truncate">{p.name}</p>
+                                      {isMainProduct && (
+                                        <span className="text-[9px] bg-emerald-600 text-white font-bold px-1.5 py-0.2 rounded shrink-0">
+                                          মূল প্রোডাক্ট
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      ৳{p.price.toLocaleString()}
+                                    </p>
+                                  </div>
+                                </label>
+                              );
+                            })}
+
+                          {availableStoreProducts.length === 0 && (
+                            <div className="py-4 text-center text-xs text-muted-foreground">
+                              প্রোডাক্ট লোড হচ্ছে...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
 
                   {/* Other default sections */}
-                  {(sec.type === "product-select" ||
-                    sec.type === "reviews" ||
+                  {(sec.type === "reviews" ||
                     sec.type === "order-form" ||
                     sec.type === "info-banner") && (
                     <div className="py-2 text-center text-xs text-muted-foreground bg-muted/20 rounded-lg">

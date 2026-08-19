@@ -313,42 +313,70 @@ export default function CustomLandingPageRoute({
     return DEFAULT_LANDING_SECTIONS.filter((s) => s.visible);
   }, [data?.config?.sectionsJson]);
 
-  // All selectable products pool (Main Product + Related Products)
+  // All selectable products pool (Main Product + Admin Configured Selected Products)
   const allSelectableProducts = useMemo(() => {
     if (!data?.product) return [];
-    const list: UnifiedProduct[] = [
-      {
-        id: data.product.id,
-        name: data.product.name,
-        slug: data.product.slug,
-        description: data.product.description,
-        shortDescription: data.product.shortDescription,
-        price: data.product.price,
-        basePrice: data.product.basePrice,
-        compareAtPrice: data.product.compareAtPrice,
-        imageUrl: data.product.imageUrl,
-        images: data.product.images,
-        variants: data.product.variants,
-      },
-    ];
+    const mainProd: UnifiedProduct = {
+      id: data.product.id,
+      name: data.product.name,
+      slug: data.product.slug,
+      description: data.product.description,
+      shortDescription: data.product.shortDescription,
+      price: data.product.price,
+      basePrice: data.product.basePrice,
+      compareAtPrice: data.product.compareAtPrice,
+      imageUrl: data.product.imageUrl,
+      images: data.product.images,
+      variants: data.product.variants,
+    };
 
-    if (data.relatedProducts && data.relatedProducts.length > 0) {
-      data.relatedProducts.forEach((rp) => {
-        if (!list.some((item) => item.id === rp.id)) {
-          list.push({
-            id: rp.id,
-            name: rp.name,
-            price: rp.price,
-            compareAtPrice: rp.compareAtPrice || null,
-            imageUrl: rp.imageUrl,
-            variants: rp.variants,
-          });
-        }
-      });
+    const list: UnifiedProduct[] = [mainProd];
+
+    // Check if admin has explicitly selected products for the product-select section
+    const prodSec = activeSections.find((s) => s.type === "product-select");
+    const configuredProductIds = (prodSec?.settings?.selectedProductIds as string[]) || [];
+
+    if (configuredProductIds.length > 0) {
+      // If admin configured specific products, include ONLY those matching selectedProductIds (plus main product is always first)
+      if (data.relatedProducts && data.relatedProducts.length > 0) {
+        data.relatedProducts.forEach((rp) => {
+          if (
+            (configuredProductIds.includes(rp.id) || configuredProductIds.includes(rp.slug)) &&
+            !list.some((item) => item.id === rp.id)
+          ) {
+            list.push({
+              id: rp.id,
+              name: rp.name,
+              slug: rp.slug,
+              price: rp.price,
+              compareAtPrice: rp.compareAtPrice || null,
+              imageUrl: rp.imageUrl,
+              variants: rp.variants,
+            });
+          }
+        });
+      }
+    } else {
+      // Fallback: If no explicit filter is set, show related products pool
+      if (data.relatedProducts && data.relatedProducts.length > 0) {
+        data.relatedProducts.forEach((rp) => {
+          if (!list.some((item) => item.id === rp.id)) {
+            list.push({
+              id: rp.id,
+              name: rp.name,
+              slug: rp.slug,
+              price: rp.price,
+              compareAtPrice: rp.compareAtPrice || null,
+              imageUrl: rp.imageUrl,
+              variants: rp.variants,
+            });
+          }
+        });
+      }
     }
 
     return list;
-  }, [data]);
+  }, [data, activeSections]);
 
   // Selection Helper Methods
   const getProductPrice = (p: UnifiedProduct) => {
@@ -1102,206 +1130,236 @@ export default function CustomLandingPageRoute({
               );
             }
 
-            // Previous Order Form Design (with live cart summary items)
+            // Previous Order Form Design (Compact 2-Column on Desktop/Tablet with Cart on Right)
             case "order-form": {
               return (
                 <section key={sec.id} id="section-order-form" className="py-12 px-4 md:px-8 bg-muted/30">
-                  <div className="max-w-3xl mx-auto bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
+                  <div className="max-w-5xl mx-auto bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
                     {/* Form Header */}
-                    <div className="bg-primary text-primary-foreground p-6 text-center space-y-1">
+                    <div className="bg-primary text-primary-foreground p-5 md:p-6 text-center space-y-1">
                       <h3 className="text-xl md:text-2xl font-black">
                         📝 সরাসরি অর্ডার করতে তথ্য পূরণ করুন
                       </h3>
-                      <p className="text-xs md:text-sm text-primary-foreground/80">
+                      <p className="text-xs md:text-sm text-primary-foreground/90 font-medium">
                         ক্যাশ অন ডেলিভারি — পণ্য হাতে পেয়ে মূল্য পরিশোধ করুন
                       </p>
                     </div>
 
-                    <form onSubmit={handlePlaceOrder} className="p-6 md:p-8 space-y-6">
-                      {/* 1. Selected Products Summary */}
-                      <div className="space-y-3">
-                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                          আপনার নির্বাচিত প্রোডাক্ট ({selectedProductList.length}):
-                        </label>
-                        <div className="space-y-2 bg-muted/30 p-3 rounded-xl border border-border">
-                          {selectedProductList.map((item) => (
-                            <div
-                              key={item.product.id}
-                              className="flex items-center justify-between gap-3 text-xs"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <img
-                                  src={getImageUrl(item.product.imageUrl, "thumb")}
-                                  alt={item.product.name}
-                                  width={40}
-                                  height={40}
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="size-10 rounded-md object-cover border border-border shrink-0"
-                                  onError={handleImageError}
-                                />
-                                <div className="min-w-0">
-                                  <p className="font-bold text-foreground truncate">{item.product.name}</p>
-                                  {item.selectedSize && (
-                                    <p className="text-[11px] text-muted-foreground">
-                                      সাইজ: {item.selectedSize}
-                                    </p>
-                                  )}
+                    <form onSubmit={handlePlaceOrder} className="p-5 md:p-8">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+                        {/* Left Column (Customer Form Details): 7 cols on lg */}
+                        <div className="lg:col-span-7 space-y-4">
+                          <h4 className="text-sm font-bold text-foreground flex items-center gap-2 pb-2 border-b border-border">
+                            <Truck className="size-4 text-primary" />
+                            ডেলিভারির তথ্য
+                          </h4>
+
+                          {/* Customer Name & Phone */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-foreground">আপনার নাম *</label>
+                              <input
+                                type="text"
+                                required
+                                value={customerName}
+                                onChange={(e) => setCustomerName(e.target.value)}
+                                placeholder="যেমন: মোঃ করিম"
+                                className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                              />
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-foreground">
+                                মোবাইল নম্বর * (১১ ডিজিট)
+                              </label>
+                              <input
+                                type="tel"
+                                required
+                                value={customerPhone}
+                                onChange={(e) => setCustomerPhone(e.target.value)}
+                                placeholder="01XXXXXXXXX"
+                                className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                              />
+                            </div>
+                          </div>
+
+                          {/* City & Area Selection */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-foreground">শহর / জেলা *</label>
+                              <select
+                                value={selectedCity}
+                                onChange={(e) => handleCityChange(e.target.value)}
+                                className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                              >
+                                {DEFAULT_CITIES.map((c) => (
+                                  <option key={c} value={c}>{c}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-foreground">থানা / উপজেলা *</label>
+                              <select
+                                value={selectedArea}
+                                onChange={(e) => setSelectedArea(e.target.value)}
+                                className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                              >
+                                {availableAreas.map((a) => (
+                                  <option key={a} value={a}>{a}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Full Address */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-foreground">
+                              পূর্ণাঙ্গ ঠিকানা (বাসা/রোড/এলাকা) *
+                            </label>
+                            <textarea
+                              required
+                              rows={2}
+                              value={customerAddress}
+                              onChange={(e) => setCustomerAddress(e.target.value)}
+                              placeholder="বাসা নম্বর, রোড, এলাকার বিস্তারিত লিখুন..."
+                              className="w-full px-3.5 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary resize-none"
+                            />
+                          </div>
+
+                          {/* Note */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-foreground">নোট (ঐচ্ছিক)</label>
+                            <input
+                              type="text"
+                              value={notes}
+                              onChange={(e) => setNotes(e.target.value)}
+                              placeholder="অর্ডার সম্পর্কে কিছু জানাতে চাইলে লিখুন..."
+                              className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                            />
+                          </div>
+
+                          {/* Trust Badges under Form */}
+                          <div className="pt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground bg-muted/20 p-3 rounded-lg border border-border">
+                            <span className="flex items-center gap-1.5">
+                              <ShieldCheck className="size-4 text-emerald-600 shrink-0" /> ১০০% অরিজিনাল পণ্য
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <HeartHandshake className="size-4 text-blue-600 shrink-0" /> সহজ রিটার্ন সুবিধা
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Truck className="size-4 text-amber-600 shrink-0" /> দ্রুত ক্যাশ অন ডেলিভারি
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Right Column (Cart Summary & Total Pricing): 5 cols on lg */}
+                        <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-20">
+                          <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-4">
+                            <div className="flex items-center justify-between pb-2 border-b border-border">
+                              <label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                <ShoppingBag className="size-4 text-primary" />
+                                আপনার কার্ট ({selectedProductList.length}টি পণ্য)
+                              </label>
+                            </div>
+
+                            {/* Cart Products List */}
+                            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                              {selectedProductList.map((item) => (
+                                <div
+                                  key={item.product.id}
+                                  className="flex items-center justify-between gap-2.5 p-2.5 bg-background rounded-lg border border-border text-xs shadow-sm"
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <img
+                                      src={getImageUrl(item.product.imageUrl || (item.product.images?.[0]?.imageUrl ?? ""), "thumb")}
+                                      alt={item.product.name}
+                                      width={40}
+                                      height={40}
+                                      loading="lazy"
+                                      decoding="async"
+                                      className="size-10 rounded-md object-cover border border-border shrink-0"
+                                      onError={handleImageError}
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-foreground truncate text-xs">{item.product.name}</p>
+                                      {item.selectedSize && (
+                                        <span className="inline-block mt-0.5 text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.2 rounded">
+                                          সাইজ: {item.selectedSize}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex items-center border border-border rounded bg-muted/40">
+                                      <button
+                                        type="button"
+                                        onClick={() => updateProductQuantity(item.product, -1)}
+                                        className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                      >
+                                        <Minus className="size-2.5" />
+                                      </button>
+                                      <span className="w-5 text-center font-bold text-xs">{item.quantity}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => updateProductQuantity(item.product, 1)}
+                                        className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                      >
+                                        <Plus className="size-2.5" />
+                                      </button>
+                                    </div>
+
+                                    <span className="font-bold text-foreground text-xs min-w-14 text-right">
+                                      ৳{(getProductPrice(item.product) * item.quantity).toLocaleString()}
+                                    </span>
+                                  </div>
                                 </div>
+                              ))}
+                            </div>
+
+                            {/* Pricing Breakdown */}
+                            <div className="p-3.5 bg-background rounded-xl border border-border space-y-2 text-xs">
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>প্রোডাক্ট সাবটোটাল</span>
+                                <span className="font-bold text-foreground">
+                                  ৳{subtotal.toLocaleString()}
+                                </span>
                               </div>
-
-                              <div className="flex items-center gap-3 shrink-0">
-                                <div className="flex items-center border border-border rounded bg-background">
-                                  <button
-                                    type="button"
-                                    onClick={() => updateProductQuantity(item.product, -1)}
-                                    className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
-                                  >
-                                    <Minus className="size-2.5" />
-                                  </button>
-                                  <span className="w-6 text-center font-bold">{item.quantity}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => updateProductQuantity(item.product, 1)}
-                                    className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
-                                  >
-                                    <Plus className="size-2.5" />
-                                  </button>
-                                </div>
-
-                                <span className="font-bold text-foreground w-16 text-right">
-                                  ৳{(getProductPrice(item.product) * item.quantity).toLocaleString()}
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>ডেলিভারি চার্জ</span>
+                                <span className="font-bold text-foreground">
+                                  {deliveryCharge === 0 ? "ফ্রি" : `৳${deliveryCharge}`}
+                                </span>
+                              </div>
+                              <div className="border-t border-border pt-2 flex justify-between text-sm font-black text-foreground">
+                                <span>সর্বমোট প্রদেয় বিল</span>
+                                <span className="text-primary text-base font-black">
+                                  ৳{grandTotal.toLocaleString()}
                                 </span>
                               </div>
                             </div>
-                          ))}
+
+                            {/* Submit Button */}
+                            <button
+                              type="submit"
+                              disabled={isSubmitting || selectedProductList.length === 0}
+                              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3.5 rounded-xl shadow-xl hover:shadow-2xl transition-all text-sm md:text-base flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                            >
+                              {isSubmitting ? (
+                                <>
+                                  <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  <span>অর্ডার প্রসেস হচ্ছে...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="size-5" />
+                                  <span>অর্ডার নিশ্চিত করুন (৳{grandTotal.toLocaleString()})</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
-
-                      {/* 2. Customer Name & Phone */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-foreground">আপনার নাম *</label>
-                          <input
-                            type="text"
-                            required
-                            value={customerName}
-                            onChange={(e) => setCustomerName(e.target.value)}
-                            placeholder="যেমন: মোঃ করিম"
-                            className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-foreground">
-                            মোবাইল নম্বর * (১১ ডিজিট)
-                          </label>
-                          <input
-                            type="tel"
-                            required
-                            value={customerPhone}
-                            onChange={(e) => setCustomerPhone(e.target.value)}
-                            placeholder="01XXXXXXXXX"
-                            className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-                          />
-                        </div>
-                      </div>
-
-                      {/* 3. City & Area Selection */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-foreground">শহর / জেলা *</label>
-                          <select
-                            value={selectedCity}
-                            onChange={(e) => handleCityChange(e.target.value)}
-                            className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-                          >
-                            {DEFAULT_CITIES.map((c) => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-foreground">থানা / উপজেলা *</label>
-                          <select
-                            value={selectedArea}
-                            onChange={(e) => setSelectedArea(e.target.value)}
-                            className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-                          >
-                            {availableAreas.map((a) => (
-                              <option key={a} value={a}>{a}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* 4. Full Address */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-foreground">
-                          পূর্ণাঙ্গ ঠিকানা (বাসা/রোড/এলাকা) *
-                        </label>
-                        <textarea
-                          required
-                          rows={2}
-                          value={customerAddress}
-                          onChange={(e) => setCustomerAddress(e.target.value)}
-                          placeholder="বাসা নম্বর, রোড, এলাকার বিস্তারিত লিখুন..."
-                          className="w-full px-3.5 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary resize-none"
-                        />
-                      </div>
-
-                      {/* 5. Note */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-foreground">নোট (ঐচ্ছিক)</label>
-                        <input
-                          type="text"
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                          placeholder="অর্ডার সম্পর্কে কিছু জানাতে চাইলে লিখুন..."
-                          className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
-                        />
-                      </div>
-
-                      {/* 6. Pricing Breakdown */}
-                      <div className="p-4 bg-muted/40 rounded-xl border border-border space-y-2 text-xs">
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>প্রোডাক্ট সাবটোটাল</span>
-                          <span className="font-bold text-foreground">
-                            ৳{subtotal.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>ডেলিভারি চার্জ</span>
-                          <span className="font-bold text-foreground">
-                            {deliveryCharge === 0 ? "ফ্রি" : `৳${deliveryCharge}`}
-                          </span>
-                        </div>
-                        <div className="border-t border-border pt-2 flex justify-between text-sm font-black text-foreground">
-                          <span>সর্বমোট প্রদেয় বিল</span>
-                          <span className="text-primary text-base font-black">
-                            ৳{grandTotal.toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Submit Button */}
-                      <button
-                        type="submit"
-                        disabled={isSubmitting || selectedProductList.length === 0}
-                        className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 rounded-xl shadow-xl hover:shadow-2xl transition-all text-base flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>অর্ডার প্রসেস হচ্ছে...</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="size-5" />
-                            <span>অর্ডার নিশ্চিত করুন (৳{grandTotal.toLocaleString()})</span>
-                          </>
-                        )}
-                      </button>
                     </form>
                   </div>
                 </section>
