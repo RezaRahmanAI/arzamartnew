@@ -145,6 +145,59 @@ export default function CustomLandingPageRoute({
           }
         }
 
+        // Also fetch other active products from store so customer can always pick additional products
+        try {
+          const prodsRes = await productsService.getAll();
+          if (Array.isArray(prodsRes) && prodsRes.length > 0) {
+            const currentProdId = pageData?.product?.id;
+            const extraProds: RelatedProductItem[] = prodsRes
+              .filter((p) => p.id !== currentProdId && p.slug !== slug)
+              .map((p) => ({
+                id: p.id || p.slug,
+                name: p.name,
+                slug: p.slug,
+                price: p.price,
+                compareAtPrice: p.compareAt || null,
+                imageUrl: p.image || (p.images?.[0] ?? ""),
+                variants: (p.sizes || []).map((s) => ({
+                  id: s,
+                  name: s,
+                  stockQuantity: p.sizeStock?.[s] ?? 10,
+                  priceOverride: p.sizePrices?.[s],
+                })),
+              }));
+
+            if (pageData) {
+              if (!pageData.relatedProducts || pageData.relatedProducts.length === 0) {
+                pageData.relatedProducts = extraProds;
+              } else {
+                extraProds.forEach((ep) => {
+                  if (!pageData?.relatedProducts?.some((rp) => rp.id === ep.id)) {
+                    pageData?.relatedProducts?.push(ep);
+                  }
+                });
+              }
+            }
+          }
+        } catch {
+          const currentProdId = pageData?.product?.id;
+          const staticFallback: RelatedProductItem[] = staticProducts
+            .filter((p) => (p.id || p.slug) !== currentProdId && p.slug !== slug)
+            .map((p) => ({
+              id: p.id || p.slug,
+              name: p.name,
+              slug: p.slug,
+              price: p.price,
+              compareAtPrice: p.compareAt || null,
+              imageUrl: p.image || p.images?.[0] || "",
+              variants: (p.sizes || []).map((s) => ({ id: s, name: s, stockQuantity: 10 })),
+            }));
+
+          if (pageData && (!pageData.relatedProducts || pageData.relatedProducts.length === 0)) {
+            pageData.relatedProducts = staticFallback;
+          }
+        }
+
         setData(pageData);
         setSettings(siteSettings);
 

@@ -119,6 +119,33 @@ public class CustomLandingPageController : ControllerBase
             })
             .ToListAsync(ct);
 
+        if (relatedProducts.Count < 6)
+        {
+            var existingIds = relatedProducts.Select(r => r.id).Append(product.Id).ToList();
+            var additionalProducts = await _context.Products
+                .AsNoTracking()
+                .Include(p => p.Images)
+                .Include(p => p.Variants)
+                .Where(p => !existingIds.Contains(p.Id) && p.IsActive)
+                .OrderBy(p => p.IsFeatured ? 0 : 1)
+                .ThenByDescending(p => p.CreatedAtUtc)
+                .Take(12 - relatedProducts.Count)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    name = p.Name,
+                    slug = p.Slug,
+                    price = p.DiscountPrice ?? p.BasePrice,
+                    compareAtPrice = p.DiscountPrice.HasValue ? p.BasePrice : (decimal?)null,
+                    imageUrl = p.Images.Where(i => i.IsMain).Select(i => i.ImageUrl).FirstOrDefault() ?? p.Images.Select(i => i.ImageUrl).FirstOrDefault() ?? "",
+                    isFeatured = p.IsFeatured,
+                    variants = p.Variants.Select(v => new { id = v.Id, name = v.Name, priceOverride = v.PriceOverride, stockQuantity = v.StockQuantity })
+                })
+                .ToListAsync(ct);
+
+            relatedProducts.AddRange(additionalProducts);
+        }
+
         var productDto = new
         {
             id = product.Id,
