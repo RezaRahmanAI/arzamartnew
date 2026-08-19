@@ -1238,18 +1238,6 @@ export default function CustomLandingPageRoute({
                             />
                           </div>
 
-                          {/* Trust Badges under Form */}
-                          <div className="pt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground bg-muted/20 p-3 rounded-lg border border-border">
-                            <span className="flex items-center gap-1.5">
-                              <ShieldCheck className="size-4 text-emerald-600 shrink-0" /> ১০০% অরিজিনাল পণ্য
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <HeartHandshake className="size-4 text-blue-600 shrink-0" /> সহজ রিটার্ন সুবিধা
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <Truck className="size-4 text-amber-600 shrink-0" /> দ্রুত ক্যাশ অন ডেলিভারি
-                            </span>
-                          </div>
                         </div>
 
                         {/* Right Column (Cart Summary & Total Pricing): 5 cols on lg */}
@@ -1357,6 +1345,19 @@ export default function CustomLandingPageRoute({
                                 </>
                               )}
                             </button>
+
+                            {/* Trust Badges under Button */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground bg-muted/20 p-3 rounded-lg border border-border">
+                              <span className="flex items-center gap-1.5">
+                                <ShieldCheck className="size-4 text-emerald-600 shrink-0" /> ১০০% অরিজিনাল পণ্য
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <HeartHandshake className="size-4 text-blue-600 shrink-0" /> সহজ রিটার্ন সুবিধা
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <Truck className="size-4 text-amber-600 shrink-0" /> দ্রুত ক্যাশ অন ডেলিভারি
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
