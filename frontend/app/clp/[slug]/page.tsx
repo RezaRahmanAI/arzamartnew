@@ -623,12 +623,12 @@ export default function CustomLandingPageRoute({
 
       {/* 2. Sticky Countdown Urgency Bar (New red design with 4 units: Days, Hours, Minutes, Seconds) */}
       {isTimer && (
-        <div className="sticky top-0 z-50 w-full bg-[#dc2626] text-white py-3 md:py-4 px-4 shadow-lg overflow-hidden">
-          <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-center gap-3 md:gap-4">
-            <span className="whitespace-pre-line text-base md:text-lg font-bold">
+        <div className="sticky top-0 z-50 w-full bg-[#dc2626] text-white py-1.5 md:py-2 px-4 shadow-lg overflow-hidden">
+          <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3">
+            <span className="whitespace-pre-line text-xs md:text-sm font-bold">
               {timerTitle}
             </span>
-            <div className="flex justify-center gap-2 md:gap-3">
+            <div className="flex justify-center gap-1.5 md:gap-2">
               {[
                 { val: timeLeft.days, label: "দিন" },
                 { val: timeLeft.hours, label: "ঘন্টা" },
@@ -637,12 +637,12 @@ export default function CustomLandingPageRoute({
               ].map((unit) => (
                 <div
                   key={unit.label}
-                  className="flex flex-col items-center justify-center w-14 h-14 md:w-16 md:h-16 bg-white/25 backdrop-blur-xs rounded-md shadow-xs"
+                  className="flex flex-col items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white/25 backdrop-blur-xs rounded-md shadow-xs"
                 >
-                  <span className="text-xl md:text-2xl font-extrabold leading-none">
+                  <span className="text-sm md:text-lg font-extrabold leading-none">
                     {String(unit.val).padStart(2, "0")}
                   </span>
-                  <span className="text-[11px] mt-1 opacity-90">{unit.label}</span>
+                  <span className="text-[9px] md:text-[10px] mt-0.5 opacity-90">{unit.label}</span>
                 </div>
               ))}
             </div>
