@@ -32,6 +32,8 @@ public class CustomLandingPageConfigDto
     public bool IsMarqueeVisible { get; set; }
     public string? MarqueeText { get; set; }
 
+    public string? CustomHeroImageUrl { get; set; }
+
     public string? SectionsJson { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
@@ -64,6 +66,8 @@ public class CustomLandingPageConfigUpdateDto
 
     public bool IsMarqueeVisible { get; set; } = true;
     public string? MarqueeText { get; set; }
+
+    public string? CustomHeroImageUrl { get; set; }
 
     public string? SectionsJson { get; set; }
 }

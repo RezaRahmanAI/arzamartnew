@@ -26,6 +26,7 @@ import {
   LandingSection,
   CustomLandingPageConfig,
 } from "@/lib/api/services/custom-landing-page.service";
+import { ImageUploader } from "@/components/image-uploader";
 import { getImageUrl } from "@/lib/utils";
 import { CustomSectionEditor } from "./custom-section-editor";
 import { AddComponentModal } from "./add-component-modal";
@@ -320,10 +321,19 @@ export function CustomLandingPageEditor({
                           <div className="grid grid-cols-2 gap-0">
                             {/* Image */}
                             <div className="aspect-square bg-muted/40 relative overflow-hidden">
-                              {product.imageUrl ? (
-                                <img src={getImageUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" />
+                              {(config.customHeroImageUrl || product.imageUrl) ? (
+                                <img
+                                  src={getImageUrl(config.customHeroImageUrl || product.imageUrl)}
+                                  alt={product.name}
+                                  className="w-full h-full object-cover"
+                                />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-[10px]">No Image</div>
+                              )}
+                              {config.customHeroImageUrl && (
+                                <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold px-1.5 py-0.5 rounded shadow">
+                                  কাস্টম ইমেজ
+                                </span>
                               )}
                             </div>
                             {/* Details */}
@@ -346,6 +356,28 @@ export function CustomLandingPageEditor({
                           </div>
                         </div>
                       )}
+
+                      {/* Custom Image Uploader */}
+                      <div className="p-2.5 rounded-lg border border-border bg-muted/20 space-y-2">
+                        <ImageUploader
+                          value={config.customHeroImageUrl || ""}
+                          onChange={(url) =>
+                            onConfigChange({ ...config, customHeroImageUrl: url })
+                          }
+                          label="হিরো সেকশনের প্রোডাক্ট ছবি পরিবর্তন করুন"
+                          sublabel="ডিফল্ট ছবির বদলে ল্যান্ডিং পেজে এই কাস্টম ছবিটি বড় আকারে দেখানো হবে।"
+                          folder="landing-pages"
+                        />
+                        {config.customHeroImageUrl && (
+                          <button
+                            type="button"
+                            onClick={() => onConfigChange({ ...config, customHeroImageUrl: "" })}
+                            className="text-[10px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                          >
+                            মূল প্রোডাক্টের ছবিতে ফিরে যান (Reset)
+                          </button>
+                        )}
+                      </div>
 
                       {/* Editable Fields */}
                       <div className="space-y-1">

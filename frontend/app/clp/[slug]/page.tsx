@@ -494,10 +494,10 @@ export default function CustomLandingPageRoute({
                   <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-8 items-center">
                     {/* Product Image */}
                     <div className="relative rounded-2xl overflow-hidden border border-border shadow-xl bg-background aspect-square max-w-md mx-auto w-full">
-                      {product.imageUrl ? (
+                      {(config?.customHeroImageUrl || product.imageUrl) ? (
                         <img
-                          src={getImageUrl(product.imageUrl, "large")}
-                          alt={product.name}
+                          src={getImageUrl(config?.customHeroImageUrl || product.imageUrl, "large")}
+                          alt={config?.featuredProductName || product.name}
                           width={600}
                           height={600}
                           fetchPriority="high"

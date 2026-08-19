@@ -37,6 +37,9 @@ public class CustomLandingPageConfig : BaseEntity
     public bool IsMarqueeVisible { get; set; } = true;
     public string? MarqueeText { get; set; } = "🔥 সীমিত স্টক — মাত্র ৩৪টি বাকি! 🚚 সারা বাংলাদেশে ক্যাশ অন ডেলিভারি 💥 আজকের জন্য বিশেষ ছাড় ⚡";
 
+    // Product Details / Custom Hero Image
+    public string? CustomHeroImageUrl { get; set; }
+
     // Dynamic Sections JSON
     public string? SectionsJson { get; set; }
 }

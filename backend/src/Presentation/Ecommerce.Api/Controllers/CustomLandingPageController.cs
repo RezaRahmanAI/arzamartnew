@@ -88,6 +88,7 @@ public class CustomLandingPageController : ControllerBase
                 FreeShippingThresholdQuantity = config.FreeShippingThresholdQuantity,
                 IsMarqueeVisible = config.IsMarqueeVisible,
                 MarqueeText = config.MarqueeText,
+                CustomHeroImageUrl = config.CustomHeroImageUrl,
                 SectionsJson = config.SectionsJson,
                 CreatedAtUtc = config.CreatedAtUtc,
                 UpdatedAtUtc = config.UpdatedAtUtc
@@ -175,6 +176,7 @@ public class CustomLandingPageController : ControllerBase
             FreeShippingThresholdQuantity = config.FreeShippingThresholdQuantity,
             IsMarqueeVisible = config.IsMarqueeVisible,
             MarqueeText = config.MarqueeText,
+            CustomHeroImageUrl = config.CustomHeroImageUrl,
             SectionsJson = config.SectionsJson,
             CreatedAtUtc = config.CreatedAtUtc,
             UpdatedAtUtc = config.UpdatedAtUtc
@@ -224,6 +226,7 @@ public class CustomLandingPageController : ControllerBase
                     IsMarqueeVisible = cfg.IsMarqueeVisible,
                     MarqueeText = cfg.MarqueeText,
                     PromoText = cfg.PromoText,
+                    CustomHeroImageUrl = cfg.CustomHeroImageUrl,
                     SectionsJson = cfg.SectionsJson,
                     UpdatedAtUtc = cfg.UpdatedAtUtc
                 } : null
@@ -271,6 +274,7 @@ public class CustomLandingPageController : ControllerBase
                 FreeShippingThresholdQuantity = dto.FreeShippingThresholdQuantity,
                 IsMarqueeVisible = dto.IsMarqueeVisible,
                 MarqueeText = dto.MarqueeText,
+                CustomHeroImageUrl = dto.CustomHeroImageUrl,
                 SectionsJson = dto.SectionsJson,
                 CreatedAtUtc = DateTime.UtcNow
             };
@@ -297,6 +301,7 @@ public class CustomLandingPageController : ControllerBase
             config.FreeShippingThresholdQuantity = dto.FreeShippingThresholdQuantity;
             config.IsMarqueeVisible = dto.IsMarqueeVisible;
             config.MarqueeText = dto.MarqueeText;
+            config.CustomHeroImageUrl = dto.CustomHeroImageUrl;
             config.SectionsJson = dto.SectionsJson;
             config.UpdatedAtUtc = DateTime.UtcNow;
         }
@@ -326,6 +331,7 @@ public class CustomLandingPageController : ControllerBase
             FreeShippingThresholdQuantity = config.FreeShippingThresholdQuantity,
             IsMarqueeVisible = config.IsMarqueeVisible,
             MarqueeText = config.MarqueeText,
+            CustomHeroImageUrl = config.CustomHeroImageUrl,
             SectionsJson = config.SectionsJson,
             CreatedAtUtc = config.CreatedAtUtc,
             UpdatedAtUtc = config.UpdatedAtUtc

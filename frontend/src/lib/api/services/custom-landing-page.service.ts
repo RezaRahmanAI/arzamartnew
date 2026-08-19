@@ -23,6 +23,7 @@ export interface CustomLandingPageConfig {
   freeShippingThresholdQuantity?: number | null;
   isMarqueeVisible?: boolean;
   marqueeText?: string;
+  customHeroImageUrl?: string;
   sectionsJson?: string;
   createdAtUtc?: string;
   updatedAtUtc?: string;
