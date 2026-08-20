@@ -31,7 +31,7 @@ export type HeroSlide = {
 
 const BANNERS_KEY = "arza_hero_banners_v1";
 
-const initialMockSlides: HeroSlide[] = [
+export const initialMockSlides: HeroSlide[] = [
   {
     id: "slide_default_1",
     image: heroSummer,

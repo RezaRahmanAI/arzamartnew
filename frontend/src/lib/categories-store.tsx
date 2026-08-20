@@ -11,6 +11,7 @@ import {
 } from "react";
 import { type Category } from "./shop-data";
 import { categoriesService } from "./api/services/categories.service";
+import { useAppInit } from "@/context/app-init-context";
 
 type CategoriesContextValue = {
   categories: Category[];
@@ -24,8 +25,17 @@ type CategoriesContextValue = {
 const CategoriesContext = createContext<CategoriesContextValue | null>(null);
 
 export function CategoriesProvider({ children }: { children: ReactNode }) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { initData, isFreshLoaded } = useAppInit();
+  const [categories, setCategories] = useState<Category[]>(() => initData.categories || []);
+  const [isLoading, setIsLoading] = useState<boolean>(!isFreshLoaded);
+
+  // Sync when consolidated batch data updates
+  useEffect(() => {
+    if (initData.categories) {
+      setCategories(initData.categories);
+      setIsLoading(false);
+    }
+  }, [initData.categories]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -33,15 +43,11 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
       const data = await categoriesService.getAll();
       setCategories(data);
     } catch {
-      setCategories([]);
+      /* ignore */
     } finally {
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
 
   const addCategory = useCallback(async (category: Category) => {
     setCategories((prev) => {

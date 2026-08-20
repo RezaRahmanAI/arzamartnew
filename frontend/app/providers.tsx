@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AppInitProvider } from "@/context/app-init-context";
 import { CartProvider } from "@/lib/cart";
 import { OrdersProvider } from "@/lib/orders";
 import { ReviewsProvider } from "@/lib/reviews";
@@ -28,26 +29,28 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SettingsProvider>
-        <CustomersProvider>
-          <AuthProvider>
-            <ThemeApplier />
-            <BannersProvider>
-              <CategoriesProvider>
-                <ProductsProvider>
-                  <OrdersProvider>
-                    <ReviewsProvider>
-                      <WishlistProvider>
-                        <CartProvider>{children}</CartProvider>
-                      </WishlistProvider>
-                    </ReviewsProvider>
-                  </OrdersProvider>
-                </ProductsProvider>
-              </CategoriesProvider>
-            </BannersProvider>
-          </AuthProvider>
-        </CustomersProvider>
-      </SettingsProvider>
+      <AppInitProvider>
+        <SettingsProvider>
+          <CustomersProvider>
+            <AuthProvider>
+              <ThemeApplier />
+              <BannersProvider>
+                <CategoriesProvider>
+                  <ProductsProvider>
+                    <OrdersProvider>
+                      <ReviewsProvider>
+                        <WishlistProvider>
+                          <CartProvider>{children}</CartProvider>
+                        </WishlistProvider>
+                      </ReviewsProvider>
+                    </OrdersProvider>
+                  </ProductsProvider>
+                </CategoriesProvider>
+              </BannersProvider>
+            </AuthProvider>
+          </CustomersProvider>
+        </SettingsProvider>
+      </AppInitProvider>
     </QueryClientProvider>
   );
 }

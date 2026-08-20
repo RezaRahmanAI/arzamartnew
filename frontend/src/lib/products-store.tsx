@@ -11,6 +11,7 @@ import {
 } from "react";
 import { type Product } from "./shop-data";
 import { productsService } from "./api/services/products.service";
+import { useAppInit } from "@/context/app-init-context";
 
 type ProductsContextValue = {
   products: Product[];
@@ -25,8 +26,17 @@ type ProductsContextValue = {
 const ProductsContext = createContext<ProductsContextValue | null>(null);
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { initData, isFreshLoaded } = useAppInit();
+  const [products, setProducts] = useState<Product[]>(() => initData.products || []);
+  const [isLoading, setIsLoading] = useState<boolean>(!isFreshLoaded);
+
+  // Sync when consolidated batch data updates
+  useEffect(() => {
+    if (initData.products) {
+      setProducts(initData.products);
+      setIsLoading(false);
+    }
+  }, [initData.products]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -34,15 +44,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       const data = await productsService.getAll();
       setProducts(data);
     } catch {
-      setProducts([]);
+      /* ignore */
     } finally {
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
 
   const addProduct = useCallback(async (product: Product) => {
     setProducts((prev) => [product, ...prev.filter((p) => p.slug !== product.slug)]);

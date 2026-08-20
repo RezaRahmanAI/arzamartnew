@@ -2,14 +2,23 @@
 
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getImageUrl, handleImageError, FALLBACK_IMAGE } from "@/lib/utils";
+import { getImageUrl, FALLBACK_IMAGE } from "@/lib/utils";
 
 import { useEffect, useState } from "react";
 import { useBanners } from "@/lib/banners-store";
+import type { HeroSlide } from "@/lib/api/services/banners.service";
 
-export function HeroSlider() {
-  const { slides: fetchedSlides } = useBanners();
-  const slides = fetchedSlides.filter(
+interface HeroSliderProps {
+  /** Pre-fetched slides from server (ISR) for instant render. Falls back to context data. */
+  initialSlides?: HeroSlide[];
+}
+
+export function HeroSlider({ initialSlides }: HeroSliderProps) {
+  const { slides: contextSlides } = useBanners();
+
+  // Prefer context (live SWR data) once loaded, fallback to server-provided initialSlides
+  const rawSlides = contextSlides.length > 0 ? contextSlides : (initialSlides || []);
+  const slides = rawSlides.filter(
     (s) => s.isActive !== false && s.position !== "offer" && s.href !== "/offers"
   );
 

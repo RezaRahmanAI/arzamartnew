@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { reviewsService } from "./api/services/reviews.service";
+import { useAppInit } from "@/context/app-init-context";
 
 export type Review = {
   id: string;
@@ -31,8 +32,17 @@ type ReviewsContextValue = {
 const ReviewsContext = createContext<ReviewsContextValue | null>(null);
 
 export function ReviewsProvider({ children }: { children: ReactNode }) {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { initData, isFreshLoaded } = useAppInit();
+  const [reviews, setReviews] = useState<Review[]>(() => initData.reviews || []);
+  const [isLoading, setIsLoading] = useState<boolean>(!isFreshLoaded);
+
+  // Sync when consolidated batch data updates
+  useEffect(() => {
+    if (initData.reviews) {
+      setReviews(initData.reviews);
+      setIsLoading(false);
+    }
+  }, [initData.reviews]);
 
   const fetchReviewsData = useCallback(async () => {
     try {
@@ -45,10 +55,6 @@ export function ReviewsProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    fetchReviewsData();
-  }, [fetchReviewsData]);
 
   const addReview = useCallback(async (review: Review) => {
     setReviews((prev) => [review, ...prev]);

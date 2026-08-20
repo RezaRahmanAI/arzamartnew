@@ -52,6 +52,7 @@ public class BannersController : ControllerBase
         _context.Banners.Add(banner);
         await _context.SaveChangesAsync();
         _cache.Remove(BANNERS_CACHE_KEY);
+        _cache.Remove(InitController.INIT_CACHE_KEY);
         return CreatedAtAction(nameof(GetBanner), new { id = banner.Id }, banner);
     }
 
@@ -71,6 +72,7 @@ public class BannersController : ControllerBase
 
         await _context.SaveChangesAsync();
         _cache.Remove(BANNERS_CACHE_KEY);
+        _cache.Remove(InitController.INIT_CACHE_KEY);
         return Ok(existing);
     }
 
@@ -83,6 +85,7 @@ public class BannersController : ControllerBase
         _context.Banners.Remove(existing);
         await _context.SaveChangesAsync();
         _cache.Remove(BANNERS_CACHE_KEY);
+        _cache.Remove(InitController.INIT_CACHE_KEY);
         return NoContent();
     }
 }

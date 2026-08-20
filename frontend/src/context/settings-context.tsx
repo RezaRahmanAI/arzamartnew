@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { DEFAULT_SYSTEM_SETTINGS, SystemSettings, AuditLogEntry } from "@/types/settings";
 import { settingsService } from "@/lib/api/services/settings.service";
+import { useAppInit } from "@/context/app-init-context";
 import { toast } from "sonner";
 
 interface SettingsContextType {
@@ -24,47 +25,33 @@ const SETTINGS_STORAGE_KEY = "arzamart_system_settings_v1";
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SYSTEM_SETTINGS);
-  const [draftSettings, setDraftSettings] = useState<SystemSettings>(DEFAULT_SYSTEM_SETTINGS);
+  const { initData, isFreshLoaded } = useAppInit();
+
+  const [settings, setSettings] = useState<SystemSettings>(() => initData.settings || DEFAULT_SYSTEM_SETTINGS);
+  const [draftSettings, setDraftSettings] = useState<SystemSettings>(() => initData.settings || DEFAULT_SYSTEM_SETTINGS);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!isFreshLoaded);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Sync settings when consolidated init data updates
+  useEffect(() => {
+    if (initData.settings) {
+      setSettings(initData.settings);
+      setDraftSettings((prev) => {
+        // If user hasn't made dirty edits, update draft too
+        const isDirty = JSON.stringify(prev) !== JSON.stringify(settings);
+        return isDirty ? prev : initData.settings;
+      });
+      setIsLoading(false);
+    }
+  }, [initData.settings]);
 
   // Sync draft settings comparison
   useEffect(() => {
     const isDifferent = JSON.stringify(settings) !== JSON.stringify(draftSettings);
     setHasUnsavedChanges(isDifferent);
   }, [settings, draftSettings]);
-
-  // Load settings from API & LocalStorage on mount
-  useEffect(() => {
-    async function loadSettings() {
-      try {
-        setIsLoading(true);
-        const liveSettings = await settingsService.get();
-        setSettings(liveSettings);
-        setDraftSettings(liveSettings);
-        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(liveSettings));
-      } catch (err) {
-        console.warn("API settings fetch failed, checking local storage:", err);
-        const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
-        if (stored) {
-          try {
-            const parsed = JSON.parse(stored);
-            setSettings(parsed);
-            setDraftSettings(parsed);
-          } catch {
-            /* ignore */
-          }
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadSettings();
-  }, []);
 
   // Update specific section values in draft state
   const updateSection = useCallback(<K extends keyof SystemSettings>(section: K, values: Partial<SystemSettings[K]>) => {

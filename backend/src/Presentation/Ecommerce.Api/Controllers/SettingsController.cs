@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
+using Microsoft.Extensions.Caching.Memory;
+
 namespace Ecommerce.Api.Controllers;
 
 public class UpdateSettingsRequest
@@ -17,10 +19,12 @@ public class UpdateSettingsRequest
 public class SettingsController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly IMemoryCache _cache;
 
-    public SettingsController(IApplicationDbContext context)
+    public SettingsController(IApplicationDbContext context, IMemoryCache cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     [HttpGet]
@@ -154,6 +158,7 @@ public class SettingsController : ControllerBase
         }
 
         await _context.SaveChangesAsync();
+        _cache.Remove(InitController.INIT_CACHE_KEY);
         return Ok(new { isSuccess = true, message = "Settings updated successfully" });
     }
 }

@@ -1,114 +1,87 @@
-"use client";
-
 import Link from "next/link";
 import { BadgePercent, RotateCcw, ShieldCheck, Truck } from "lucide-react";
-import dynamic from "next/dynamic";
-import { ProductCard } from "@/components/product-card";
+import { fetchHomePageData } from "@/lib/api/server/fetch-home-data";
+import { getImageUrl } from "@/lib/utils";
+import { HomePageDeals, HomePageArrivals, HomePageHero } from "@/components/home-page-client-islands";
 
-const HeroSlider = dynamic(() => import("@/components/hero-slider").then((m) => m.HeroSlider), {
-  ssr: true,
-  loading: () => (
-    <div className="h-full min-h-[340px] sm:min-h-[420px] rounded-2xl bg-muted/30 animate-pulse" />
-  ),
-});
-import { useProducts } from "@/lib/products-store";
-import { useCategories } from "@/lib/categories-store";
-import { useBanners } from "@/lib/banners-store";
-import { offerBanner as fallbackOfferBanner } from "@/lib/shop-data";
-import { useSettings } from "@/context/settings-context";
-import { getImageUrl, FALLBACK_IMAGE } from "@/components/image-uploader";
+// ISR: Revalidate every 60 seconds — server renders complete HTML with fresh data
+export const revalidate = 60;
 
+export default async function HomePage() {
+  const data = await fetchHomePageData();
 
-export default function HomePage() {
-  const { products } = useProducts();
-  const { categories } = useCategories();
-  const { slides } = useBanners();
-  const { settings } = useSettings();
-
-  const offerSlide = slides.find((s) => s.position === "offer" || s.href === "/offers");
-  const offerBannerData = offerSlide
-    ? {
-        image: offerSlide.image,
-        title: offerSlide.title,
-        subtitle: offerSlide.subtitle,
-        href: offerSlide.href || "/offers",
-        eyebrow: offerSlide.eyebrow || "Limited time",
-      }
-    : {
-        image: fallbackOfferBanner.image,
-        title: fallbackOfferBanner.title,
-        subtitle: fallbackOfferBanner.subtitle,
-        href: "/offers",
-        eyebrow: "Limited time",
-      };
-
-  const dealProducts = products.filter((p) => (p.compareAt && p.compareAt > p.price) || p.isBundle);
-
-  const brandName = settings?.general?.websiteName || "Arza";
-  const currencySymbol = settings?.general?.currencySymbol || "৳";
-  const freeShippingThreshold = settings?.shipping?.freeShippingThreshold ?? 5000;
-  const enableFreeShipping = settings?.shipping?.enableFreeShipping ?? true;
-  const enableCOD = settings?.shipping?.cashOnDeliveryAvailable ?? true;
+  const { settings, offerBanner, categories, products, banners } = data;
+  const { brandName, currencySymbol, freeShippingThreshold, enableFreeShipping, enableCOD } = settings;
 
   const perks = [
     ...(enableFreeShipping
-      ? [{ icon: Truck, title: "Free delivery", text: `On orders over ${freeShippingThreshold.toLocaleString()} ${currencySymbol}` }]
-      : [{ icon: Truck, title: "Fast delivery", text: "Nationwide shipping available" }]),
-    { icon: RotateCcw, title: "7-day exchange", text: "Wrong size? No problem" },
+      ? [{ icon: "Truck" as const, title: "Free delivery", text: `On orders over ${freeShippingThreshold.toLocaleString()} ${currencySymbol}` }]
+      : [{ icon: "Truck" as const, title: "Fast delivery", text: "Nationwide shipping available" }]),
+    { icon: "RotateCcw" as const, title: "7-day exchange", text: "Wrong size? No problem" },
     ...(enableCOD
-      ? [{ icon: ShieldCheck, title: "Cash on delivery", text: "Pay when it arrives" }]
+      ? [{ icon: "ShieldCheck" as const, title: "Cash on delivery", text: "Pay when it arrives" }]
       : []),
-    { icon: BadgePercent, title: "Bundle deals", text: "Save up to 20%" },
+    { icon: "BadgePercent" as const, title: "Bundle deals", text: "Save up to 20%" },
   ];
+
+  const ICON_MAP = { Truck, RotateCcw, ShieldCheck, BadgePercent };
+
+  const dealProducts = products.filter((p) => (p.compareAt && p.compareAt > p.price) || p.isBundle);
+  const activeProducts = products.filter((p) => p.isActive !== false);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <h1 className="sr-only">{brandName} — everyday fashion store in Bangladesh</h1>
 
+      {/* Hero Section */}
       <section className="grid gap-5 lg:grid-cols-[1.9fr_1fr] items-stretch">
-        <HeroSlider />
+        <HomePageHero banners={banners} />
         <Link
-          href={offerBannerData.href}
+          href={offerBanner.href}
           className="group relative overflow-hidden rounded-2xl shadow-card h-full min-h-[340px] sm:min-h-[420px] block bg-secondary"
         >
           <img
-            src={offerBannerData.image}
-            alt={offerBannerData.title}
+            src={offerBanner.image}
+            alt={offerBanner.title}
             width={800}
             height={1000}
             className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 p-6">
             <p className="text-xs font-bold uppercase tracking-widest text-primary">
-              {offerBannerData.eyebrow}
+              {offerBanner.eyebrow}
             </p>
             <p className="font-display text-2xl font-extrabold text-white sm:text-3xl">
-              {offerBannerData.title}
+              {offerBanner.title}
             </p>
             <p className="mt-1 text-sm font-semibold text-white/80">
-              {offerBannerData.subtitle}
+              {offerBanner.subtitle}
             </p>
           </div>
         </Link>
       </section>
 
+      {/* Trust Perks — Fully server-rendered */}
       <section className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {perks.map((perk) => (
-          <div
-            key={perk.title}
-            className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-card"
-          >
-            <perk.icon className="size-6 shrink-0 text-primary" />
-            <div>
-              <p className="text-sm font-bold text-foreground">{perk.title}</p>
-              <p className="text-xs text-muted-foreground">{perk.text}</p>
+        {perks.map((perk) => {
+          const Icon = ICON_MAP[perk.icon];
+          return (
+            <div
+              key={perk.title}
+              className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-card"
+            >
+              <Icon className="size-6 shrink-0 text-primary" />
+              <div>
+                <p className="text-sm font-bold text-foreground">{perk.title}</p>
+                <p className="text-xs text-muted-foreground">{perk.text}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
+      {/* Categories — Fully server-rendered */}
       <section className="mt-12">
         <h2 className="section-title border-l-4 border-primary">Our Categories</h2>
         <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -126,7 +99,6 @@ export default function HomePage() {
                   height={800}
                   loading="lazy"
                   className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"; }}
                 />
               </div>
               <div className="p-3 text-center">
@@ -138,6 +110,7 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Deals of the Week */}
       <section className="mt-14">
         <div className="flex items-end justify-between">
           <h2 className="section-title border-l-4 border-primary">Deals of the Week</h2>
@@ -145,20 +118,13 @@ export default function HomePage() {
             View all
           </Link>
         </div>
-        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {dealProducts.map((p) => (
-            <ProductCard key={p.slug} product={p} />
-          ))}
-        </div>
+        <HomePageDeals products={dealProducts} />
       </section>
 
+      {/* New Arrivals */}
       <section className="mt-14">
         <h2 className="section-title border-l-4 border-primary">New Arrivals</h2>
-        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {products.filter((p) => p.isActive !== false).map((p) => (
-            <ProductCard key={p.slug} product={p} />
-          ))}
-        </div>
+        <HomePageArrivals products={activeProducts} />
       </section>
     </div>
   );

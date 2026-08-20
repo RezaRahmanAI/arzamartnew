@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { bannersService, type HeroSlide } from "./api/services/banners.service";
+import { useAppInit } from "@/context/app-init-context";
 
 type BannersContextValue = {
   slides: HeroSlide[];
@@ -23,8 +24,17 @@ type BannersContextValue = {
 const BannersContext = createContext<BannersContextValue | null>(null);
 
 export function BannersProvider({ children }: { children: ReactNode }) {
-  const [slides, setSlides] = useState<HeroSlide[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { initData, isFreshLoaded } = useAppInit();
+  const [slides, setSlides] = useState<HeroSlide[]>(() => initData.banners || []);
+  const [isLoading, setIsLoading] = useState<boolean>(!isFreshLoaded);
+
+  // Sync when consolidated batch data updates
+  useEffect(() => {
+    if (initData.banners) {
+      setSlides(initData.banners);
+      setIsLoading(false);
+    }
+  }, [initData.banners]);
 
   const fetchSlides = useCallback(async () => {
     try {
@@ -32,15 +42,11 @@ export function BannersProvider({ children }: { children: ReactNode }) {
       const data = await bannersService.getAll();
       setSlides(data);
     } catch {
-      setSlides([]);
+      /* ignore */
     } finally {
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    fetchSlides();
-  }, [fetchSlides]);
 
   const addSlide = useCallback(async (slide: Omit<HeroSlide, "id">) => {
     const created = await bannersService.create(slide);

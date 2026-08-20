@@ -97,6 +97,7 @@ public class CategoriesController : ControllerBase
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
         _cache.Remove(CATEGORIES_CACHE_KEY);
+        _cache.Remove(InitController.INIT_CACHE_KEY);
 
         return CreatedAtAction(nameof(GetCategoryById), new { id = category.Id }, category);
     }
@@ -115,6 +116,7 @@ public class CategoriesController : ControllerBase
 
         await _context.SaveChangesAsync();
         _cache.Remove(CATEGORIES_CACHE_KEY);
+        _cache.Remove(InitController.INIT_CACHE_KEY);
         return Ok(category);
     }
 
@@ -157,6 +159,7 @@ public class CategoriesController : ControllerBase
 
             await _context.SaveChangesAsync();
             _cache.Remove(CATEGORIES_CACHE_KEY);
+            _cache.Remove(InitController.INIT_CACHE_KEY);
         }
 
         return Ok(category);
@@ -171,6 +174,7 @@ public class CategoriesController : ControllerBase
         _context.Categories.Remove(category);
         await _context.SaveChangesAsync();
         _cache.Remove(CATEGORIES_CACHE_KEY);
+        _cache.Remove(InitController.INIT_CACHE_KEY);
         return NoContent();
     }
 
@@ -183,6 +187,7 @@ public class CategoriesController : ControllerBase
         _context.Categories.Remove(category);
         await _context.SaveChangesAsync();
         _cache.Remove(CATEGORIES_CACHE_KEY);
+        _cache.Remove(InitController.INIT_CACHE_KEY);
         return NoContent();
     }
 }
