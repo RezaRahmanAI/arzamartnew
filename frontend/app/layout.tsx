@@ -12,16 +12,16 @@ const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
-  preload: false,
+  weight: ["400", "700"],
+  preload: true,
 });
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
-  preload: false,
+  weight: ["400", "700"],
+  preload: true,
 });
 
 export const metadata: Metadata = {

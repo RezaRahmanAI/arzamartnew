@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { BadgePercent, RotateCcw, ShieldCheck, Truck } from "lucide-react";
 import { fetchHomePageData } from "@/lib/api/server/fetch-home-data";
@@ -40,12 +41,13 @@ export default async function HomePage() {
           href={offerBanner.href}
           className="group relative overflow-hidden rounded-2xl shadow-card h-full min-h-[340px] sm:min-h-[420px] block bg-secondary"
         >
-          <img
+          <Image
             src={offerBanner.image}
             alt={offerBanner.title}
-            width={800}
-            height={1000}
-            className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fill
+            sizes="(max-width: 768px) 100vw, 35vw"
+            quality={80}
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 p-6">
@@ -91,14 +93,15 @@ export default async function HomePage() {
               href={`/category/${c.slug}`}
               className="group overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-float"
             >
-              <div className="aspect-square overflow-hidden bg-secondary">
-                <img
+              <div className="relative aspect-square overflow-hidden bg-secondary">
+                <Image
                   src={getImageUrl(c.image)}
                   alt={c.name}
-                  width={800}
-                  height={800}
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                  quality={75}
                   loading="lazy"
-                  className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
               <div className="p-3 text-center">

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { formatBDT, type Product, getSizePrice, getColorHex } from "@/lib/shop-data";
 import { useCart } from "@/lib/cart";
@@ -73,15 +74,14 @@ export function ProductCard({ product }: { product: Product }) {
         className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-float"
       >
         <div className="relative aspect-square overflow-hidden bg-secondary">
-          <img
+          <Image
             src={getImageUrl(product.image, "medium")}
             alt={product.name}
-            width={400}
-            height={400}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            quality={75}
             loading="lazy"
-            decoding="async"
-            className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE; }}
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {product.badge && (
             <span className="absolute left-3 top-3 rounded-full gradient-sale px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
@@ -149,8 +149,8 @@ export function ProductCard({ product }: { product: Product }) {
           </DialogHeader>
 
           <div className="mt-4 flex gap-4">
-            <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-secondary border border-border">
-              <img src={getImageUrl(product.image, "thumb")} alt={product.name} width={80} height={80} loading="lazy" className="size-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE; }} />
+            <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-secondary border border-border">
+              <Image src={getImageUrl(product.image, "thumb")} alt={product.name} fill sizes="80px" quality={60} loading="lazy" className="object-cover" />
             </div>
             <div className="flex flex-col justify-center">
               <h4 className="text-sm font-semibold text-foreground leading-snug">{product.name}</h4>

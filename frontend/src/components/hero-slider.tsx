@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getImageUrl, FALLBACK_IMAGE } from "@/lib/utils";
@@ -51,15 +52,15 @@ export function HeroSlider({ initialSlides }: HeroSliderProps) {
               i === index ? "opacity-100 z-10" : "pointer-events-none opacity-0 z-0"
             }`}
           >
-            <img
+            <Image
               src={getImageUrl(slide.image, "large")}
               alt={slide.title}
-              width={1600}
-              height={1000}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 65vw, 60vw"
+              quality={80}
+              priority={i === 0}
               loading={i === 0 ? "eager" : "lazy"}
-              fetchPriority={i === 0 ? "high" : "low"}
-              decoding="async"
-              className="size-full object-cover"
+              className="object-cover"
               onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGE; }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
