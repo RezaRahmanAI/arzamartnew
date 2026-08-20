@@ -31,8 +31,17 @@ import { productsService } from "@/lib/api/services/products.service";
 import { Product, products as staticProducts } from "@/lib/shop-data";
 import { ImageUploader } from "@/components/image-uploader";
 import { getImageUrl } from "@/lib/utils";
-import { CustomSectionEditor } from "./custom-section-editor";
-import { AddComponentModal } from "./add-component-modal";
+import dynamic from "next/dynamic";
+
+const CustomSectionEditor = dynamic(
+  () => import("./custom-section-editor").then((m) => m.CustomSectionEditor),
+  { ssr: false }
+);
+
+const AddComponentModal = dynamic(
+  () => import("./add-component-modal").then((m) => m.AddComponentModal),
+  { ssr: false }
+);
 
 interface CustomLandingPageEditorProps {
   config: CustomLandingPageConfig;

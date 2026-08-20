@@ -2,8 +2,15 @@
 
 import Link from "next/link";
 import { BadgePercent, RotateCcw, ShieldCheck, Truck } from "lucide-react";
-import { HeroSlider } from "@/components/hero-slider";
+import dynamic from "next/dynamic";
 import { ProductCard } from "@/components/product-card";
+
+const HeroSlider = dynamic(() => import("@/components/hero-slider").then((m) => m.HeroSlider), {
+  ssr: true,
+  loading: () => (
+    <div className="h-full min-h-[340px] sm:min-h-[420px] rounded-2xl bg-muted/30 animate-pulse" />
+  ),
+});
 import { useProducts } from "@/lib/products-store";
 import { useCategories } from "@/lib/categories-store";
 import { useBanners } from "@/lib/banners-store";

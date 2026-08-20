@@ -8,7 +8,12 @@ import { formatBDT, Order } from "@/lib/dashboard-data";
 import { useCustomers } from "@/lib/customers-store";
 import { customersService, type ApiCustomer } from "@/lib/api/services/customers.service";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { OrderInvoiceModal } from "@/components/admin/order-invoice-modal";
+import dynamic from "next/dynamic";
+
+const OrderInvoiceModal = dynamic(
+  () => import("@/components/admin/order-invoice-modal").then((m) => m.OrderInvoiceModal),
+  { ssr: false }
+);
 
 interface CustomerHistoryProps {
   params: Promise<{ phone: string }>;
