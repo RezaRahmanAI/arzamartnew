@@ -683,9 +683,9 @@ export function CustomLandingPageEditor({
                               p.name.toLowerCase().includes(productSearchQuery.toLowerCase())
                             )
                             .map((p) => {
-                              const isMainProduct = p.id === product?.id || p.slug === product?.slug;
+                              const isMainProduct = (product?.id && p.id === product.id) || (product?.slug && p.slug === product.slug);
                               const selectedIds = (sec.settings?.selectedProductIds as string[]) || [];
-                              const isChecked = isMainProduct || selectedIds.includes(p.id || p.slug);
+                              const isChecked = isMainProduct || (p.id ? selectedIds.includes(p.id) : false) || (p.slug ? selectedIds.includes(p.slug) : false);
 
                               return (
                                 <label
@@ -699,12 +699,12 @@ export function CustomLandingPageEditor({
                                     disabled={isMainProduct}
                                     checked={isChecked}
                                     onChange={(e) => {
-                                      const pId = p.id || p.slug;
+                                      const pKey = p.id || p.slug;
                                       let newSelected: string[];
                                       if (e.target.checked) {
-                                        newSelected = [...selectedIds, pId];
+                                        newSelected = [...selectedIds.filter((id) => id !== p.id && id !== p.slug), pKey];
                                       } else {
-                                        newSelected = selectedIds.filter((id) => id !== pId);
+                                        newSelected = selectedIds.filter((id) => id !== p.id && id !== p.slug);
                                       }
                                       const updatedSec = {
                                         ...sec,

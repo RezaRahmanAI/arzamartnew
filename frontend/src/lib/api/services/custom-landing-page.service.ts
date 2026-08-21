@@ -59,6 +59,7 @@ export interface LandingPageProduct {
   imageUrl: string;
   images: LandingPageProductImage[];
   variants: LandingPageProductVariant[];
+  colors?: string[];
   category?: { id: number; name: string; slug: string } | null;
 }
 
@@ -71,6 +72,7 @@ export interface RelatedProductItem {
   imageUrl: string;
   isFeatured?: boolean;
   variants?: { id: string; name: string; priceOverride?: number; stockQuantity: number }[];
+  colors?: string[];
 }
 
 export interface LandingPageData {

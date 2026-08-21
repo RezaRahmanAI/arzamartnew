@@ -31,7 +31,7 @@ import {
   RelatedProductItem,
 } from "@/lib/api/services/custom-landing-page.service";
 import { productsService } from "@/lib/api/services/products.service";
-import { products as staticProducts } from "@/lib/shop-data";
+import { products as staticProducts, getColorHex } from "@/lib/shop-data";
 import { getImageUrl, handleImageError } from "@/lib/utils";
 import { CustomSectionRenderer } from "@/components/admin/custom-section-renderer";
 import { settingsService } from "@/lib/api/services/settings.service";
@@ -51,6 +51,7 @@ interface UnifiedProduct {
   imageUrl?: string;
   images?: { imageUrl: string; isMain: boolean }[];
   variants?: { id: string; name: string; priceOverride?: number; stockQuantity?: number }[];
+  colors?: string[];
   isPreOrder?: boolean;
 }
 
@@ -58,6 +59,7 @@ interface ProductSelectionState {
   [productId: string]: {
     quantity: number;
     selectedSize: string;
+    selectedColor: string;
     product: UnifiedProduct;
   };
 }
@@ -80,6 +82,7 @@ export default function CustomLandingPageRoute({
   // Selection State
   const [productSelections, setProductSelections] = useState<ProductSelectionState>({});
   const [lastSelectedSizes, setLastSelectedSizes] = useState<{ [productId: string]: string }>({});
+  const [lastSelectedColors, setLastSelectedColors] = useState<{ [productId: string]: string }>({});
 
   // Quick Details Modal
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -115,6 +118,10 @@ export default function CustomLandingPageRoute({
           }
           if (rawProduct) {
             const rawMainImg = rawProduct.image || (rawProduct.images && rawProduct.images.length > 0 ? rawProduct.images[0] : "");
+            const fallbackColors = rawProduct.colors && rawProduct.colors.length > 0
+              ? rawProduct.colors
+              : ["Black", "White", "Navy", "Olive", "Maroon"];
+
             pageData = {
               product: {
                 id: rawProduct.id || slug,
@@ -134,14 +141,21 @@ export default function CustomLandingPageRoute({
                   stockQuantity: rawProduct.sizeStock?.[s] ?? 10,
                   priceOverride: rawProduct.sizePrices?.[s],
                 })),
+                colors: fallbackColors,
               },
               config: null,
             };
           }
-        } else if (pageData.product && !pageData.product.imageUrl) {
-          const firstImg = pageData.product.images?.find((i) => i.isMain)?.imageUrl || pageData.product.images?.[0]?.imageUrl || "";
-          if (firstImg) {
-            pageData.product.imageUrl = firstImg;
+        } else if (pageData.product) {
+          if (!pageData.product.imageUrl) {
+            const firstImg = pageData.product.images?.find((i) => i.isMain)?.imageUrl || pageData.product.images?.[0]?.imageUrl || "";
+            if (firstImg) {
+              pageData.product.imageUrl = firstImg;
+            }
+          }
+          if (!pageData.product.colors || pageData.product.colors.length === 0) {
+            const matchedStatic = staticProducts.find((sp) => sp.slug === pageData?.product.slug || sp.id === pageData?.product.id || sp.name.toLowerCase() === pageData?.product.name.toLowerCase());
+            pageData.product.colors = matchedStatic?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
           }
         }
 
@@ -165,6 +179,7 @@ export default function CustomLandingPageRoute({
                   stockQuantity: p.sizeStock?.[s] ?? 10,
                   priceOverride: p.sizePrices?.[s],
                 })),
+                colors: p.colors || staticProducts.find((sp) => sp.slug === p.slug || sp.id === p.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
               }));
 
             if (pageData) {
@@ -191,6 +206,7 @@ export default function CustomLandingPageRoute({
               compareAtPrice: p.compareAt || null,
               imageUrl: p.image || p.images?.[0] || "",
               variants: (p.sizes || []).map((s) => ({ id: s, name: s, stockQuantity: 10 })),
+              colors: p.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
             }));
 
           if (pageData && (!pageData.relatedProducts || pageData.relatedProducts.length === 0)) {
@@ -202,6 +218,7 @@ export default function CustomLandingPageRoute({
         setSettings(siteSettings);
 
         if (pageData?.product) {
+          const mainProdColors = pageData.product.colors || staticProducts.find((sp) => sp.slug === pageData?.product.slug || sp.id === pageData?.product.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
           const mainProd: UnifiedProduct = {
             id: pageData.product.id,
             name: pageData.product.name,
@@ -214,18 +231,24 @@ export default function CustomLandingPageRoute({
             imageUrl: pageData.product.imageUrl,
             images: pageData.product.images,
             variants: pageData.product.variants,
+            colors: mainProdColors,
           };
           const firstSize = mainProd.variants?.[0]?.name || "";
+          const firstColor = mainProd.colors?.[0] || "";
 
           setProductSelections({
             [mainProd.id]: {
               quantity: 1,
               selectedSize: firstSize,
+              selectedColor: firstColor,
               product: mainProd,
             },
           });
           if (firstSize) {
             setLastSelectedSizes({ [mainProd.id]: firstSize });
+          }
+          if (firstColor) {
+            setLastSelectedColors({ [mainProd.id]: firstColor });
           }
         }
       } catch (err: unknown) {
@@ -316,6 +339,7 @@ export default function CustomLandingPageRoute({
   // All selectable products pool (Main Product + Admin Configured Selected Products)
   const allSelectableProducts = useMemo(() => {
     if (!data?.product) return [];
+    const mainProdColors = data.product.colors || staticProducts.find((sp) => sp.slug === data.product.slug || sp.id === data.product.id || sp.name.toLowerCase() === data.product.name.toLowerCase())?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
     const mainProd: UnifiedProduct = {
       id: data.product.id,
       name: data.product.name,
@@ -328,6 +352,7 @@ export default function CustomLandingPageRoute({
       imageUrl: data.product.imageUrl,
       images: data.product.images,
       variants: data.product.variants,
+      colors: mainProdColors,
     };
 
     const list: UnifiedProduct[] = [mainProd];
@@ -340,10 +365,9 @@ export default function CustomLandingPageRoute({
       // If admin configured specific products, include ONLY those matching selectedProductIds (plus main product is always first)
       if (data.relatedProducts && data.relatedProducts.length > 0) {
         data.relatedProducts.forEach((rp) => {
-          if (
-            (configuredProductIds.includes(rp.id) || configuredProductIds.includes(rp.slug)) &&
-            !list.some((item) => item.id === rp.id)
-          ) {
+          const isMatched = configuredProductIds.includes(rp.id) || (rp.slug && configuredProductIds.includes(rp.slug));
+          if (isMatched && !list.some((item) => item.id === rp.id || (rp.slug && item.slug === rp.slug))) {
+            const rpColors = rp.colors || staticProducts.find((sp) => sp.slug === rp.slug || sp.id === rp.id || sp.name.toLowerCase() === rp.name.toLowerCase())?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
             list.push({
               id: rp.id,
               name: rp.name,
@@ -352,23 +376,7 @@ export default function CustomLandingPageRoute({
               compareAtPrice: rp.compareAtPrice || null,
               imageUrl: rp.imageUrl,
               variants: rp.variants,
-            });
-          }
-        });
-      }
-    } else {
-      // Fallback: If no explicit filter is set, show related products pool
-      if (data.relatedProducts && data.relatedProducts.length > 0) {
-        data.relatedProducts.forEach((rp) => {
-          if (!list.some((item) => item.id === rp.id)) {
-            list.push({
-              id: rp.id,
-              name: rp.name,
-              slug: rp.slug,
-              price: rp.price,
-              compareAtPrice: rp.compareAtPrice || null,
-              imageUrl: rp.imageUrl,
-              variants: rp.variants,
+              colors: rpColors,
             });
           }
         });
@@ -408,10 +416,22 @@ export default function CustomLandingPageRoute({
     return Array.from(new Set(p.variants.map((v) => v.name)));
   };
 
-  const updateSelections = (product: UnifiedProduct, quantity: number, size?: string) => {
+  const getSelectedColor = (p: UnifiedProduct): string => {
+    return productSelections[p.id]?.selectedColor || lastSelectedColors[p.id] || p.colors?.[0] || getUniqueColors(p)[0] || "";
+  };
+
+  const getUniqueColors = (p: UnifiedProduct): string[] => {
+    if (p.colors && p.colors.length > 0) return p.colors;
+    const staticMatch = staticProducts.find((sp) => sp.slug === p.slug || sp.id === p.id || sp.name.toLowerCase() === p.name.toLowerCase());
+    if (staticMatch?.colors && staticMatch.colors.length > 0) return staticMatch.colors;
+    return ["Black", "White", "Navy", "Olive", "Maroon"];
+  };
+
+  const updateSelections = (product: UnifiedProduct, quantity: number, size?: string, color?: string) => {
     setProductSelections((prev) => {
       const current = prev[product.id];
       const newSize = size !== undefined ? size : (current?.selectedSize || lastSelectedSizes[product.id] || product.variants?.[0]?.name || "");
+      const newColor = color !== undefined ? color : (current?.selectedColor || lastSelectedColors[product.id] || product.colors?.[0] || getUniqueColors(product)[0] || "");
 
       if (quantity <= 0) {
         const copy = { ...prev };
@@ -424,6 +444,7 @@ export default function CustomLandingPageRoute({
         [product.id]: {
           quantity,
           selectedSize: newSize,
+          selectedColor: newColor,
           product,
         },
       };
@@ -433,29 +454,43 @@ export default function CustomLandingPageRoute({
   const toggleProductCheck = (p: UnifiedProduct) => {
     const currentQty = productSelections[p.id]?.quantity ?? 0;
     const currentSize = productSelections[p.id]?.selectedSize || lastSelectedSizes[p.id] || p.variants?.[0]?.name || "";
+    const currentColor = productSelections[p.id]?.selectedColor || lastSelectedColors[p.id] || p.colors?.[0] || getUniqueColors(p)[0] || "";
 
     if (currentQty > 0) {
       if (currentSize) {
         setLastSelectedSizes((prev) => ({ ...prev, [p.id]: currentSize }));
       }
+      if (currentColor) {
+        setLastSelectedColors((prev) => ({ ...prev, [p.id]: currentColor }));
+      }
       updateSelections(p, 0);
     } else {
-      const remembered = lastSelectedSizes[p.id] || p.variants?.[0]?.name || "";
-      updateSelections(p, 1, remembered);
+      const rememberedSize = lastSelectedSizes[p.id] || p.variants?.[0]?.name || "";
+      const rememberedColor = lastSelectedColors[p.id] || p.colors?.[0] || getUniqueColors(p)[0] || "";
+      updateSelections(p, 1, rememberedSize, rememberedColor);
     }
   };
 
   const selectProductSize = (p: UnifiedProduct, size: string) => {
     setLastSelectedSizes((prev) => ({ ...prev, [p.id]: size }));
     const currentQty = productSelections[p.id]?.quantity ?? 0;
-    updateSelections(p, currentQty > 0 ? currentQty : 1, size);
+    const currentColor = getSelectedColor(p);
+    updateSelections(p, currentQty > 0 ? currentQty : 1, size, currentColor);
+  };
+
+  const selectProductColor = (p: UnifiedProduct, color: string) => {
+    setLastSelectedColors((prev) => ({ ...prev, [p.id]: color }));
+    const currentQty = productSelections[p.id]?.quantity ?? 0;
+    const currentSize = getSelectedSize(p);
+    updateSelections(p, currentQty > 0 ? currentQty : 1, currentSize, color);
   };
 
   const updateProductQuantity = (p: UnifiedProduct, delta: number) => {
     const currentQty = productSelections[p.id]?.quantity ?? 0;
     const newQty = Math.max(0, currentQty + delta);
     const size = getSelectedSize(p);
-    updateSelections(p, newQty, size);
+    const color = getSelectedColor(p);
+    updateSelections(p, newQty, size, color);
   };
 
   const selectedProductList = useMemo(() => {
@@ -555,12 +590,15 @@ export default function CustomLandingPageRoute({
         notes: notes.trim(),
         items: selectedProductList.map((item) => {
           const unitPrice = getProductPrice(item.product);
+          const variantParts = [item.selectedColor, item.selectedSize].filter(Boolean);
           return {
             productId: item.product.id,
             productName: item.product.name,
             unitPrice: unitPrice,
             quantity: item.quantity,
-            variantName: item.selectedSize || "",
+            color: item.selectedColor || "",
+            size: item.selectedSize || "",
+            variantName: variantParts.join(" - ") || item.selectedSize || "",
             totalPrice: unitPrice * item.quantity,
           };
         }),
@@ -886,7 +924,7 @@ export default function CustomLandingPageRoute({
                   <div className="max-w-[1200px] mx-auto">
                     <div className="text-center mb-10 md:mb-12">
                       <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-2">
-                        পণ্য নির্বাচন করুন
+                        {(sec.settings?.sectionTitle as string) || "পণ্য নির্বাচন করুন"}
                       </h2>
                       <p className="text-muted-foreground font-medium text-sm">
                         চেকবক্সে ক্লিক করে পণ্য নির্বাচন করুন
@@ -899,6 +937,8 @@ export default function CustomLandingPageRoute({
                         const qty = getProductQuantity(p);
                         const selectedSize = getSelectedSize(p);
                         const uniqueSizes = getUniqueSizes(p);
+                        const selectedColor = getSelectedColor(p);
+                        const uniqueColors = getUniqueColors(p);
                         const hasDiscount = p.compareAtPrice && p.compareAtPrice > p.price;
 
                         return (
@@ -978,12 +1018,62 @@ export default function CustomLandingPageRoute({
                               </div>
                             </div>
 
+                            {/* Color Selection */}
+                            {uniqueColors.length > 0 && (
+                              <div className="mb-3">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest">
+                                    কালার সিলেক্ট করুন
+                                  </p>
+                                  {selectedColor && (
+                                    <span className="text-[11px] font-bold text-primary">
+                                      {selectedColor}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {uniqueColors.map((col) => {
+                                    const isColorActive = selectedColor === col;
+                                    const colHex = getColorHex(col);
+                                    return (
+                                      <button
+                                        key={col}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          selectProductColor(p, col);
+                                        }}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold transition-all cursor-pointer ${
+                                          isColorActive
+                                            ? "bg-primary text-primary-foreground border-primary shadow-xs scale-105"
+                                            : "bg-card text-foreground border-border hover:border-primary/50"
+                                        }`}
+                                      >
+                                        <span
+                                          className="size-2.5 rounded-full border border-black/20 shrink-0"
+                                          style={{ backgroundColor: colHex }}
+                                        />
+                                        <span>{col}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
                             {/* Size Selection */}
                             {uniqueSizes.length > 0 && (
                               <div className="mb-4">
-                                <p className="text-muted-foreground mb-2 text-[10px] uppercase font-bold tracking-widest">
-                                  সাইজ সিলেক্ট করুন
-                                </p>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest">
+                                    সাইজ সিলেক্ট করুন
+                                  </p>
+                                  {selectedSize && (
+                                    <span className="text-[11px] font-bold text-primary">
+                                      {selectedSize}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex flex-wrap gap-1.5">
                                   {uniqueSizes.map((size) => {
                                     const isSizeActive = selectedSize === size;
@@ -998,7 +1088,7 @@ export default function CustomLandingPageRoute({
                                         className={`w-9 h-9 flex items-center justify-center transition-all border text-xs font-bold rounded-sm cursor-pointer ${
                                           isSizeActive
                                             ? "bg-primary text-primary-foreground border-primary shadow-md scale-105"
-                                            : "bg-transparent text-foreground border-border hover:border-primary/50"
+                                            : "bg-card text-foreground border-border hover:border-primary/50"
                                         }`}
                                       >
                                         {size}
@@ -1040,9 +1130,6 @@ export default function CustomLandingPageRoute({
                                 </button>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
                     </div>
                   </div>
                 </section>
@@ -1270,11 +1357,22 @@ export default function CustomLandingPageRoute({
                                     />
                                     <div className="min-w-0">
                                       <p className="font-bold text-foreground truncate text-xs">{item.product.name}</p>
-                                      {item.selectedSize && (
-                                        <span className="inline-block mt-0.5 text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.2 rounded">
-                                          সাইজ: {item.selectedSize}
-                                        </span>
-                                      )}
+                                      <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                                        {item.selectedColor && (
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-muted text-foreground border border-border px-1.5 py-0.2 rounded">
+                                            <span
+                                              className="size-2 rounded-full border border-black/20 shrink-0"
+                                              style={{ backgroundColor: getColorHex(item.selectedColor) }}
+                                            />
+                                            {item.selectedColor}
+                                          </span>
+                                        )}
+                                        {item.selectedSize && (
+                                          <span className="inline-block text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.2 rounded">
+                                            সাইজ: {item.selectedSize}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
 
