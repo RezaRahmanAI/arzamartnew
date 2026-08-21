@@ -87,6 +87,10 @@ export default function CustomLandingPageRoute({
   // Quick Details Modal
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedProductForDetails, setSelectedProductForDetails] = useState<UnifiedProduct | null>(null);
+  const [modalActiveImg, setModalActiveImg] = useState<string>("");
+  const [modalSelectedSize, setModalSelectedSize] = useState<string>("");
+  const [modalSelectedColor, setModalSelectedColor] = useState<string>("");
+  const [modalQty, setModalQty] = useState<number>(1);
 
   // Checkout Form State
   const [customerName, setCustomerName] = useState("");
@@ -499,6 +503,14 @@ export default function CustomLandingPageRoute({
 
   const openProductDetails = (p: UnifiedProduct) => {
     setSelectedProductForDetails(p);
+    const firstImg = p.imageUrl || p.images?.[0]?.imageUrl || "";
+    setModalActiveImg(firstImg);
+    const currSize = getSelectedSize(p);
+    const currColor = getSelectedColor(p);
+    const currQty = getProductQuantity(p) || 1;
+    setModalSelectedSize(currSize);
+    setModalSelectedColor(currColor);
+    setModalQty(currQty);
     setShowDetailsModal(true);
   };
 
@@ -1477,57 +1489,327 @@ export default function CustomLandingPageRoute({
         <p>সারা বাংলাদেশে নিরাপদ ক্যাশ অন ডেলিভারি সেবা।</p>
       </footer>
 
-      {/* 5. Quick Details Modal */}
-      {showDetailsModal && selectedProductForDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in-50">
-          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
-            <button
-              type="button"
-              onClick={() => setShowDetailsModal(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              <X className="size-5" />
-            </button>
+      {/* 5. Rich Quick Details Modal */}
+      {showDetailsModal && selectedProductForDetails && (() => {
+        const modalAllImages = Array.from(
+          new Set(
+            [
+              selectedProductForDetails.imageUrl,
+              ...(selectedProductForDetails.images?.map((i) => i.imageUrl) || []),
+            ].filter(Boolean)
+          )
+        ) as string[];
+        const activeDisplayImg = modalActiveImg || selectedProductForDetails.imageUrl || modalAllImages[0] || "";
 
-            <div className="aspect-square max-w-[240px] mx-auto rounded-xl overflow-hidden bg-muted/20 border border-border">
-              <img
-                src={getImageUrl(selectedProductForDetails.imageUrl, "large")}
-                alt={selectedProductForDetails.name}
-                width={300}
-                height={300}
-                className="w-full h-full object-contain"
-                onError={handleImageError}
-              />
+        const modalSizePrice =
+          (modalSelectedSize && data?.config?.sizePrices?.[modalSelectedSize]) ||
+          (modalSelectedSize &&
+            selectedProductForDetails.variants?.find((v) => v.name === modalSelectedSize)?.priceOverride) ||
+          selectedProductForDetails.price;
+
+        const modalHasDiscount =
+          selectedProductForDetails.compareAtPrice &&
+          selectedProductForDetails.compareAtPrice > modalSizePrice;
+        const modalDiscountAmt = modalHasDiscount
+          ? Math.round(selectedProductForDetails.compareAtPrice! - modalSizePrice)
+          : 0;
+
+        const modalStock = modalSelectedSize
+          ? selectedProductForDetails.variants?.find((v) => v.name === modalSelectedSize)?.stockQuantity ?? 15
+          : 15;
+
+        const modalUniqueColors = getUniqueColors(selectedProductForDetails);
+        const modalUniqueSizes = getUniqueSizes(selectedProductForDetails);
+        const isAlreadySelected = isProductSelected(selectedProductForDetails);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="bg-card border border-border rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    প্রোডাক্ট বিস্তারিত তথ্য
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDetailsModal(false)}
+                  className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                  aria-label="Close modal"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              {/* Modal Body (Scrollable) */}
+              <div className="overflow-y-auto p-4 sm:p-6 space-y-5 flex-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6 items-start">
+                  {/* Left Column: Image Gallery & Badges */}
+                  <div className="space-y-3">
+                    <div className="relative aspect-square rounded-xl overflow-hidden bg-muted/20 border border-border">
+                      <img
+                        src={getImageUrl(activeDisplayImg, "large")}
+                        alt={selectedProductForDetails.name}
+                        width={400}
+                        height={400}
+                        className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+                        onError={handleImageError}
+                      />
+
+                      {/* Discount Badge */}
+                      {modalHasDiscount && (
+                        <div className="absolute top-2.5 right-2.5 bg-rose-600 text-white text-[11px] font-black px-2.5 py-0.5 rounded-md shadow-md">
+                          ৳{modalDiscountAmt} ছাড়
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Image Thumbnails */}
+                    {modalAllImages.length > 1 && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {modalAllImages.map((imgUrl, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setModalActiveImg(imgUrl)}
+                            className={`size-12 rounded-lg border-2 overflow-hidden cursor-pointer transition-all ${
+                              activeDisplayImg === imgUrl
+                                ? "border-primary ring-1 ring-primary scale-105"
+                                : "border-border/60 hover:border-primary/50 opacity-70 hover:opacity-100"
+                            }`}
+                          >
+                            <img
+                              src={getImageUrl(imgUrl, "thumb")}
+                              alt=""
+                              width={48}
+                              height={48}
+                              className="w-full h-full object-cover"
+                              onError={handleImageError}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Trust Highlights */}
+                    <div className="grid grid-cols-2 gap-2 pt-2 text-[10px] text-muted-foreground font-medium">
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/30 border border-border/40">
+                        <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" />
+                        <span>১০০% অরিজিনাল পণ্য</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/30 border border-border/40">
+                        <Truck className="size-3.5 text-blue-600 shrink-0" />
+                        <span>ক্যাশ অন ডেলিভারি</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Title, Price, Attributes & Controls */}
+                  <div className="space-y-4">
+                    {/* Title & SKU */}
+                    <div className="space-y-1">
+                      <h3 className="text-lg sm:text-xl font-extrabold text-foreground leading-snug">
+                        {selectedProductForDetails.name}
+                      </h3>
+                      {selectedProductForDetails.slug && (
+                        <p className="text-[11px] text-muted-foreground font-mono">
+                          আইটেম কোড: {selectedProductForDetails.slug}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Price Block */}
+                    <div className="flex items-baseline gap-2.5 pb-3 border-b border-border/60">
+                      <span className="text-2xl font-black text-primary">
+                        ৳{modalSizePrice.toLocaleString()}
+                      </span>
+                      {modalHasDiscount && (
+                        <span className="text-sm text-muted-foreground line-through">
+                          ৳{selectedProductForDetails.compareAtPrice!.toLocaleString()}
+                        </span>
+                      )}
+                      {modalHasDiscount && (
+                        <span className="text-[11px] font-bold text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded">
+                          {Math.round(((selectedProductForDetails.compareAtPrice! - modalSizePrice) / selectedProductForDetails.compareAtPrice!) * 100)}% ছাড়
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Stock Status */}
+                    <div className="text-xs">
+                      {modalStock > 5 ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold inline-flex items-center gap-1.5">
+                          <span className="size-2 rounded-full bg-emerald-500" />
+                          ইন স্টক ({modalStock}টি পণ্য এভেইলেবল)
+                        </span>
+                      ) : modalStock > 0 ? (
+                        <span className="text-amber-600 dark:text-amber-400 font-semibold inline-flex items-center gap-1.5">
+                          <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+                          লিমিটেড স্টক (মাত্র {modalStock}টি বাকি আছে)
+                        </span>
+                      ) : (
+                        <span className="text-rose-600 font-bold inline-flex items-center gap-1.5">
+                          <span className="size-2 rounded-full bg-rose-500" />
+                          আউট অফ স্টক
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Color Selector */}
+                    {modalUniqueColors.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-foreground">কালার সিলেক্ট করুন:</span>
+                          {modalSelectedColor && (
+                            <span className="font-semibold text-primary">{modalSelectedColor}</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {modalUniqueColors.map((col) => {
+                            const isColActive = modalSelectedColor === col;
+                            const colHex = getColorHex(col);
+                            return (
+                              <button
+                                key={col}
+                                type="button"
+                                onClick={() => setModalSelectedColor(col)}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold transition-all cursor-pointer ${
+                                  isColActive
+                                    ? "bg-primary text-primary-foreground border-primary shadow-xs scale-105"
+                                    : "bg-card text-foreground border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <span
+                                  className="size-2.5 rounded-full border border-black/20 shrink-0"
+                                  style={{ backgroundColor: colHex }}
+                                />
+                                <span>{col}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Size Selector */}
+                    {modalUniqueSizes.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-foreground">সাইজ সিলেক্ট করুন:</span>
+                          {modalSelectedSize && (
+                            <span className="font-semibold text-primary">{modalSelectedSize}</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {modalUniqueSizes.map((sz) => {
+                            const isSzActive = modalSelectedSize === sz;
+                            return (
+                              <button
+                                key={sz}
+                                type="button"
+                                onClick={() => setModalSelectedSize(sz)}
+                                className={`w-10 h-9 flex items-center justify-center transition-all border text-xs font-bold rounded-md cursor-pointer ${
+                                  isSzActive
+                                    ? "bg-primary text-primary-foreground border-primary shadow-xs scale-105"
+                                    : "bg-card text-foreground border-border hover:border-primary/50"
+                                }`}
+                              >
+                                {sz}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quantity Selector */}
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs font-bold text-foreground">পরিমাণ (Quantity):</span>
+                      <div className="flex items-center border border-border rounded-lg overflow-hidden bg-background">
+                        <button
+                          type="button"
+                          onClick={() => setModalQty((q) => Math.max(1, q - 1))}
+                          className="size-8 flex items-center justify-center hover:bg-muted cursor-pointer transition-colors"
+                        >
+                          <Minus className="size-3" />
+                        </button>
+                        <div className="w-8 text-center font-bold text-xs text-foreground">
+                          {modalQty}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setModalQty((q) => q + 1)}
+                          className="size-8 flex items-center justify-center hover:bg-muted cursor-pointer transition-colors"
+                        >
+                          <Plus className="size-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Description Text */}
+                    {(selectedProductForDetails.description || selectedProductForDetails.shortDescription) && (
+                      <div className="space-y-1 pt-2 border-t border-border/60">
+                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                          বিবরণ:
+                        </span>
+                        <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line max-h-28 overflow-y-auto bg-muted/20 p-2.5 rounded-lg border border-border/40">
+                          {selectedProductForDetails.description || selectedProductForDetails.shortDescription}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="px-5 py-3.5 border-t border-border bg-muted/20 flex items-center gap-3 flex-shrink-0">
+                {isAlreadySelected && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateSelections(selectedProductForDetails, 0);
+                      setShowDetailsModal(false);
+                      toast.info(`${selectedProductForDetails.name} সিলেকশন থেকে সরানো হয়েছে`);
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    বাদ দিন
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateSelections(
+                      selectedProductForDetails,
+                      modalQty,
+                      modalSelectedSize,
+                      modalSelectedColor
+                    );
+                    setShowDetailsModal(false);
+                    toast.success(
+                      `${selectedProductForDetails.name} অর্ডারে সফলভাবে যুক্ত হয়েছে!`,
+                      {
+                        description: `কালার: ${modalSelectedColor || "Standard"} · সাইজ: ${modalSelectedSize || "Standard"} · পরিমাণ: ${modalQty}টি`,
+                      }
+                    );
+                  }}
+                  className="flex-1 h-11 bg-primary hover:opacity-90 text-primary-foreground font-black rounded-xl shadow-md hover:shadow-lg transition-all text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <CheckCircle2 className="size-4" />
+                  <span>
+                    {isAlreadySelected
+                      ? `সিলেকশন আপডেট করুন (৳${(modalSizePrice * modalQty).toLocaleString()})`
+                      : `অর্ডারে সিলেক্ট করুন (৳${(modalSizePrice * modalQty).toLocaleString()})`}
+                  </span>
+                </button>
+              </div>
             </div>
-
-            <div className="space-y-1 text-center">
-              <h3 className="text-lg font-bold text-foreground">
-                {selectedProductForDetails.name}
-              </h3>
-              <p className="text-primary font-extrabold text-lg">
-                ৳{getProductPrice(selectedProductForDetails).toLocaleString()}
-              </p>
-            </div>
-
-            {selectedProductForDetails.description && (
-              <p className="text-xs text-muted-foreground leading-relaxed max-h-32 overflow-y-auto whitespace-pre-line bg-muted/20 p-3 rounded-lg border border-border/50">
-                {selectedProductForDetails.description}
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                toggleProductCheck(selectedProductForDetails);
-                setShowDetailsModal(false);
-              }}
-              className="w-full h-11 bg-primary hover:opacity-90 text-primary-foreground font-bold rounded-xl shadow-md transition-all text-sm cursor-pointer"
-            >
-              {isProductSelected(selectedProductForDetails) ? "পণ্যটি যোগ করা আছে" : "পণ্যটি নির্বাচন করুন"}
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
