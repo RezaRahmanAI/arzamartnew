@@ -98,11 +98,80 @@ public class CustomLandingPageController : ControllerBase
             };
         }
 
+        // Extract any explicitly selected product IDs from sectionsJson (product-select section)
+        var configuredProductIds = new List<string>();
+        if (!string.IsNullOrWhiteSpace(config?.SectionsJson))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(config.SectionsJson);
+                if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var sectionEl in doc.RootElement.EnumerateArray())
+                    {
+                        if (sectionEl.TryGetProperty("type", out var typeProp) && typeProp.GetString() == "product-select")
+                        {
+                            if (sectionEl.TryGetProperty("settings", out var settingsProp) &&
+                                settingsProp.TryGetProperty("selectedProductIds", out var idsProp) &&
+                                idsProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            {
+                                foreach (var idEl in idsProp.EnumerateArray())
+                                {
+                                    var val = idEl.GetString();
+                                    if (!string.IsNullOrWhiteSpace(val))
+                                    {
+                                        configuredProductIds.Add(val);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore JSON parsing exceptions
+            }
+        }
+
+        var configuredGuids = configuredProductIds
+            .Where(id => Guid.TryParse(id, out _))
+            .Select(Guid.Parse)
+            .ToList();
+
+        var configuredSlugs = configuredProductIds
+            .Where(id => !Guid.TryParse(id, out _))
+            .ToList();
+
+        var selectedProducts = new List<dynamic>();
+        if (configuredGuids.Count > 0 || configuredSlugs.Count > 0)
+        {
+            var selFromDb = await _context.Products
+                .AsNoTracking()
+                .Include(p => p.Images)
+                .Include(p => p.Variants)
+                .Where(p => p.Id != product.Id && p.IsActive && (configuredGuids.Contains(p.Id) || (p.Slug != null && configuredSlugs.Contains(p.Slug))))
+                .Select(p => new
+                {
+                    id = p.Id,
+                    name = p.Name,
+                    slug = p.Slug,
+                    price = p.DiscountPrice ?? p.BasePrice,
+                    compareAtPrice = p.DiscountPrice.HasValue ? p.BasePrice : (decimal?)null,
+                    imageUrl = p.Images.Where(i => i.IsMain).Select(i => i.ImageUrl).FirstOrDefault() ?? p.Images.Select(i => i.ImageUrl).FirstOrDefault() ?? "",
+                    isFeatured = p.IsFeatured,
+                    variants = p.Variants.Select(v => new { id = v.Id, name = v.Name, priceOverride = v.PriceOverride, stockQuantity = v.StockQuantity })
+                })
+                .ToListAsync(ct);
+
+            selectedProducts.AddRange(selFromDb);
+        }
+
         var relatedProducts = await _context.Products
             .AsNoTracking()
             .Include(p => p.Images)
             .Include(p => p.Variants)
-            .Where(p => p.Id != product.Id && p.CategoryId == product.CategoryId && p.IsActive)
+            .Where(p => p.Id != product.Id && p.CategoryId == product.CategoryId && p.IsActive && !configuredGuids.Contains(p.Id))
             .OrderBy(p => p.IsFeatured ? 0 : 1)
             .ThenByDescending(p => p.CreatedAtUtc)
             .Take(12)
@@ -119,32 +188,7 @@ public class CustomLandingPageController : ControllerBase
             })
             .ToListAsync(ct);
 
-        if (relatedProducts.Count < 6)
-        {
-            var existingIds = relatedProducts.Select(r => r.id).Append(product.Id).ToList();
-            var additionalProducts = await _context.Products
-                .AsNoTracking()
-                .Include(p => p.Images)
-                .Include(p => p.Variants)
-                .Where(p => !existingIds.Contains(p.Id) && p.IsActive)
-                .OrderBy(p => p.IsFeatured ? 0 : 1)
-                .ThenByDescending(p => p.CreatedAtUtc)
-                .Take(12 - relatedProducts.Count)
-                .Select(p => new
-                {
-                    id = p.Id,
-                    name = p.Name,
-                    slug = p.Slug,
-                    price = p.DiscountPrice ?? p.BasePrice,
-                    compareAtPrice = p.DiscountPrice.HasValue ? p.BasePrice : (decimal?)null,
-                    imageUrl = p.Images.Where(i => i.IsMain).Select(i => i.ImageUrl).FirstOrDefault() ?? p.Images.Select(i => i.ImageUrl).FirstOrDefault() ?? "",
-                    isFeatured = p.IsFeatured,
-                    variants = p.Variants.Select(v => new { id = v.Id, name = v.Name, priceOverride = v.PriceOverride, stockQuantity = v.StockQuantity })
-                })
-                .ToListAsync(ct);
-
-            relatedProducts.AddRange(additionalProducts);
-        }
+        var combinedRelated = selectedProducts.Concat(relatedProducts).ToList();
 
         var productDto = new
         {
@@ -168,7 +212,7 @@ public class CustomLandingPageController : ControllerBase
         {
             Product = productDto,
             Config = configDto,
-            RelatedProducts = relatedProducts
+            RelatedProducts = combinedRelated
         });
     }
 

@@ -78,6 +78,7 @@ export default function CustomLandingPageRoute({
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<LandingPageData | null>(null);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [allStoreProducts, setAllStoreProducts] = useState<UnifiedProduct[]>([]);
 
   // Selection State
   const [productSelections, setProductSelections] = useState<ProductSelectionState>({});
@@ -186,12 +187,32 @@ export default function CustomLandingPageRoute({
                 colors: p.colors || staticProducts.find((sp) => sp.slug === p.slug || sp.id === p.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
               }));
 
+            const mappedStoreProds: UnifiedProduct[] = prodsRes.map((p) => ({
+              id: p.id || p.slug,
+              name: p.name,
+              slug: p.slug,
+              description: p.description || "",
+              shortDescription: p.description || "",
+              price: p.price,
+              compareAtPrice: p.compareAt || null,
+              imageUrl: p.image || (p.images?.[0] ?? ""),
+              images: (p.images || [p.image || ""]).map((img, idx) => ({ imageUrl: img, isMain: idx === 0 })),
+              variants: (p.sizes || []).map((s) => ({
+                id: s,
+                name: s,
+                stockQuantity: p.sizeStock?.[s] ?? 10,
+                priceOverride: p.sizePrices?.[s],
+              })),
+              colors: p.colors || staticProducts.find((sp) => sp.slug === p.slug || sp.id === p.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
+            }));
+            setAllStoreProducts(mappedStoreProds);
+
             if (pageData) {
               if (!pageData.relatedProducts || pageData.relatedProducts.length === 0) {
                 pageData.relatedProducts = extraProds;
               } else {
                 extraProds.forEach((ep) => {
-                  if (!pageData?.relatedProducts?.some((rp) => rp.id === ep.id)) {
+                  if (!pageData?.relatedProducts?.some((rp) => rp.id === ep.id || (rp.slug && rp.slug === ep.slug))) {
                     pageData?.relatedProducts?.push(ep);
                   }
                 });
@@ -365,30 +386,76 @@ export default function CustomLandingPageRoute({
     const prodSec = activeSections.find((s) => s.type === "product-select");
     const configuredProductIds = (prodSec?.settings?.selectedProductIds as string[]) || [];
 
-    if (configuredProductIds.length > 0 && data.relatedProducts && data.relatedProducts.length > 0) {
-      // If admin configured specific products, include ONLY those matching selectedProductIds (plus main product is always first)
-      if (data.relatedProducts && data.relatedProducts.length > 0) {
-        data.relatedProducts.forEach((rp) => {
-          const isMatched = configuredProductIds.includes(rp.id) || (rp.slug && configuredProductIds.includes(rp.slug));
-          if (isMatched && !list.some((item) => item.id === rp.id || (rp.slug && item.slug === rp.slug))) {
-            const rpColors = rp.colors || staticProducts.find((sp) => sp.slug === rp.slug || sp.id === rp.id || sp.name.toLowerCase() === rp.name.toLowerCase())?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
+    if (configuredProductIds.length > 0) {
+      configuredProductIds.forEach((targetId) => {
+        if (!targetId || targetId === data.product.id || targetId === data.product.slug) return;
+
+        // 1. Check data.relatedProducts
+        const fromRelated = data.relatedProducts?.find(
+          (rp) => rp.id === targetId || (rp.slug && rp.slug === targetId)
+        );
+
+        if (fromRelated) {
+          if (!list.some((item) => item.id === fromRelated.id || (fromRelated.slug && item.slug === fromRelated.slug))) {
+            const rpColors = fromRelated.colors || staticProducts.find((sp) => sp.slug === fromRelated.slug || sp.id === fromRelated.id || sp.name.toLowerCase() === fromRelated.name.toLowerCase())?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
             list.push({
-              id: rp.id,
-              name: rp.name,
-              slug: rp.slug,
-              price: rp.price,
-              compareAtPrice: rp.compareAtPrice || null,
-              imageUrl: rp.imageUrl,
-              variants: rp.variants,
+              id: fromRelated.id,
+              name: fromRelated.name,
+              slug: fromRelated.slug,
+              price: fromRelated.price,
+              compareAtPrice: fromRelated.compareAtPrice || null,
+              imageUrl: fromRelated.imageUrl,
+              variants: fromRelated.variants,
               colors: rpColors,
             });
           }
-        });
-      }
+          return;
+        }
+
+        // 2. Check allStoreProducts
+        const fromStore = allStoreProducts.find(
+          (sp) => sp.id === targetId || sp.slug === targetId || (sp.name && targetId && sp.name.toLowerCase() === targetId.toLowerCase())
+        );
+
+        if (fromStore) {
+          if (!list.some((item) => item.id === fromStore.id || (fromStore.slug && item.slug === fromStore.slug))) {
+            list.push(fromStore);
+          }
+          return;
+        }
+
+        // 3. Fallback to staticProducts
+        const fromStatic = staticProducts.find(
+          (sp) => sp.id === targetId || sp.slug === targetId || (sp.name && targetId && sp.name.toLowerCase() === targetId.toLowerCase())
+        );
+
+        if (fromStatic) {
+          if (!list.some((item) => item.id === fromStatic.id || item.slug === fromStatic.slug)) {
+            list.push({
+              id: fromStatic.id || fromStatic.slug,
+              name: fromStatic.name,
+              slug: fromStatic.slug,
+              description: fromStatic.description,
+              shortDescription: fromStatic.description,
+              price: fromStatic.price,
+              compareAtPrice: fromStatic.compareAt || null,
+              imageUrl: fromStatic.image || (fromStatic.images?.[0] ?? ""),
+              images: (fromStatic.images || [fromStatic.image]).map((img, idx) => ({ imageUrl: img, isMain: idx === 0 })),
+              variants: (fromStatic.sizes || []).map((s) => ({
+                id: s,
+                name: s,
+                stockQuantity: fromStatic.sizeStock?.[s] ?? 10,
+                priceOverride: fromStatic.sizePrices?.[s],
+              })),
+              colors: fromStatic.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
+            });
+          }
+        }
+      });
     }
 
     return list;
-  }, [data, activeSections]);
+  }, [data, activeSections, allStoreProducts]);
 
   // Selection Helper Methods
   const getProductPrice = useCallback((p: UnifiedProduct) => {
