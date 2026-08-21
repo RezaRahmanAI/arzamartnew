@@ -1111,35 +1111,51 @@ export default function CustomLandingPageRoute({
                               </div>
                             )}
 
-                            {/* Quantity Selection */}
-                            <div className="flex items-center justify-between pt-3 border-t border-border/70">
-                              <span className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest">
-                                Qty
-                              </span>
-                              <div className="flex items-center border border-border rounded-md overflow-hidden bg-background">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateProductQuantity(p, -1);
-                                  }}
-                                  className="w-9 h-9 flex items-center justify-center hover:bg-muted cursor-pointer"
-                                >
-                                  <Minus className="size-2.5" />
-                                </button>
-                                <div className="w-9 h-9 flex items-center justify-center font-bold text-sm text-foreground">
-                                  {qty || 1}
+                            {/* Bottom Controls: Bistarito (Details) & Quantity Selection */}
+                            <div className="flex items-center justify-between gap-2 pt-3 border-t border-border/70">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openProductDetails(p);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/60 hover:bg-muted text-foreground border border-border text-xs font-bold transition-all cursor-pointer hover:border-primary/50"
+                              >
+                                <span>বিস্তারিত</span>
+                                <ChevronRight className="size-3.5 text-muted-foreground" />
+                              </button>
+
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest hidden sm:inline-block">
+                                  Qty
+                                </span>
+                                <div className="flex items-center border border-border rounded-md overflow-hidden bg-background">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateProductQuantity(p, -1);
+                                    }}
+                                    className="w-8 sm:w-9 h-8 sm:h-9 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                    aria-label="Decrease quantity"
+                                  >
+                                    <Minus className="size-2.5" />
+                                  </button>
+                                  <div className="w-8 sm:w-9 h-8 sm:h-9 flex items-center justify-center font-bold text-xs sm:text-sm text-foreground">
+                                    {qty || 1}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateProductQuantity(p, 1);
+                                    }}
+                                    className="w-8 sm:w-9 h-8 sm:h-9 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                    aria-label="Increase quantity"
+                                  >
+                                    <Plus className="size-2.5" />
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateProductQuantity(p, 1);
-                                  }}
-                                  className="w-9 h-9 flex items-center justify-center hover:bg-muted cursor-pointer"
-                                >
-                                  <Plus className="size-2.5" />
-                                </button>
                               </div>
                             </div>
                           </div>
