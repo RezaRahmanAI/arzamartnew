@@ -59,7 +59,7 @@ function AccountContent() {
     setPPhone(user?.phone || "");
     setPAddress(user?.address || master?.address || "");
     setPNote(master?.defaultNote || "");
-  }, [user?.id, user?.phone]);
+  }, [user?.id, user?.phone, user?.name, user?.address, findCustomerByPhone]);
 
   const customerInfo = {
     customerId: user?.id || "CUST-1001",

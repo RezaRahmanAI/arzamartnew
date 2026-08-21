@@ -223,7 +223,7 @@ export default function AdminPreOrderPage() {
         toast.info(`Editing Pre-Order #${existing.id}`);
       }
     }
-  }, [editOrderId, orders]);
+  }, [editOrderId, orders, products]);
   
   // Pre-Order specific state
   const [expectedDispatchDate, setExpectedDispatchDate] = useState(() => {

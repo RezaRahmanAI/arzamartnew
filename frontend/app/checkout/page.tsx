@@ -51,7 +51,7 @@ export default function CheckoutPage() {
     } catch {
       /* ignore */
     }
-  }, [user?.phone]);
+  }, [user?.phone, findCustomerByPhone]);
 
   useEffect(() => {
     const t = setTimeout(() => {

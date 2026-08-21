@@ -230,7 +230,7 @@ export default function AdminManualOrder() {
         toast.info(`Editing Order #${existing.id}`);
       }
     }
-  }, [editOrderId, orders]);
+  }, [editOrderId, orders, products]);
 
   // Source Page change handler -> automatically update Social Page dropdown options & default selected page
   const handleSourcePageChange = (newSourcePage: string) => {
