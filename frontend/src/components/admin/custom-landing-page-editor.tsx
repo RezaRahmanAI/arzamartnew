@@ -621,6 +621,33 @@ export function CustomLandingPageEditor({
                     </div>
                   )}
 
+                  {/* Info Banner Editor */}
+                  {sec.type === "info-banner" && (
+                    <div className="space-y-2 pt-1 text-xs">
+                      <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                        ইনফো ব্যানার মেসেজ / বার্তা
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={
+                          (sec.settings?.text as string) ??
+                          (sec.settings?.infoBannerText as string) ??
+                          config.trustBannerDescription ??
+                          "পণ্য হাতে পেয়ে দেখে মূল্য পরিশোধের সম্পূর্ণ নিশ্চয়তা!"
+                        }
+                        onChange={(e) => {
+                          const updatedSec = {
+                            ...sec,
+                            settings: { ...sec.settings, text: e.target.value },
+                          };
+                          onSectionsChange(sections.map((s) => (s.id === sec.id ? updatedSec : s)));
+                        }}
+                        placeholder="পণ্য হাতে পেয়ে দেখে মূল্য পরিশোধের সম্পূর্ণ নিশ্চয়তা!"
+                        className="w-full px-2.5 py-1.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                  )}
+
                   {/* Product Selection Section Editor */}
                   {sec.type === "product-select" && (
                     <div className="space-y-3 pt-1 text-xs">

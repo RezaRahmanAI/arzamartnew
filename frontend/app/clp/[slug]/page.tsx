@@ -922,7 +922,7 @@ export default function CustomLandingPageRoute({
                   <div className="max-w-3xl mx-auto flex items-center justify-center gap-3 text-amber-900 dark:text-amber-200">
                     <ShieldCheck className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
                     <p className="text-xs md:text-sm font-semibold">
-                      {config?.trustBannerText || "পণ্য হাতে পেয়ে দেখে মূল্য পরিশোধের সম্পূর্ণ নিশ্চয়তা!"}
+                      {(sec.settings?.text as string) || (sec.settings?.infoBannerText as string) || config?.trustBannerDescription || "পণ্য হাতে পেয়ে দেখে মূল্য পরিশোধের সম্পূর্ণ নিশ্চয়তা!"}
                     </p>
                   </div>
                 </section>
