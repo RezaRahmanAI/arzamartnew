@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, use } from "react";
+import { useEffect, useState, useMemo, useCallback, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
@@ -365,7 +365,7 @@ export default function CustomLandingPageRoute({
     const prodSec = activeSections.find((s) => s.type === "product-select");
     const configuredProductIds = (prodSec?.settings?.selectedProductIds as string[]) || [];
 
-    if (configuredProductIds.length > 0) {
+    if (configuredProductIds.length > 0 && data.relatedProducts && data.relatedProducts.length > 0) {
       // If admin configured specific products, include ONLY those matching selectedProductIds (plus main product is always first)
       if (data.relatedProducts && data.relatedProducts.length > 0) {
         data.relatedProducts.forEach((rp) => {
