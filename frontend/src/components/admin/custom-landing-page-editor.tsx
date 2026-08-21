@@ -785,8 +785,7 @@ export function CustomLandingPageEditor({
 
                   {/* Other default sections */}
                   {(sec.type === "reviews" ||
-                    sec.type === "order-form" ||
-                    sec.type === "info-banner") && (
+                    sec.type === "order-form") && (
                     <div className="py-2 text-center text-xs text-muted-foreground bg-muted/20 rounded-lg">
                       এই সেকশনটি স্বয়ংক্রিয়ভাবে অপটিমাইজড এবং লাইভ ডাটার সাথে কানেক্টেড।
                     </div>

@@ -32,6 +32,7 @@ export type Product = {
   compareAt?: number;
   mrp?: number;
   image: string;
+  imageUrl?: string;
   sizes: string[];
   colors: string[];
   description: string;
