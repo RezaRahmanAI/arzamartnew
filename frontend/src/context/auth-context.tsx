@@ -362,13 +362,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success("Logged into Admin Panel", { description: `Role: ${foundStaff.role}` });
       return true;
     },
-    [staffList]
+    [staffList, saveUserSession]
   );
 
   const logout = useCallback(() => {
     saveUserSession(null);
     toast.info("Logged out successfully");
-  }, []);
+  }, [saveUserSession]);
 
   return (
       <AuthContext.Provider

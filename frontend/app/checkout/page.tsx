@@ -128,7 +128,7 @@ export default function CheckoutPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [detailedLines, draftId, subtotal, delivery, saveIncomplete, selectedCity, selectedArea]);
+  }, [detailedLines, draftId, subtotal, delivery, saveIncomplete, selectedCity, selectedArea, generateNextIncompleteOrderId]);
 
   if (detailedLines.length === 0) {
     return (

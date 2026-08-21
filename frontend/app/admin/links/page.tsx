@@ -102,7 +102,7 @@ export default function AdminLinks() {
               </TableRow>
             ) : (
               filteredProducts.map((p) => {
-                const imgSource = p.imageUrl || p.image;
+                const imgSource = (p as any).imageUrl || p.image;
                 const clpPath = `/clp/${p.slug}`;
                 const promoPath = `/promotion/${p.slug}`;
                 const isClpCopied = copiedPath === clpPath;

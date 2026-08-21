@@ -391,7 +391,7 @@ export default function CustomLandingPageRoute({
   }, [data, activeSections]);
 
   // Selection Helper Methods
-  const getProductPrice = (p: UnifiedProduct) => {
+  const getProductPrice = useCallback((p: UnifiedProduct) => {
     const size = productSelections[p.id]?.selectedSize;
     if (size && data?.config?.sizePrices?.[size]) {
       return data.config.sizePrices[size];
@@ -401,7 +401,7 @@ export default function CustomLandingPageRoute({
       if (v?.priceOverride) return v.priceOverride;
     }
     return p.price;
-  };
+  }, [productSelections, data?.config?.sizePrices]);
 
   const isProductSelected = (p: UnifiedProduct): boolean => {
     return (productSelections[p.id]?.quantity ?? 0) > 0;
@@ -555,7 +555,7 @@ export default function CustomLandingPageRoute({
       const price = getProductPrice(item.product);
       return sum + price * item.quantity;
     }, 0);
-  }, [selectedProductList, data?.config?.sizePrices]);
+  }, [selectedProductList, getProductPrice]);
 
   const grandTotal = subtotal + deliveryCharge;
 
