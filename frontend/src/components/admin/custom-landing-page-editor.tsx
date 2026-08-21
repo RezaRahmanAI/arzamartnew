@@ -624,36 +624,6 @@ export function CustomLandingPageEditor({
                   {/* Product Selection Section Editor */}
                   {sec.type === "product-select" && (
                     <div className="space-y-3 pt-1 text-xs">
-                      <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-900 dark:text-blue-200 space-y-1">
-                        <p className="font-bold flex items-center gap-1.5">
-                          <Boxes className="size-4 text-blue-600 dark:text-blue-400" />
-                          পণ্য নির্বাচন কনফিগারেশন
-                        </p>
-                        <p className="text-[11px] leading-relaxed text-blue-800/80 dark:text-blue-300/80">
-                          নিচের তালিকা থেকে যেসব পণ্য সিলেক্ট করবেন, শুধুমাত্র সেই পণ্যগুলোই কাস্টমার ল্যান্ডিং পেজে দেখতে পাবেন। মূল প্রোডাক্টটি ডিফল্টভাবে থাকবে।
-                        </p>
-                      </div>
-
-                      {/* Section Title & Subtitle */}
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-muted-foreground uppercase">
-                          সেকশন শিরোনাম
-                        </label>
-                        <input
-                          type="text"
-                          value={(sec.settings?.sectionTitle as string) || "পণ্য নির্বাচন করুন"}
-                          onChange={(e) => {
-                            const updatedSec = {
-                              ...sec,
-                              settings: { ...sec.settings, sectionTitle: e.target.value },
-                            };
-                            onSectionsChange(sections.map((s) => (s.id === sec.id ? updatedSec : s)));
-                          }}
-                          placeholder="পণ্য নির্বাচন করুন"
-                          className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-
                       {/* Search & Actions */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
