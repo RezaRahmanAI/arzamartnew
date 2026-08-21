@@ -43,7 +43,9 @@ import {
   Share2,
   ArrowRightLeft,
   Pencil,
-  ExternalLink
+  ExternalLink,
+  X,
+  RotateCcw,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { getSavedNotesStore } from "@/components/admin/order-notes-modal";
@@ -81,15 +83,23 @@ const nextStatusLabels: Partial<Record<OrderStatus, string>> = {
   shipped: "Deliver",
 };
 
+const getTodayRange = (): DateRange => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  return { from: start, to: end };
+};
+
 export default function AdminOrders() {
   const router = useRouter();
   const [orderIdQuery, setOrderIdQuery] = useState("");
   const [phoneQuery, setPhoneQuery] = useState("");
   
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("pending");
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "preorder" | "website">("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | "facebook" | "instagram">("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(getTodayRange);
 
   const [activeNotesOrder, setActiveNotesOrder] = useState<Order | null>(null);
   const [activeTrackingOrder, setActiveTrackingOrder] = useState<Order | null>(null);
@@ -134,11 +144,11 @@ export default function AdminOrders() {
   const filteredOrders = useMemo(() => {
     let filtered = data;
 
-    if (orderIdQuery) {
-      filtered = filtered.filter(o => o.id.toLowerCase().includes(orderIdQuery.toLowerCase()));
+    if (orderIdQuery.trim()) {
+      filtered = filtered.filter(o => o.id.toLowerCase().includes(orderIdQuery.trim().toLowerCase()));
     }
-    if (phoneQuery) {
-      filtered = filtered.filter(o => o.phone.includes(phoneQuery));
+    if (phoneQuery.trim()) {
+      filtered = filtered.filter(o => o.phone.includes(phoneQuery.trim()));
     }
     if (statusFilter !== "all") {
       filtered = filtered.filter(o => o.status === statusFilter);
@@ -154,10 +164,17 @@ export default function AdminOrders() {
       filtered = filtered.filter(o => o.socialMediaSourceName === "Instagram");
     }
     if (dateRange?.from) {
-      filtered = filtered.filter(o => new Date(o.date) >= dateRange.from!);
-    }
-    if (dateRange?.to) {
-      filtered = filtered.filter(o => new Date(o.date) <= dateRange.to!);
+      const from = new Date(dateRange.from);
+      from.setHours(0, 0, 0, 0);
+      const to = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+      to.setHours(23, 59, 59, 999);
+
+      filtered = filtered.filter(o => {
+        if (!o.date) return false;
+        const orderDate = new Date(o.date);
+        if (isNaN(orderDate.getTime())) return true;
+        return orderDate >= from && orderDate <= to;
+      });
     }
 
     return filtered;
@@ -166,7 +183,38 @@ export default function AdminOrders() {
   const totalPages = Math.ceil(filteredOrders.length / pageSize) || 1;
   const paginatedOrders = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
 
-  const activeFiltersCount = (statusFilter !== "all" ? 1 : 0) + (orderTypeFilter !== "all" ? 1 : 0) + (sourceFilter !== "all" ? 1 : 0);
+  const activeFiltersCount =
+    (statusFilter !== "all" ? 1 : 0) +
+    (orderTypeFilter !== "all" ? 1 : 0) +
+    (sourceFilter !== "all" ? 1 : 0) +
+    (dateRange?.from ? 1 : 0) +
+    (orderIdQuery.trim() ? 1 : 0) +
+    (phoneQuery.trim() ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setOrderIdQuery("");
+    setPhoneQuery("");
+    setStatusFilter("all");
+    setOrderTypeFilter("all");
+    setSourceFilter("all");
+    setDateRange(undefined);
+    setPage(1);
+    toast.info("All filters cleared (সব ফিল্টার ক্লিয়ার করা হয়েছে)");
+  };
+
+  const clearNonDateFilters = () => {
+    setStatusFilter("all");
+    setOrderTypeFilter("all");
+    setSourceFilter("all");
+  };
+
+  const isTodayActive = useMemo(() => {
+    if (!dateRange?.from) return false;
+    const now = new Date();
+    const isSameStart = dateRange.from.getDate() === now.getDate() && dateRange.from.getMonth() === now.getMonth() && dateRange.from.getFullYear() === now.getFullYear();
+    const isSameEnd = !dateRange.to || (dateRange.to.getDate() === now.getDate() && dateRange.to.getMonth() === now.getMonth() && dateRange.to.getFullYear() === now.getFullYear());
+    return isSameStart && isSameEnd;
+  }, [dateRange]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -316,93 +364,312 @@ export default function AdminOrders() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-xl border shadow-sm">
-        <div className="relative flex-1 min-w-[200px]">
-          <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by Order ID..."
-            value={orderIdQuery}
-            onChange={(e) => setOrderIdQuery(e.target.value)}
-            className="pl-9 h-9 text-xs"
-          />
-        </div>
+      <div className="space-y-2.5">
+        <div className="flex flex-wrap items-center gap-3 bg-card p-3 rounded-xl border shadow-sm">
+          <div className="relative flex-1 min-w-[180px]">
+            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search Order ID..."
+              value={orderIdQuery}
+              onChange={(e) => setOrderIdQuery(e.target.value)}
+              className="pl-9 h-9 text-xs"
+            />
+            {orderIdQuery && (
+              <button
+                onClick={() => setOrderIdQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
 
-        <div className="relative flex-1 min-w-[200px]">
-          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by Phone Number..."
-            value={phoneQuery}
-            onChange={(e) => setPhoneQuery(e.target.value)}
-            className="pl-9 h-9 text-xs"
-          />
-        </div>
+          <div className="relative flex-1 min-w-[180px]">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search Phone..."
+              value={phoneQuery}
+              onChange={(e) => setPhoneQuery(e.target.value)}
+              className="pl-9 h-9 text-xs"
+            />
+            {phoneQuery && (
+              <button
+                onClick={() => setPhoneQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
 
-        {/* Filter Popover */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2 text-xs h-9">
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span>Filters</span>
-              {activeFiltersCount > 0 && (
-                <span className="ml-1 rounded-full bg-primary px-1.5 py-0.2 text-[10px] font-bold text-primary-foreground">
-                  {activeFiltersCount}
+          {/* Filter Popover */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={statusFilter !== "all" || orderTypeFilter !== "all" || sourceFilter !== "all" ? "default" : "outline"}
+                size="sm"
+                className={`gap-2 text-xs h-9 font-medium transition-colors ${
+                  statusFilter !== "all" || orderTypeFilter !== "all" || sourceFilter !== "all"
+                    ? "bg-primary/10 text-primary border-primary/40 hover:bg-primary/20 hover:text-primary"
+                    : ""
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span className="truncate">
+                  {statusFilter !== "all"
+                    ? `Status: ${statusFilter.toUpperCase()}`
+                    : orderTypeFilter !== "all"
+                    ? `Type: ${orderTypeFilter}`
+                    : sourceFilter !== "all"
+                    ? `Source: ${sourceFilter}`
+                    : "Filter Orders"}
                 </span>
-              )}
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80 p-4">
-            <div className="space-y-4">
+                {(statusFilter !== "all" ? 1 : 0) + (orderTypeFilter !== "all" ? 1 : 0) + (sourceFilter !== "all" ? 1 : 0) > 0 && (
+                  <span className="rounded-full bg-primary px-1.5 py-0.2 text-[10px] font-bold text-primary-foreground">
+                    {(statusFilter !== "all" ? 1 : 0) + (orderTypeFilter !== "all" ? 1 : 0) + (sourceFilter !== "all" ? 1 : 0)}
+                  </span>
+                )}
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-84 p-4 space-y-4 shadow-lg" align="start">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Filter Orders</h4>
+                {(statusFilter !== "all" || orderTypeFilter !== "all" || sourceFilter !== "all") && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearNonDateFilters}
+                    className="h-6 text-xs px-2 text-destructive hover:bg-destructive/10 hover:text-destructive font-semibold"
+                  >
+                    <RotateCcw className="size-3 mr-1" /> Clear Filters
+                  </Button>
+                )}
+              </div>
+
               <div>
-                <h4 className="text-sm font-medium mb-2">Status</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant={statusFilter === "all" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter("all")}>All</Button>
-                  {statusOptions.slice(0, 5).map(s => (
-                    <Button key={s} variant={statusFilter === s ? "default" : "outline"} size="sm" onClick={() => setStatusFilter(s)} className="capitalize">{s}</Button>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-muted-foreground uppercase">Order Status</span>
+                  <span className="text-[11px] font-semibold text-primary capitalize">{statusFilter}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <Button
+                    variant={statusFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("all")}
+                    className="h-7 text-xs"
+                  >
+                    All Status
+                  </Button>
+                  {statusOptions.map(s => (
+                    <Button
+                      key={s}
+                      variant={statusFilter === s ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setStatusFilter(s)}
+                      className="h-7 text-xs capitalize truncate px-1"
+                    >
+                      {s}
+                    </Button>
                   ))}
                 </div>
               </div>
+
               <div>
-                <h4 className="text-sm font-medium mb-2">Order Type</h4>
-                <div className="flex gap-2">
-                  <Button variant={orderTypeFilter === "all" ? "default" : "outline"} size="sm" onClick={() => setOrderTypeFilter("all")}>All</Button>
-                  <Button variant={orderTypeFilter === "website" ? "default" : "outline"} size="sm" onClick={() => setOrderTypeFilter("website")}>Website</Button>
-                  <Button variant={orderTypeFilter === "preorder" ? "default" : "outline"} size="sm" onClick={() => setOrderTypeFilter("preorder")}>Pre-Order</Button>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-muted-foreground uppercase">Order Type</span>
+                  <span className="text-[11px] font-semibold text-primary capitalize">{orderTypeFilter}</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <Button
+                    variant={orderTypeFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setOrderTypeFilter("all")}
+                    className="flex-1 h-7 text-xs"
+                  >
+                    All Types
+                  </Button>
+                  <Button
+                    variant={orderTypeFilter === "website" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setOrderTypeFilter("website")}
+                    className="flex-1 h-7 text-xs"
+                  >
+                    Website
+                  </Button>
+                  <Button
+                    variant={orderTypeFilter === "preorder" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setOrderTypeFilter("preorder")}
+                    className="flex-1 h-7 text-xs"
+                  >
+                    Pre-Order
+                  </Button>
                 </div>
               </div>
+
               <div>
-                <h4 className="text-sm font-medium mb-2">Source</h4>
-                <div className="flex gap-2">
-                  <Button variant={sourceFilter === "all" ? "default" : "outline"} size="sm" onClick={() => setSourceFilter("all")}>All</Button>
-                  <Button variant={sourceFilter === "facebook" ? "default" : "outline"} size="sm" onClick={() => setSourceFilter("facebook")}>Facebook</Button>
-                  <Button variant={sourceFilter === "instagram" ? "default" : "outline"} size="sm" onClick={() => setSourceFilter("instagram")}>Instagram</Button>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-muted-foreground uppercase">Traffic Source</span>
+                  <span className="text-[11px] font-semibold text-primary capitalize">{sourceFilter}</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <Button
+                    variant={sourceFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSourceFilter("all")}
+                    className="flex-1 h-7 text-xs"
+                  >
+                    All Sources
+                  </Button>
+                  <Button
+                    variant={sourceFilter === "facebook" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSourceFilter("facebook")}
+                    className="flex-1 h-7 text-xs"
+                  >
+                    Facebook
+                  </Button>
+                  <Button
+                    variant={sourceFilter === "instagram" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSourceFilter("instagram")}
+                    className="flex-1 h-7 text-xs"
+                  >
+                    Instagram
+                  </Button>
                 </div>
               </div>
-            </div>
-          </PopoverContent>
-        </Popover>
 
-        <div className="w-full md:w-auto">
-          <DateRangePicker onUpdate={setDateRange} />
+              <div className="pt-2 border-t border-border flex items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="w-full text-xs h-7 text-destructive border-destructive/30 hover:bg-destructive/10"
+                >
+                  <RotateCcw className="size-3 mr-1.5" /> Clear All Filters
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <div className="w-full sm:w-auto">
+            <DateRangePicker value={dateRange} onUpdate={setDateRange} />
+          </div>
+
+          <div className="flex-1" />
+          
+          <div className="flex gap-2 w-full md:w-auto">
+            <Button variant="secondary" className="gap-2 w-full md:w-auto text-xs h-9" asChild>
+              <Link href="/admin/manual-order">
+                <ShoppingCart className="h-4 w-4" /> New Order
+              </Link>
+            </Button>
+            <Button className="gap-2 w-full md:w-auto text-xs h-9" asChild>
+              <Link href="/admin/pre-order">
+                <PackagePlus className="h-4 w-4" /> Pre-order
+              </Link>
+            </Button>
+            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         </div>
 
-        <div className="flex-1" />
-        
-        <div className="flex gap-2 w-full md:w-auto">
-          <Button variant="secondary" className="gap-2 w-full md:w-auto" asChild>
-            <Link href="/admin/manual-order">
-              <ShoppingCart className="h-4 w-4" /> New Order
-            </Link>
-          </Button>
-          <Button className="gap-2 w-full md:w-auto" asChild>
-            <Link href="/admin/pre-order">
-              <PackagePlus className="h-4 w-4" /> Pre-order
-            </Link>
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
+        {/* Active Filter Chips / Status Indicator */}
+        {activeFiltersCount > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 px-1 py-1 text-xs">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase mr-1">Active:</span>
+
+            {dateRange?.from && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium text-[11px]">
+                📅 Date: {isTodayActive ? "Today" : "Custom Range"}
+                <button
+                  onClick={() => setDateRange(undefined)}
+                  className="p-0.5 hover:bg-primary/20 rounded-full"
+                  title="Remove date filter"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            )}
+
+            {statusFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border font-medium text-[11px] capitalize">
+                🏷️ Status: {statusFilter}
+                <button
+                  onClick={() => setStatusFilter("all")}
+                  className="p-0.5 hover:bg-muted rounded-full"
+                  title="Remove status filter"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            )}
+
+            {orderTypeFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border font-medium text-[11px] capitalize">
+                📦 Type: {orderTypeFilter}
+                <button
+                  onClick={() => setOrderTypeFilter("all")}
+                  className="p-0.5 hover:bg-muted rounded-full"
+                  title="Remove type filter"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            )}
+
+            {sourceFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border font-medium text-[11px] capitalize">
+                🌐 Source: {sourceFilter}
+                <button
+                  onClick={() => setSourceFilter("all")}
+                  className="p-0.5 hover:bg-muted rounded-full"
+                  title="Remove source filter"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            )}
+
+            {orderIdQuery.trim() && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border font-medium text-[11px]">
+                🔍 ID: {orderIdQuery}
+                <button
+                  onClick={() => setOrderIdQuery("")}
+                  className="p-0.5 hover:bg-muted rounded-full"
+                  title="Clear search query"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            )}
+
+            {phoneQuery.trim() && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border font-medium text-[11px]">
+                📱 Phone: {phoneQuery}
+                <button
+                  onClick={() => setPhoneQuery("")}
+                  className="p-0.5 hover:bg-muted rounded-full"
+                  title="Clear phone query"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            )}
+
+            <button
+              onClick={clearAllFilters}
+              className="text-[11px] text-destructive hover:underline font-semibold ml-auto flex items-center gap-1"
+            >
+              <RotateCcw className="size-3" /> Clear All
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Orders Table */}
@@ -532,15 +799,22 @@ export default function AdminOrders() {
             
             {paginatedOrders.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="py-24 text-center">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground opacity-50">
-                      <PackageX className="h-8 w-8" />
+                <TableCell colSpan={9} className="py-20 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center text-muted-foreground opacity-60">
+                      <PackageX className="h-7 w-7" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-medium">No orders found</h3>
-                      <p className="text-muted-foreground text-sm">Adjust your filters to find what you're looking for.</p>
+                      <h3 className="text-base font-semibold">No orders found</h3>
+                      <p className="text-muted-foreground text-xs mt-0.5">
+                        {dateRange?.from ? "No orders found for the selected date or filter criteria." : "Adjust your search or filters to find orders."}
+                      </p>
                     </div>
+                    {activeFiltersCount > 0 && (
+                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="gap-1.5 text-xs mt-1">
+                        <RotateCcw className="size-3.5" /> View All Orders (Clear Filters)
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
