@@ -48,9 +48,13 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
   };
 
   const layoutType = section.settings?.layoutType || "A";
+  const customBg = section.settings?.backgroundColor as string;
 
   return (
-    <section className="py-10 px-4 md:px-8 border-b border-border/40 bg-card text-card-foreground">
+    <section
+      className="py-10 px-4 md:px-8 border-b border-border/40 bg-card text-card-foreground transition-colors"
+      style={customBg ? { backgroundColor: customBg } : undefined}
+    >
       <div className="max-w-4xl mx-auto">
         {/* Layout A: Title + Subtitle + Big Image */}
         {layoutType === "A" && (

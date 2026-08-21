@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Layers,
   Search,
+  Palette,
 } from "lucide-react";
 import {
   LandingSection,
@@ -32,6 +33,20 @@ import { Product, products as staticProducts } from "@/lib/shop-data";
 import { ImageUploader } from "@/components/image-uploader";
 import { getImageUrl } from "@/lib/utils";
 import dynamic from "next/dynamic";
+
+const COLOR_PRESETS = [
+  { label: "Purple", color: "#9333ea" },
+  { label: "Magenta / Rose", color: "#c026d3" },
+  { label: "Navy Blue", color: "#1e3a8a" },
+  { label: "Ocean Blue", color: "#0284c7" },
+  { label: "Emerald Green", color: "#059669" },
+  { label: "Amber Gold", color: "#d97706" },
+  { label: "Fire Red", color: "#dc2626" },
+  { label: "Dark Slate", color: "#0f172a" },
+  { label: "Pure Black", color: "#000000" },
+  { label: "Soft Gray", color: "#f8fafc" },
+  { label: "Pure White", color: "#ffffff" },
+];
 
 const CustomSectionEditor = dynamic(
   () => import("./custom-section-editor").then((m) => m.CustomSectionEditor),
@@ -271,6 +286,74 @@ export function CustomLandingPageEditor({
               {/* Accordion Body Editor */}
               {isExpanded && (
                 <div className="px-3 pb-3 pt-1 border-t border-border/60 space-y-3 animate-in fade-in-50">
+                  {/* Universal Section Background Color Selector */}
+                  {(() => {
+                    const currentSectionBg =
+                      (sec.settings?.backgroundColor as string) ||
+                      (sec.type === "product-hero" ? config.customHeroBgColor || "#9333ea" : "");
+
+                    const updateSectionBg = (newColor: string) => {
+                      const updatedSec = {
+                        ...sec,
+                        settings: { ...sec.settings, backgroundColor: newColor },
+                      };
+                      if (sec.type === "product-hero") {
+                        onConfigChange({ ...config, customHeroBgColor: newColor });
+                      }
+                      onSectionsChange(sections.map((s) => (s.id === sec.id ? updatedSec : s)));
+                    };
+
+                    return (
+                      <div className="p-2.5 rounded-lg border border-border bg-muted/20 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                            <Palette className="size-3.5 text-primary" />
+                            <span>সেকশন ব্যাকগ্রাউন্ড কালার</span>
+                          </label>
+                          <div className="flex items-center gap-2">
+                            {currentSectionBg && (
+                              <button
+                                type="button"
+                                onClick={() => updateSectionBg("")}
+                                className="text-[10px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                              >
+                                রিসেট (ডিফল্ট)
+                              </button>
+                            )}
+                            <span className="text-[10px] font-mono text-foreground font-normal">
+                              {currentSectionBg || "ডিফল্ট"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={currentSectionBg || "#ffffff"}
+                            onChange={(e) => updateSectionBg(e.target.value)}
+                            className="size-8 rounded border border-border cursor-pointer bg-transparent p-0.5"
+                          />
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            {COLOR_PRESETS.map((p) => (
+                              <button
+                                key={p.color}
+                                type="button"
+                                title={p.label}
+                                onClick={() => updateSectionBg(p.color)}
+                                className={`size-5 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
+                                  (currentSectionBg || "").toLowerCase() === p.color.toLowerCase()
+                                    ? "border-white ring-2 ring-primary scale-110"
+                                    : "border-border"
+                                }`}
+                                style={{ backgroundColor: p.color }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Marquee Bar Editor */}
                   {sec.type === "marquee" && (
                     <div className="space-y-2 pt-1 text-xs">
@@ -386,51 +469,6 @@ export function CustomLandingPageEditor({
                           </div>
                         </div>
                       )}
-
-                      {/* Background Color Picker */}
-                      <div className="p-2.5 rounded-lg border border-border bg-muted/20 space-y-2">
-                        <label className="text-[11px] font-bold text-muted-foreground uppercase flex items-center justify-between">
-                          <span>সেকশন ব্যাকগ্রাউন্ড কালার</span>
-                          <span className="text-[10px] font-mono text-foreground font-normal">{config.customHeroBgColor || "#9333ea"}</span>
-                        </label>
-                        
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="color"
-                            value={config.customHeroBgColor || "#9333ea"}
-                            onChange={(e) =>
-                              onConfigChange({ ...config, customHeroBgColor: e.target.value })
-                            }
-                            className="size-8 rounded border border-border cursor-pointer bg-transparent p-0.5"
-                          />
-                          
-                          {/* Quick Color Presets */}
-                          <div className="flex flex-wrap gap-1.5 items-center">
-                            {[
-                              { label: "Purple (ছবি অনুযায়ী)", color: "#9333ea" },
-                              { label: "Magenta / Rose", color: "#c026d3" },
-                              { label: "Deep Violet", color: "#6b21a8" },
-                              { label: "Emerald Green", color: "#059669" },
-                              { label: "Navy Blue", color: "#1e3a8a" },
-                              { label: "Dark Slate", color: "#0f172a" },
-                              { label: "Fire Red", color: "#dc2626" },
-                            ].map((p) => (
-                              <button
-                                key={p.color}
-                                type="button"
-                                title={p.label}
-                                onClick={() => onConfigChange({ ...config, customHeroBgColor: p.color })}
-                                className={`size-6 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
-                                  (config.customHeroBgColor || "#9333ea").toLowerCase() === p.color.toLowerCase()
-                                    ? "border-white ring-2 ring-primary scale-110"
-                                    : "border-border"
-                                }`}
-                                style={{ backgroundColor: p.color }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
 
                       {/* Custom Image Uploader */}
                       <div className="p-2.5 rounded-lg border border-border bg-muted/20 space-y-2">

@@ -661,44 +661,58 @@ export default function CustomLandingPageRoute({
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20">
       {/* 1. Scrolling Marquee Bar (Previous gradient design) */}
-      {isMarquee && (
-        <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-primary text-white py-1.5 md:py-2 px-3 md:px-4 overflow-hidden relative shadow-sm text-[11px] md:text-sm font-bold">
-          <div className="flex whitespace-nowrap animate-marquee">
-            <span className="mx-3 md:mx-4">{marqueeText}</span>
-            <span className="mx-3 md:mx-4">{marqueeText}</span>
-            <span className="mx-3 md:mx-4">{marqueeText}</span>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Sticky Countdown Urgency Bar (New red design with 4 units: Days, Hours, Minutes, Seconds) */}
-      {isTimer && (
-        <div className="sticky top-0 z-50 w-full bg-[#dc2626] text-white py-1.5 md:py-2 px-4 shadow-lg overflow-hidden">
-          <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3">
-            <span className="whitespace-pre-line text-xs md:text-sm font-bold">
-              {timerTitle}
-            </span>
-            <div className="flex justify-center gap-1.5 md:gap-2">
-              {[
-                { val: timeLeft.days, label: "দিন" },
-                { val: timeLeft.hours, label: "ঘন্টা" },
-                { val: timeLeft.minutes, label: "মিনিট" },
-                { val: timeLeft.seconds, label: "সেকেন্ড" },
-              ].map((unit) => (
-                <div
-                  key={unit.label}
-                  className="flex flex-col items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white/25 backdrop-blur-xs rounded-md shadow-xs"
-                >
-                  <span className="text-sm md:text-lg font-extrabold leading-none">
-                    {String(unit.val).padStart(2, "0")}
-                  </span>
-                  <span className="text-[9px] md:text-[10px] mt-0.5 opacity-90">{unit.label}</span>
-                </div>
-              ))}
+      {isMarquee && (() => {
+        const marqueeSec = activeSections.find((s) => s.type === "marquee");
+        const marqueeBg = marqueeSec?.settings?.backgroundColor as string;
+        return (
+          <div
+            className="bg-gradient-to-r from-amber-500 via-rose-500 to-primary text-white py-1.5 md:py-2 px-3 md:px-4 overflow-hidden relative shadow-sm text-[11px] md:text-sm font-bold transition-colors"
+            style={marqueeBg ? { backgroundColor: marqueeBg, backgroundImage: "none" } : undefined}
+          >
+            <div className="flex whitespace-nowrap animate-marquee">
+              <span className="mx-3 md:mx-4">{marqueeText}</span>
+              <span className="mx-3 md:mx-4">{marqueeText}</span>
+              <span className="mx-3 md:mx-4">{marqueeText}</span>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* 2. Sticky Countdown Urgency Bar (New red design with 4 units: Days, Hours, Minutes, Seconds) */}
+      {isTimer && (() => {
+        const countdownSec = activeSections.find((s) => s.type === "countdown");
+        const countdownBg = countdownSec?.settings?.backgroundColor as string;
+        return (
+          <div
+            className="sticky top-0 z-50 w-full bg-[#dc2626] text-white py-1.5 md:py-2 px-4 shadow-lg overflow-hidden transition-colors"
+            style={countdownBg ? { backgroundColor: countdownBg } : undefined}
+          >
+            <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3">
+              <span className="whitespace-pre-line text-xs md:text-sm font-bold">
+                {timerTitle}
+              </span>
+              <div className="flex justify-center gap-1.5 md:gap-2">
+                {[
+                  { val: timeLeft.days, label: "দিন" },
+                  { val: timeLeft.hours, label: "ঘন্টা" },
+                  { val: timeLeft.minutes, label: "মিনিট" },
+                  { val: timeLeft.seconds, label: "সেকেন্ড" },
+                ].map((unit) => (
+                  <div
+                    key={unit.label}
+                    className="flex flex-col items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white/25 backdrop-blur-xs rounded-md shadow-xs"
+                  >
+                    <span className="text-sm md:text-lg font-extrabold leading-none">
+                      {String(unit.val).padStart(2, "0")}
+                    </span>
+                    <span className="text-[9px] md:text-[10px] mt-0.5 opacity-90">{unit.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 3. Render Active Sections */}
       <main className="divide-y divide-border/60">
@@ -714,7 +728,8 @@ export default function CustomLandingPageRoute({
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
-                  className="py-8 md:py-12 px-4 bg-gradient-to-b from-primary/5 to-transparent text-center"
+                  className="py-8 md:py-12 px-4 bg-gradient-to-b from-primary/5 to-transparent text-center transition-colors"
+                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string, backgroundImage: "none" } : undefined}
                 >
                   <div className="max-w-3xl mx-auto space-y-4">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs md:text-sm font-bold border border-primary/20">
@@ -750,8 +765,8 @@ export default function CustomLandingPageRoute({
 
             // Previous Product Hero Section Design (with customHeroBgColor & reference image layout)
             case "product-hero": {
-              const heroBgColor = config?.customHeroBgColor || "#9333ea";
-              const isDefaultPurple = !config?.customHeroBgColor || config.customHeroBgColor.toLowerCase() === "#9333ea" || config.customHeroBgColor.toLowerCase() === "#a855f7";
+              const heroBgColor = (sec.settings?.backgroundColor as string) || config?.customHeroBgColor || "#9333ea";
+              const isDefaultPurple = !sec.settings?.backgroundColor && (!config?.customHeroBgColor || config.customHeroBgColor.toLowerCase() === "#9333ea" || config.customHeroBgColor.toLowerCase() === "#a855f7");
 
               return (
                 <section
@@ -845,7 +860,8 @@ export default function CustomLandingPageRoute({
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
-                  className="py-8 px-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-center"
+                  className="py-8 px-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-center transition-colors"
+                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string, backgroundImage: "none" } : undefined}
                 >
                   <div className="max-w-2xl mx-auto space-y-3">
                     <h3 className="text-xl md:text-2xl font-black">
@@ -898,7 +914,12 @@ export default function CustomLandingPageRoute({
             // Previous Trust Banner Design
             case "trust-banner": {
               return (
-                <section key={sec.id} id={`section-${sec.id}`} className="py-8 px-4 md:px-8 bg-card">
+                <section
+                  key={sec.id}
+                  id={`section-${sec.id}`}
+                  className="py-8 px-4 md:px-8 bg-card transition-colors"
+                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
+                >
                   <div className="max-w-4xl mx-auto p-6 bg-muted/40 rounded-2xl border border-border flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
                     <div className="size-14 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
                       <ShieldCheck className="size-7" />
@@ -918,7 +939,12 @@ export default function CustomLandingPageRoute({
             // Previous Info Banner Design
             case "info-banner": {
               return (
-                <section key={sec.id} id={`section-${sec.id}`} className="py-6 px-4 md:px-8 bg-amber-500/10 border-y border-amber-500/20 text-center">
+                <section
+                  key={sec.id}
+                  id={`section-${sec.id}`}
+                  className="py-6 px-4 md:px-8 bg-amber-500/10 border-y border-amber-500/20 text-center transition-colors"
+                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
+                >
                   <div className="max-w-3xl mx-auto flex items-center justify-center gap-3 text-amber-900 dark:text-amber-200">
                     <ShieldCheck className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
                     <p className="text-xs md:text-sm font-semibold">
@@ -932,7 +958,12 @@ export default function CustomLandingPageRoute({
             // Product Selection: Keeping New Card Design & Interactive Size/Qty logic
             case "product-select": {
               return (
-                <section key={sec.id} id={`section-${sec.id}`} className="py-14 md:py-20 px-4 md:px-8 bg-background border-b border-border">
+                <section
+                  key={sec.id}
+                  id={`section-${sec.id}`}
+                  className="py-14 md:py-20 px-4 md:px-8 bg-background border-b border-border transition-colors"
+                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
+                >
                   <div className="max-w-[1200px] mx-auto">
                     <div className="text-center mb-10 md:mb-12">
                       <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-2">
@@ -1170,7 +1201,12 @@ export default function CustomLandingPageRoute({
             // Previous Reviews Design
             case "reviews": {
               return (
-                <section key={sec.id} id={`section-${sec.id}`} className="py-10 px-4 md:px-8 bg-card">
+                <section
+                  key={sec.id}
+                  id={`section-${sec.id}`}
+                  className="py-10 px-4 md:px-8 bg-card transition-colors"
+                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
+                >
                   <div className="max-w-4xl mx-auto space-y-6">
                     <div className="text-center space-y-1">
                       <div className="flex items-center justify-center gap-1 text-amber-400">
@@ -1251,7 +1287,12 @@ export default function CustomLandingPageRoute({
             // Previous Order Form Design (Compact 2-Column on Desktop/Tablet with Cart on Right)
             case "order-form": {
               return (
-                <section key={sec.id} id="section-order-form" className="py-12 px-4 md:px-8 bg-muted/30">
+                <section
+                  key={sec.id}
+                  id="section-order-form"
+                  className="py-12 px-4 md:px-8 bg-muted/30 transition-colors"
+                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
+                >
                   <div className="max-w-5xl mx-auto bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
                     {/* Form Header */}
                     <div className="bg-primary text-primary-foreground p-5 md:p-6 text-center space-y-1">
