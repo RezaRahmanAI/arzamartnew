@@ -737,7 +737,7 @@ export default function CustomLandingPageRoute({
                           const el = document.getElementById(nextSectionId) || document.getElementById("section-order-form");
                           if (el) el.scrollIntoView({ behavior: "smooth" });
                         }}
-                        className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-base cursor-pointer"
+                        className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-base cursor-pointer"
                       >
                         <span>অর্ডার করতে এখানে চাপুন</span>
                         <ArrowRight className="size-5" />
@@ -789,7 +789,7 @@ export default function CustomLandingPageRoute({
                         <button
                           type="button"
                           onClick={scrollToOrderForm}
-                          className="bg-white text-purple-900 hover:bg-slate-100 font-extrabold px-8 py-3.5 rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all text-base flex items-center justify-center gap-2 cursor-pointer border-2 border-white/50"
+                          className="bg-white text-purple-900 hover:bg-slate-100 font-extrabold px-8 py-3.5 rounded-xl shadow-2xl hover:scale-105 active:scale-95 transition-all text-base flex items-center justify-center gap-2 cursor-pointer border-2 border-white/50"
                         >
                           <ShoppingBag className="size-5 text-purple-700" />
                           <span>অর্ডার করতে ক্লিক করুন</span>
@@ -885,7 +885,7 @@ export default function CustomLandingPageRoute({
                       <button
                         type="button"
                         onClick={scrollToOrderForm}
-                        className="bg-white text-emerald-800 font-black px-6 py-2.5 rounded-full hover:bg-emerald-50 shadow-md transition-all text-xs md:text-sm cursor-pointer"
+                        className="bg-white text-emerald-800 font-black px-6 py-2.5 rounded-xl hover:bg-emerald-50 shadow-md transition-all text-xs md:text-sm cursor-pointer"
                       >
                         অর্ডার করতে এখানে চাপুন
                       </button>

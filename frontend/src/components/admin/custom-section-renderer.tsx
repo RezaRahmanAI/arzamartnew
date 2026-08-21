@@ -81,7 +81,7 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
                 <button
                   type="button"
                   onClick={handleButtonClick}
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-base cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-base cursor-pointer"
                 >
                   <span>{getFieldValue("button")}</span>
                   <ArrowRight className="size-5" />
@@ -109,7 +109,7 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
                 <button
                   type="button"
                   onClick={handleButtonClick}
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-base cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-base cursor-pointer"
                 >
                   <span>{getFieldValue("button")}</span>
                   <ArrowRight className="size-5" />
@@ -195,7 +195,7 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
                   <button
                     type="button"
                     onClick={handleButtonClick}
-                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-7 py-3 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-sm md:text-base cursor-pointer"
+                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-7 py-3 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-sm md:text-base cursor-pointer"
                   >
                     <span>{getFieldValue("button")}</span>
                     <ArrowRight className="size-4" />
