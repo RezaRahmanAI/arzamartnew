@@ -17,10 +17,12 @@ export function DateRangePicker({
   className,
   value,
   onUpdate,
+  numberOfMonths = 1,
 }: {
   className?: string;
   value?: DateRange;
   onUpdate?: (range: DateRange | undefined) => void;
+  numberOfMonths?: number;
 }) {
   const [date, setDate] = useState<DateRange | undefined>(value);
   const [open, setOpen] = useState(false);
@@ -162,7 +164,7 @@ export function DateRangePicker({
             onSelect={(newDate) => {
               handleSelect(newDate);
             }}
-            numberOfMonths={2}
+            numberOfMonths={numberOfMonths}
           />
         </PopoverContent>
       </Popover>
