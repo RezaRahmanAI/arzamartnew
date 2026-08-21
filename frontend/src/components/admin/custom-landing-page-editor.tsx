@@ -544,66 +544,6 @@ export function CustomLandingPageEditor({
                   {/* Discount CTA Editor */}
                   {sec.type === "discount-cta" && (
                     <div className="space-y-2 pt-1 text-xs">
-                      {/* MRP / Original Price */}
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-muted-foreground uppercase">
-                          MRP / আগের মূল্য (৳)
-                        </label>
-                        <input
-                          type="number"
-                          value={config.originalPrice || ""}
-                          onChange={(e) =>
-                            onConfigChange({
-                              ...config,
-                              originalPrice: parseFloat(e.target.value) || undefined,
-                            })
-                          }
-                          placeholder="যেমন: ১২০০"
-                          className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                        {!config.originalPrice && product?.compareAtPrice && (
-                          <p className="text-[10px] text-muted-foreground italic">
-                            প্রোডাক্ট MRP থেকে: ৳{product.compareAtPrice.toLocaleString()}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Size-wise Selling Prices */}
-                      {product?.variants && product.variants.length > 0 && (
-                        <div className="space-y-1.5">
-                          <label className="text-[11px] font-bold text-muted-foreground uppercase">
-                            সাইজ অনুযায়ী বিক্রয় মূল্য (৳)
-                          </label>
-                          <div className="space-y-1">
-                            {product.variants.map((v) => {
-                              const currentPrice = config.sizePrices?.[v.name] ?? v.priceOverride ?? product.price ?? 0;
-                              return (
-                                <div key={v.id} className="flex items-center gap-2">
-                                  <span className="w-16 text-[11px] font-semibold text-muted-foreground truncate">
-                                    {v.name}
-                                  </span>
-                                  <input
-                                    type="number"
-                                    value={currentPrice || ""}
-                                    onChange={(e) => {
-                                      const newPrice = parseFloat(e.target.value) || 0;
-                                      const newSizePrices = { ...(config.sizePrices || {}), [v.name]: newPrice };
-                                      onConfigChange({ ...config, sizePrices: newSizePrices });
-                                      onSyncProductPrices?.(newSizePrices);
-                                    }}
-                                    placeholder="৳"
-                                    className="flex-1 h-7 px-2 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <p className="text-[10px] text-muted-foreground italic">
-                            মান পরিবর্তন করলে প্রোডাক্ট সাইজ প্রাইসও আপডেট হবে
-                          </p>
-                        </div>
-                      )}
-
                       {/* Promo Text */}
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-muted-foreground uppercase">

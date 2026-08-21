@@ -22,22 +22,30 @@ import {
   Check,
   Eye,
   EyeOff,
+  Sparkles,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
+
+const DEFAULT_HEADER_MENU: MenuItem[] = [
+  { id: "nav_1", label: "Panjabi", url: "/category/panjabi", type: "category", active: true, displayOrder: 1 },
+  { id: "nav_2", label: "Saree", url: "/category/saree", type: "category", active: true, displayOrder: 2 },
+  { id: "nav_3", label: "Salwar Kameez", url: "/category/salwar-kameez", type: "category", active: true, displayOrder: 3 },
+  { id: "nav_4", label: "Kurti", url: "/category/kurti", type: "category", active: true, displayOrder: 4 },
+  { id: "nav_5", label: "Offers", url: "/offers", type: "custom", active: true, displayOrder: 5 },
+];
 
 export default function AdminMenuPage() {
   const { draftSettings, updateSection, saveSettings, resetDrafts, isSaving, hasUnsavedChanges } = useSettings();
   const { categories } = useCategories();
 
-  const currentMenu: MenuItem[] = draftSettings?.navigation?.headerMenu || [
-    { id: "nav_1", label: "Panjabi", url: "/category/panjabi", type: "category", active: true, displayOrder: 1 },
-    { id: "nav_2", label: "Saree", url: "/category/saree", type: "category", active: true, displayOrder: 2 },
-    { id: "nav_3", label: "Salwar Kameez", url: "/category/salwar-kameez", type: "category", active: true, displayOrder: 3 },
-    { id: "nav_4", label: "Kurti", url: "/category/kurti", type: "category", active: true, displayOrder: 4 },
-    { id: "nav_5", label: "Offers", url: "/offers", type: "custom", active: true, displayOrder: 5 },
-  ];
+  const menuFromDraft = draftSettings?.navigation?.headerMenu;
+  const currentMenu: MenuItem[] =
+    Array.isArray(menuFromDraft) && menuFromDraft.length > 0
+      ? menuFromDraft
+      : DEFAULT_HEADER_MENU;
 
-  // New item modal / form state
+  // New item form state
   const [newLabel, setNewLabel] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [newType, setNewType] = useState<"category" | "custom">("custom");
@@ -69,8 +77,13 @@ export default function AdminMenuPage() {
       return;
     }
 
+    // Ensure URL has leading slash if internal
+    if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://") && !finalUrl.startsWith("/")) {
+      finalUrl = `/${finalUrl}`;
+    }
+
     const newItem: MenuItem = {
-      id: `nav_${Date.now()}`,
+      id: `nav_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       label: finalLabel,
       url: finalUrl,
       type: newType,
@@ -119,6 +132,12 @@ export default function AdminMenuPage() {
     handleUpdateItems(updated);
   };
 
+  const applyPresetUrl = (label: string, url: string) => {
+    setNewType("custom");
+    setNewLabel(label);
+    setNewUrl(url);
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Action Header */}
@@ -128,7 +147,7 @@ export default function AdminMenuPage() {
             <Menu className="size-5 text-primary" /> Header Navigation Builder
           </h2>
           <p className="text-xs text-muted-foreground">
-            Manage links shown on the main top navigation header of your storefront.
+            Customize header navigation links, categories, and custom campaign URLs.
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -162,7 +181,35 @@ export default function AdminMenuPage() {
               <Plus className="size-4 text-primary" /> Add New Menu Item
             </h3>
 
-            <form onSubmit={handleAddItem} className="space-y-4">
+            {/* Quick Presets */}
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-semibold text-muted-foreground">Quick Presets</Label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => applyPresetUrl("Offers", "/offers")}
+                  className="text-[11px] px-2 py-1 bg-secondary/80 hover:bg-primary/10 hover:text-primary rounded border border-border transition-colors font-medium"
+                >
+                  ⚡ /offers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPresetUrl("Track Order", "/account")}
+                  className="text-[11px] px-2 py-1 bg-secondary/80 hover:bg-primary/10 hover:text-primary rounded border border-border transition-colors font-medium"
+                >
+                  📦 /account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPresetUrl("Hot Deals", "/offers?tag=hot")}
+                  className="text-[11px] px-2 py-1 bg-secondary/80 hover:bg-primary/10 hover:text-primary rounded border border-border transition-colors font-medium"
+                >
+                  🔥 /hot-deals
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddItem} className="space-y-4 pt-1">
               <div className="space-y-2">
                 <Label className="text-xs font-semibold">Link Type</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -214,7 +261,7 @@ export default function AdminMenuPage() {
               ) : null}
 
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">Menu Label</Label>
+                <Label className="text-xs font-semibold">Menu Label (নাম)</Label>
                 <Input
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
@@ -225,19 +272,19 @@ export default function AdminMenuPage() {
 
               {newType === "custom" && (
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">URL Path</Label>
+                  <Label className="text-xs font-semibold">Target URL (লিংক)</Label>
                   <Input
                     value={newUrl}
                     onChange={(e) => setNewUrl(e.target.value)}
-                    placeholder="e.g. /offers or /promotion/eid"
-                    className="h-9 text-xs"
+                    placeholder="e.g. /offers, /clp/special-deal or https://..."
+                    className="h-9 text-xs font-mono"
                   />
                 </div>
               )}
 
               <div className="flex items-center justify-between pt-1">
                 <Label className="text-xs text-muted-foreground cursor-pointer" htmlFor="new-tab">
-                  Open in new tab?
+                  Open in new tab? (_blank)
                 </Label>
                 <Switch
                   id="new-tab"
@@ -247,7 +294,7 @@ export default function AdminMenuPage() {
               </div>
 
               <Button type="submit" size="sm" className="w-full gap-2 text-xs font-bold mt-2">
-                <Plus className="size-4" /> Add to Header
+                <Plus className="size-4" /> Add to Header Navigation
               </Button>
             </form>
           </div>
@@ -258,10 +305,10 @@ export default function AdminMenuPage() {
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-                <Menu className="size-4 text-primary" /> Active Menu Items ({currentMenu.length})
+                <Menu className="size-4 text-primary" /> Header Menu Items ({currentMenu.length})
               </h3>
               <span className="text-[11px] text-muted-foreground">
-                Reorder using arrows below
+                Edit items inline and click Save Navigation
               </span>
             </div>
 
@@ -274,81 +321,109 @@ export default function AdminMenuPage() {
                 {currentMenu.map((item, index) => (
                   <div
                     key={item.id}
-                    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border transition-all ${
+                    className={`flex flex-col gap-3 p-3.5 rounded-xl border transition-all ${
                       item.active
                         ? "border-border bg-background"
                         : "border-border/50 bg-muted/40 opacity-75"
                     }`}
                   >
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex flex-col gap-1">
-                        <button
-                          type="button"
-                          disabled={index === 0}
-                          onClick={() => handleMove(index, "up")}
-                          className="p-1 text-muted-foreground hover:text-primary disabled:opacity-30 disabled:hover:text-muted-foreground rounded hover:bg-secondary transition-colors"
-                          title="Move up"
-                        >
-                          <MoveUp className="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={index === currentMenu.length - 1}
-                          onClick={() => handleMove(index, "down")}
-                          className="p-1 text-muted-foreground hover:text-primary disabled:opacity-30 disabled:hover:text-muted-foreground rounded hover:bg-secondary transition-colors"
-                          title="Move down"
-                        >
-                          <MoveDown className="size-3.5" />
-                        </button>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => handleMove(index, "up")}
+                            className="p-1 text-muted-foreground hover:text-primary disabled:opacity-30 disabled:hover:text-muted-foreground rounded hover:bg-secondary transition-colors"
+                            title="Move up"
+                          >
+                            <MoveUp className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === currentMenu.length - 1}
+                            onClick={() => handleMove(index, "down")}
+                            className="p-1 text-muted-foreground hover:text-primary disabled:opacity-30 disabled:hover:text-muted-foreground rounded hover:bg-secondary transition-colors"
+                            title="Move down"
+                          >
+                            <MoveDown className="size-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="size-7 rounded-lg bg-secondary flex items-center justify-center font-bold text-xs text-muted-foreground">
+                          #{index + 1}
+                        </div>
+
+                        <span className="text-xs font-bold text-foreground">
+                          {item.label || "Untitled Link"}
+                        </span>
                       </div>
 
-                      <div className="size-7 rounded-lg bg-secondary flex items-center justify-center font-bold text-xs text-muted-foreground">
-                        #{index + 1}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleItemChange(
+                              item.id,
+                              "target",
+                              item.target === "_blank" ? "_self" : "_blank"
+                            )
+                          }
+                          className={`text-[11px] px-2 py-1 rounded border transition-colors flex items-center gap-1 font-medium ${
+                            item.target === "_blank"
+                              ? "bg-primary/10 border-primary/30 text-primary"
+                              : "bg-muted/50 border-border text-muted-foreground"
+                          }`}
+                          title="Toggle open in new tab"
+                        >
+                          <ExternalLink className="size-3" />
+                          <span>{item.target === "_blank" ? "New Tab" : "Same Tab"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(item.id)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors ${
+                            item.active
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                          title={item.active ? "Click to hide from header" : "Click to show on header"}
+                        >
+                          {item.active ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+                          <span>{item.active ? "Visible" : "Hidden"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item.id)}
+                          className="p-1.5 text-muted-foreground hover:text-destructive rounded hover:bg-destructive/10 transition-colors"
+                          title="Delete menu item"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
                       </div>
                     </div>
 
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-border/50">
                       <div>
-                        <Label className="text-[10px] text-muted-foreground">Label</Label>
+                        <Label className="text-[10px] text-muted-foreground">Label (ডিসপ্লে নাম)</Label>
                         <Input
                           value={item.label}
                           onChange={(e) => handleItemChange(item.id, "label", e.target.value)}
+                          placeholder="Menu Label"
                           className="h-8 text-xs font-semibold"
                         />
                       </div>
                       <div>
-                        <Label className="text-[10px] text-muted-foreground">Target URL</Label>
+                        <Label className="text-[10px] text-muted-foreground">Target URL (গন্তব্য লিংক)</Label>
                         <Input
                           value={item.url}
                           onChange={(e) => handleItemChange(item.id, "url", e.target.value)}
+                          placeholder="/path or https://..."
                           className="h-8 text-xs font-mono"
                         />
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(item.id)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                          item.active
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                        title={item.active ? "Click to hide from header" : "Click to show on header"}
-                      >
-                        {item.active ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
-                        <span>{item.active ? "Visible" : "Hidden"}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item.id)}
-                        className="p-1.5 text-muted-foreground hover:text-destructive rounded hover:bg-destructive/10 transition-colors"
-                        title="Delete menu item"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
                     </div>
                   </div>
                 ))}

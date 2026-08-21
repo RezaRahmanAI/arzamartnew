@@ -7,6 +7,7 @@ interface AppInitContextType {
   initData: AppInitData;
   isFreshLoaded: boolean;
   refetchInit: () => Promise<void>;
+  updateInitSettings: (newSettings: AppInitData["settings"]) => void;
 }
 
 const AppInitContext = createContext<AppInitContextType | undefined>(undefined);
@@ -34,6 +35,24 @@ export function AppInitProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const updateInitSettings = useCallback((newSettings: AppInitData["settings"]) => {
+    setInitData((prev) => {
+      const updated = {
+        ...prev,
+        settings: newSettings,
+        timestamp: Date.now(),
+      };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(APP_INIT_STORAGE_KEY, JSON.stringify(updated));
+        } catch {
+          /* ignore quota */
+        }
+      }
+      return updated;
+    });
+  }, []);
+
   useEffect(() => {
     // If we only had fallback data or on mount, fetch fresh data once
     refetchInit();
@@ -44,8 +63,9 @@ export function AppInitProvider({ children }: { children: React.ReactNode }) {
       initData,
       isFreshLoaded,
       refetchInit,
+      updateInitSettings,
     }),
-    [initData, isFreshLoaded, refetchInit]
+    [initData, isFreshLoaded, refetchInit, updateInitSettings]
   );
 
   return <AppInitContext.Provider value={value}>{children}</AppInitContext.Provider>;

@@ -25,27 +25,40 @@ const SETTINGS_STORAGE_KEY = "arzamart_system_settings_v1";
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const { initData, isFreshLoaded } = useAppInit();
+  const { initData, isFreshLoaded, updateInitSettings, refetchInit } = useAppInit();
 
-  const [settings, setSettings] = useState<SystemSettings>(() => initData.settings || DEFAULT_SYSTEM_SETTINGS);
-  const [draftSettings, setDraftSettings] = useState<SystemSettings>(() => initData.settings || DEFAULT_SYSTEM_SETTINGS);
+  const [settings, setSettings] = useState<SystemSettings>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed === "object") return parsed;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return initData.settings || DEFAULT_SYSTEM_SETTINGS;
+  });
+  const [draftSettings, setDraftSettings] = useState<SystemSettings>(() => settings);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(!isFreshLoaded);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Sync settings when consolidated init data updates
+  // Sync settings when consolidated init data updates from server
   useEffect(() => {
     if (initData.settings) {
       setSettings(initData.settings);
       setDraftSettings((prev) => {
         // If user hasn't made dirty edits, update draft too
-        const isDirty = JSON.stringify(prev) !== JSON.stringify(settings);
+        const isDirty = JSON.stringify(prev) !== JSON.stringify(initData.settings);
         return isDirty ? prev : initData.settings;
       });
       setIsLoading(false);
     }
-  }, [initData.settings, settings]);
+  }, [initData.settings]);
 
   // Sync draft settings comparison
   useEffect(() => {
@@ -56,8 +69,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Update specific section values in draft state
   const updateSection = useCallback(<K extends keyof SystemSettings>(section: K, values: Partial<SystemSettings[K]>) => {
     setDraftSettings((prev) => {
+      const currentSection = prev[section] || {};
       const updatedSection = {
-        ...prev[section],
+        ...currentSection,
         ...values,
       };
       return {
@@ -73,7 +87,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setIsSaving(true);
       const success = await settingsService.update(draftSettings, "Super Admin");
       setSettings(draftSettings);
+      updateInitSettings(draftSettings);
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(draftSettings));
+
+      // Trigger background refetch so server cache and app state stay completely aligned
+      refetchInit();
 
       if (!options?.silent) {
         if (success) {
@@ -91,6 +109,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.warn("Saving to API failed, applying local persist:", err);
       setSettings(draftSettings);
+      updateInitSettings(draftSettings);
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(draftSettings));
       if (!options?.silent) {
         toast.success("Settings Saved Locally!", {
@@ -100,7 +119,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setIsSaving(false);
       return true;
     }
-  }, [draftSettings]);
+  }, [draftSettings, updateInitSettings, refetchInit]);
 
   // Reset draft changes back to saved settings
   const resetDrafts = useCallback(() => {
