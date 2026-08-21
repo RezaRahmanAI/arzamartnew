@@ -94,16 +94,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const saveUserSession = (authUser: AuthUser | null) => {
+  const saveUserSession = useCallback((authUser: AuthUser | null) => {
     setUser(authUser);
     if (authUser) {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
     } else {
       localStorage.removeItem(AUTH_STORAGE_KEY);
     }
-  };
+  }, []);
 
-  const setCustomerSessionFromMaster = (customer: CustomerMaster) => {
+  const setCustomerSessionFromMaster = useCallback((customer: CustomerMaster) => {
     const authUser: AuthUser = {
       id: customer.customerId,
       name: customer.fullName,
@@ -118,11 +118,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     saveUserSession(authUser);
     return authUser;
-  };
+  }, [saveUserSession]);
 
   const loginAsCustomer = useCallback(
     (customer: CustomerMaster) => setCustomerSessionFromMaster(customer),
-    []
+    [setCustomerSessionFromMaster]
   );
 
   const loginCustomer = useCallback(
@@ -175,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success("Welcome back!", { description: `Logged in as ${master.fullName}` });
       return true;
     },
-    [customers, findCustomerByPhone, verifyCustomerPassword, upsertCustomerFromServer]
+    [customers, findCustomerByPhone, verifyCustomerPassword, upsertCustomerFromServer, setCustomerSessionFromMaster]
   );
 
   const setPassword = useCallback(
@@ -216,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return true;
     },
-    [setCustomerPassword, upsertCustomerFromServer]
+    [setCustomerPassword, upsertCustomerFromServer, setCustomerSessionFromMaster]
   );
 
   const changePassword = useCallback(
@@ -265,7 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return true;
     },
-    [verifyCustomerPassword, setCustomerPassword, upsertCustomerFromServer]
+    [verifyCustomerPassword, setCustomerPassword, upsertCustomerFromServer, setCustomerSessionFromMaster]
   );
 
   const registerCustomer = useCallback(
@@ -325,7 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return true;
     },
-    [findOrCreateByPhone, setCustomerPassword, upsertCustomerFromServer]
+    [findOrCreateByPhone, setCustomerPassword, upsertCustomerFromServer, setCustomerSessionFromMaster]
   );
 
   const loginAdmin = useCallback(

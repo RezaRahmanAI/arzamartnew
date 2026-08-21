@@ -683,9 +683,9 @@ export function CustomLandingPageEditor({
                               p.name.toLowerCase().includes(productSearchQuery.toLowerCase())
                             )
                             .map((p) => {
-                              const isMainProduct = (product?.id && p.id === product.id) || (product?.slug && p.slug === product.slug);
+                              const isMainProduct = Boolean((product?.id && p.id === product.id) || (product?.slug && p.slug === product.slug));
                               const selectedIds = (sec.settings?.selectedProductIds as string[]) || [];
-                              const isChecked = isMainProduct || (p.id ? selectedIds.includes(p.id) : false) || (p.slug ? selectedIds.includes(p.slug) : false);
+                              const isChecked = Boolean(isMainProduct || (p.id && selectedIds.includes(p.id)) || (p.slug && selectedIds.includes(p.slug)));
 
                               return (
                                 <label

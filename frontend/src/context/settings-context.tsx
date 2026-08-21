@@ -45,7 +45,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       });
       setIsLoading(false);
     }
-  }, [initData.settings]);
+  }, [initData.settings, settings]);
 
   // Sync draft settings comparison
   useEffect(() => {
