@@ -102,6 +102,7 @@ export default function CustomLandingPageRoute({
   const [selectedArea, setSelectedArea] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
 
   // Countdown timer state (Days, Hours, Minutes, Seconds)
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 1, minutes: 59, seconds: 59 });
@@ -619,6 +620,63 @@ export default function CustomLandingPageRoute({
     }
   };
 
+  // Incomplete order tracking on CLP page
+  useEffect(() => {
+    if (selectedProductList.length === 0) return;
+    const name = customerName.trim();
+    const phone = customerPhone.trim();
+    const address = customerAddress.trim();
+
+    // Only record incomplete order if customer entered phone or name
+    if (!name && !phone) return;
+
+    const currentDraftId = draftId ?? `INC-${Math.floor(10000 + Math.random() * 90000)}`;
+    if (!draftId) setDraftId(currentDraftId);
+
+    const timer = setTimeout(() => {
+      const incompleteOrder: Order = {
+        id: currentDraftId,
+        customer: name || "Incomplete",
+        phone: phone || "",
+        address: address || "",
+        city: selectedCity,
+        area: selectedArea,
+        note: notes.trim(),
+        payment: "Cash on Delivery",
+        status: "pending",
+        date: new Date().toISOString().slice(0, 10),
+        total: grandTotal,
+        delivery: deliveryCharge,
+        source: "checkout",
+        items: selectedProductList.map((item) => ({
+          name: item.product.name,
+          slug: item.product.slug || item.product.id,
+          size: item.selectedSize || "Standard",
+          color: item.selectedColor || "",
+          qty: item.quantity,
+          price: getProductPrice(item.product),
+        })),
+      };
+
+      ordersService.saveIncomplete(incompleteOrder);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [
+    customerName,
+    customerPhone,
+    customerAddress,
+    selectedCity,
+    selectedArea,
+    notes,
+    selectedProductList,
+    subtotal,
+    grandTotal,
+    deliveryCharge,
+    draftId,
+    getProductPrice,
+  ]);
+
   // Submit Direct Order
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -671,6 +729,11 @@ export default function CustomLandingPageRoute({
 
       const res = await ordersService.createOrder(payload);
       const orderId = res?.orderNumber || `ORD-${Date.now()}`;
+
+      // Clean up incomplete draft since order is completed
+      if (draftId) {
+        ordersService.removeIncomplete(draftId);
+      }
 
       // Save local order cache so order-confirmation page has it immediately
       try {
