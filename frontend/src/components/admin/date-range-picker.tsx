@@ -103,69 +103,81 @@ export function DateRangePicker({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-3 space-y-3" align="start">
-          {/* Quick Presets */}
-          <div className="flex flex-wrap items-center gap-1.5 pb-2 border-b border-border">
-            <span className="text-[11px] font-bold text-muted-foreground mr-1 flex items-center gap-1">
-              <Clock className="size-3" /> Presets:
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => applyPreset("today")}
-              className="h-7 text-xs px-2 font-medium"
-            >
-              Today (আজকে)
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => applyPreset("yesterday")}
-              className="h-7 text-xs px-2 font-medium"
-            >
-              Yesterday (গতকাল)
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => applyPreset("last7")}
-              className="h-7 text-xs px-2 font-medium"
-            >
-              Last 7 Days
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => applyPreset("thisMonth")}
-              className="h-7 text-xs px-2 font-medium"
-            >
-              This Month
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => applyPreset("all")}
-              className="h-7 text-xs px-2 text-destructive hover:bg-destructive/10 hover:text-destructive font-medium ml-auto"
-            >
-              <RotateCcw className="size-3 mr-1" /> All Dates
-            </Button>
-          </div>
+        <PopoverContent className="w-auto p-0 shadow-xl border border-border overflow-hidden" align="start">
+          <div className="flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-border">
+            {/* Calendar */}
+            <div className="p-3">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={date?.from || new Date()}
+                selected={date}
+                onSelect={(newDate) => {
+                  handleSelect(newDate);
+                }}
+                numberOfMonths={numberOfMonths}
+              />
+            </div>
 
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={date?.from}
-            selected={date}
-            onSelect={(newDate) => {
-              handleSelect(newDate);
-            }}
-            numberOfMonths={numberOfMonths}
-          />
+            {/* Quick Presets on the Right Side */}
+            <div className="flex flex-col justify-between p-3 bg-muted/20 sm:w-[155px] shrink-0">
+              <div className="space-y-1">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5 px-2 pt-1">
+                  <Clock className="size-3 text-primary" />
+                  <span>ফিল্টার</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => applyPreset("today")}
+                  className={cn(
+                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-primary/10 hover:text-primary cursor-pointer",
+                    date?.from && isSameDay(date.from, new Date()) && (!date.to || isSameDay(date.to, new Date()))
+                      ? "bg-primary text-primary-foreground font-semibold hover:bg-primary hover:text-primary-foreground"
+                      : "text-foreground"
+                  )}
+                >
+                  Today (আজকে)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPreset("yesterday")}
+                  className={cn(
+                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-primary/10 hover:text-primary cursor-pointer",
+                    date?.from && isSameDay(date.from, subDays(new Date(), 1)) && (!date.to || isSameDay(date.to, subDays(new Date(), 1)))
+                      ? "bg-primary text-primary-foreground font-semibold hover:bg-primary hover:text-primary-foreground"
+                      : "text-foreground"
+                  )}
+                >
+                  Yesterday (গতকাল)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPreset("last7")}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-primary/10 hover:text-primary text-foreground cursor-pointer"
+                >
+                  Last 7 Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPreset("thisMonth")}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-primary/10 hover:text-primary text-foreground cursor-pointer"
+                >
+                  This Month
+                </button>
+              </div>
+
+              <div className="pt-2 mt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => applyPreset("all")}
+                  className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="size-3" />
+                  All Dates (সব সময়)
+                </button>
+              </div>
+            </div>
+          </div>
         </PopoverContent>
       </Popover>
     </div>
