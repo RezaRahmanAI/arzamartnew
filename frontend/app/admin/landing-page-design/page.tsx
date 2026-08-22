@@ -115,9 +115,12 @@ function DesignerContent() {
           setProduct(pageData.product);
         }
 
-        // Load existing config (if any)
+        // Load existing config (from pageData or fetch if missing)
         const pId = pageData?.product?.id || productId;
-        const existingConfig = await customLandingPageService.getConfig(pId);
+        let existingConfig = pageData?.config;
+        if (!existingConfig && pId) {
+          existingConfig = await customLandingPageService.getConfig(pId);
+        }
 
         if (existingConfig) {
           setConfig({
@@ -194,7 +197,7 @@ function DesignerContent() {
   }, [config, sections, sendPreviewUpdate]);
 
   const handleSave = () => {
-    if (!product?.id && !productId) {
+    if (!product?.id && !productId && !slug) {
       toast.error("Cannot save without a valid product ID");
       return;
     }
@@ -204,6 +207,7 @@ function DesignerContent() {
         const payload: CustomLandingPageConfig = {
           ...config,
           productId: product?.id || productId,
+          productSlug: product?.slug || slug,
           sectionsJson: JSON.stringify(sections),
         };
 

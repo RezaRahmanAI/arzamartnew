@@ -3,6 +3,7 @@ import { apiClient } from "../client";
 export interface CustomLandingPageConfig {
   id?: string;
   productId: string;
+  productSlug?: string;
   relativeTimerTotalMinutes?: number | null;
   isTimerVisible: boolean;
   headerTitle?: string;

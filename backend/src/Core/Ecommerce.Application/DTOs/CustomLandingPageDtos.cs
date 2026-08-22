@@ -45,6 +45,7 @@ public class CustomLandingPageConfigDto
 public class CustomLandingPageConfigUpdateDto
 {
     public Guid ProductId { get; set; }
+    public string? ProductSlug { get; set; }
 
     public int? RelativeTimerTotalMinutes { get; set; }
     public bool IsTimerVisible { get; set; } = true;

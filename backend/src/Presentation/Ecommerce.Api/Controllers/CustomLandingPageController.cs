@@ -317,116 +317,165 @@ public class CustomLandingPageController : ControllerBase
     }
 
     /// <summary>
+    /// <summary>
     /// Admin endpoint: Save / Update Custom Landing Page Config
     /// </summary>
     [HttpPost("admin")]
     public async Task<IActionResult> SaveConfig([FromBody] CustomLandingPageConfigUpdateDto dto, CancellationToken ct = default)
     {
-        if (dto.ProductId == Guid.Empty)
-        {
-            return BadRequest(new { message = "ProductId is required." });
-        }
+        Guid targetProductId = dto.ProductId;
 
-        var config = await _context.CustomLandingPageConfigs
-            .FirstOrDefaultAsync(c => c.ProductId == dto.ProductId, ct);
-
-        if (config == null)
+        // If ProductId is empty but ProductSlug is provided, resolve from Products table
+        if (targetProductId == Guid.Empty && !string.IsNullOrWhiteSpace(dto.ProductSlug))
         {
-            config = new CustomLandingPageConfig
+            var clean = dto.ProductSlug.Trim().ToLower();
+            var matchedProduct = await _context.Products
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Slug.ToLower() == clean || p.Name.ToLower() == clean, ct);
+
+            if (matchedProduct != null)
             {
-                ProductId = dto.ProductId,
-                RelativeTimerTotalMinutes = dto.RelativeTimerTotalMinutes,
-                IsTimerVisible = dto.IsTimerVisible,
-                HeaderTitle = dto.HeaderTitle,
-                IsProductDetailsVisible = dto.IsProductDetailsVisible,
-                ProductDetailsTitle = dto.ProductDetailsTitle,
-                IsFabricVisible = dto.IsFabricVisible,
-                IsDesignVisible = dto.IsDesignVisible,
-                IsTrustBannerVisible = dto.IsTrustBannerVisible,
-                TrustBannerText = dto.TrustBannerText,
-                TrustBannerDescription = dto.TrustBannerDescription,
-                IsFeaturedOrderVisible = dto.IsFeaturedOrderVisible,
-                FeaturedProductName = dto.FeaturedProductName,
-                PromoPrice = dto.PromoPrice,
-                OriginalPrice = dto.OriginalPrice,
-                SizePricesJson = dto.SizePricesJson,
-                PromoText = dto.PromoText,
-                FreeShippingThresholdQuantity = dto.FreeShippingThresholdQuantity,
-                IsMarqueeVisible = dto.IsMarqueeVisible,
-                MarqueeText = dto.MarqueeText,
-                CustomHeroImageUrl = dto.CustomHeroImageUrl,
-                CustomHeroDescription = dto.CustomHeroDescription,
-                CustomHeroBgColor = dto.CustomHeroBgColor,
-                CustomHeroTextColor = dto.CustomHeroTextColor,
-                SectionsJson = dto.SectionsJson,
-                CreatedAtUtc = DateTime.UtcNow
+                targetProductId = matchedProduct.Id;
+            }
+        }
+
+        if (targetProductId == Guid.Empty)
+        {
+            return BadRequest(new { message = "Valid ProductId or ProductSlug is required." });
+        }
+
+        // Verify product exists in DB
+        var productExists = await _context.Products.AsNoTracking().AnyAsync(p => p.Id == targetProductId, ct);
+        if (!productExists)
+        {
+            return NotFound(new { message = $"Product with ID '{targetProductId}' was not found in the database." });
+        }
+
+        try
+        {
+            var config = await _context.CustomLandingPageConfigs
+                .FirstOrDefaultAsync(c => c.ProductId == targetProductId, ct);
+
+            if (config == null)
+            {
+                config = new CustomLandingPageConfig
+                {
+                    ProductId = targetProductId,
+                    RelativeTimerTotalMinutes = dto.RelativeTimerTotalMinutes,
+                    IsTimerVisible = dto.IsTimerVisible,
+                    HeaderTitle = dto.HeaderTitle,
+                    IsProductDetailsVisible = dto.IsProductDetailsVisible,
+                    ProductDetailsTitle = dto.ProductDetailsTitle,
+                    IsFabricVisible = dto.IsFabricVisible,
+                    IsDesignVisible = dto.IsDesignVisible,
+                    IsTrustBannerVisible = dto.IsTrustBannerVisible,
+                    TrustBannerText = dto.TrustBannerText,
+                    TrustBannerDescription = dto.TrustBannerDescription,
+                    IsFeaturedOrderVisible = dto.IsFeaturedOrderVisible,
+                    FeaturedProductName = dto.FeaturedProductName,
+                    PromoPrice = dto.PromoPrice,
+                    OriginalPrice = dto.OriginalPrice,
+                    SizePricesJson = dto.SizePricesJson,
+                    PromoText = dto.PromoText,
+                    FreeShippingThresholdQuantity = dto.FreeShippingThresholdQuantity,
+                    IsMarqueeVisible = dto.IsMarqueeVisible,
+                    MarqueeText = dto.MarqueeText,
+                    CustomHeroImageUrl = dto.CustomHeroImageUrl,
+                    CustomHeroDescription = dto.CustomHeroDescription,
+                    CustomHeroBgColor = dto.CustomHeroBgColor,
+                    CustomHeroTextColor = dto.CustomHeroTextColor,
+                    SectionsJson = dto.SectionsJson,
+                    CreatedAtUtc = DateTime.UtcNow
+                };
+                _context.CustomLandingPageConfigs.Add(config);
+            }
+            else
+            {
+                config.RelativeTimerTotalMinutes = dto.RelativeTimerTotalMinutes;
+                config.IsTimerVisible = dto.IsTimerVisible;
+                config.HeaderTitle = dto.HeaderTitle;
+                config.IsProductDetailsVisible = dto.IsProductDetailsVisible;
+                config.ProductDetailsTitle = dto.ProductDetailsTitle;
+                config.IsFabricVisible = dto.IsFabricVisible;
+                config.IsDesignVisible = dto.IsDesignVisible;
+                config.IsTrustBannerVisible = dto.IsTrustBannerVisible;
+                config.TrustBannerText = dto.TrustBannerText;
+                config.TrustBannerDescription = dto.TrustBannerDescription;
+                config.IsFeaturedOrderVisible = dto.IsFeaturedOrderVisible;
+                config.FeaturedProductName = dto.FeaturedProductName;
+                config.PromoPrice = dto.PromoPrice;
+                config.OriginalPrice = dto.OriginalPrice;
+                config.SizePricesJson = dto.SizePricesJson;
+                config.PromoText = dto.PromoText;
+                config.FreeShippingThresholdQuantity = dto.FreeShippingThresholdQuantity;
+                config.IsMarqueeVisible = dto.IsMarqueeVisible;
+                config.MarqueeText = dto.MarqueeText;
+                config.CustomHeroImageUrl = dto.CustomHeroImageUrl;
+                config.CustomHeroDescription = dto.CustomHeroDescription;
+                config.CustomHeroBgColor = dto.CustomHeroBgColor;
+                config.CustomHeroTextColor = dto.CustomHeroTextColor;
+                config.SectionsJson = dto.SectionsJson;
+                config.UpdatedAtUtc = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync(ct);
+
+            var resultDto = new CustomLandingPageConfigDto
+            {
+                Id = config.Id,
+                ProductId = config.ProductId,
+                RelativeTimerTotalMinutes = config.RelativeTimerTotalMinutes,
+                IsTimerVisible = config.IsTimerVisible,
+                HeaderTitle = config.HeaderTitle,
+                IsProductDetailsVisible = config.IsProductDetailsVisible,
+                ProductDetailsTitle = config.ProductDetailsTitle,
+                IsFabricVisible = config.IsFabricVisible,
+                IsDesignVisible = config.IsDesignVisible,
+                IsTrustBannerVisible = config.IsTrustBannerVisible,
+                TrustBannerText = config.TrustBannerText,
+                TrustBannerDescription = config.TrustBannerDescription,
+                IsFeaturedOrderVisible = config.IsFeaturedOrderVisible,
+                FeaturedProductName = config.FeaturedProductName,
+                PromoPrice = config.PromoPrice,
+                OriginalPrice = config.OriginalPrice,
+                SizePricesJson = config.SizePricesJson,
+                PromoText = config.PromoText,
+                FreeShippingThresholdQuantity = config.FreeShippingThresholdQuantity,
+                IsMarqueeVisible = config.IsMarqueeVisible,
+                MarqueeText = config.MarqueeText,
+                CustomHeroImageUrl = config.CustomHeroImageUrl,
+                CustomHeroDescription = config.CustomHeroDescription,
+                CustomHeroBgColor = config.CustomHeroBgColor,
+                CustomHeroTextColor = config.CustomHeroTextColor,
+                SectionsJson = config.SectionsJson,
+                CreatedAtUtc = config.CreatedAtUtc,
+                UpdatedAtUtc = config.UpdatedAtUtc
             };
-            _context.CustomLandingPageConfigs.Add(config);
+
+            return Ok(resultDto);
         }
-        else
+        catch (Exception ex)
         {
-            config.RelativeTimerTotalMinutes = dto.RelativeTimerTotalMinutes;
-            config.IsTimerVisible = dto.IsTimerVisible;
-            config.HeaderTitle = dto.HeaderTitle;
-            config.IsProductDetailsVisible = dto.IsProductDetailsVisible;
-            config.ProductDetailsTitle = dto.ProductDetailsTitle;
-            config.IsFabricVisible = dto.IsFabricVisible;
-            config.IsDesignVisible = dto.IsDesignVisible;
-            config.IsTrustBannerVisible = dto.IsTrustBannerVisible;
-            config.TrustBannerText = dto.TrustBannerText;
-            config.TrustBannerDescription = dto.TrustBannerDescription;
-            config.IsFeaturedOrderVisible = dto.IsFeaturedOrderVisible;
-            config.FeaturedProductName = dto.FeaturedProductName;
-            config.PromoPrice = dto.PromoPrice;
-            config.OriginalPrice = dto.OriginalPrice;
-            config.SizePricesJson = dto.SizePricesJson;
-            config.PromoText = dto.PromoText;
-            config.FreeShippingThresholdQuantity = dto.FreeShippingThresholdQuantity;
-            config.IsMarqueeVisible = dto.IsMarqueeVisible;
-            config.MarqueeText = dto.MarqueeText;
-            config.CustomHeroImageUrl = dto.CustomHeroImageUrl;
-            config.CustomHeroDescription = dto.CustomHeroDescription;
-            config.CustomHeroBgColor = dto.CustomHeroBgColor;
-            config.CustomHeroTextColor = dto.CustomHeroTextColor;
-            config.SectionsJson = dto.SectionsJson;
-            config.UpdatedAtUtc = DateTime.UtcNow;
+            // Auto-heal schema if missing columns in production SQL Server table
+            try
+            {
+                if (_context is DbContext dbContext)
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[CustomLandingPageConfigs]') AND name = 'SizePricesJson') ALTER TABLE [CustomLandingPageConfigs] ADD [SizePricesJson] nvarchar(max) NULL;", ct);
+                    await dbContext.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[CustomLandingPageConfigs]') AND name = 'CustomHeroImageUrl') ALTER TABLE [CustomLandingPageConfigs] ADD [CustomHeroImageUrl] nvarchar(max) NULL;", ct);
+                    await dbContext.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[CustomLandingPageConfigs]') AND name = 'CustomHeroDescription') ALTER TABLE [CustomLandingPageConfigs] ADD [CustomHeroDescription] nvarchar(max) NULL;", ct);
+                    await dbContext.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[CustomLandingPageConfigs]') AND name = 'CustomHeroBgColor') ALTER TABLE [CustomLandingPageConfigs] ADD [CustomHeroBgColor] nvarchar(100) NULL;", ct);
+                    await dbContext.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[CustomLandingPageConfigs]') AND name = 'CustomHeroTextColor') ALTER TABLE [CustomLandingPageConfigs] ADD [CustomHeroTextColor] nvarchar(100) NULL;", ct);
+                }
+                
+                await _context.SaveChangesAsync(ct);
+                return Ok(new { message = "Saved successfully with auto-repaired schema." });
+            }
+            catch (Exception retryEx)
+            {
+                return StatusCode(500, new { message = "Failed to save custom landing page config: " + ex.Message, inner = retryEx.Message });
+            }
         }
-
-        await _context.SaveChangesAsync(ct);
-
-        var resultDto = new CustomLandingPageConfigDto
-        {
-            Id = config.Id,
-            ProductId = config.ProductId,
-            RelativeTimerTotalMinutes = config.RelativeTimerTotalMinutes,
-            IsTimerVisible = config.IsTimerVisible,
-            HeaderTitle = config.HeaderTitle,
-            IsProductDetailsVisible = config.IsProductDetailsVisible,
-            ProductDetailsTitle = config.ProductDetailsTitle,
-            IsFabricVisible = config.IsFabricVisible,
-            IsDesignVisible = config.IsDesignVisible,
-            IsTrustBannerVisible = config.IsTrustBannerVisible,
-            TrustBannerText = config.TrustBannerText,
-            TrustBannerDescription = config.TrustBannerDescription,
-            IsFeaturedOrderVisible = config.IsFeaturedOrderVisible,
-            FeaturedProductName = config.FeaturedProductName,
-            PromoPrice = config.PromoPrice,
-            OriginalPrice = config.OriginalPrice,
-            SizePricesJson = config.SizePricesJson,
-            PromoText = config.PromoText,
-            FreeShippingThresholdQuantity = config.FreeShippingThresholdQuantity,
-            IsMarqueeVisible = config.IsMarqueeVisible,
-            MarqueeText = config.MarqueeText,
-            CustomHeroImageUrl = config.CustomHeroImageUrl,
-            CustomHeroDescription = config.CustomHeroDescription,
-            CustomHeroBgColor = config.CustomHeroBgColor,
-            CustomHeroTextColor = config.CustomHeroTextColor,
-            SectionsJson = config.SectionsJson,
-            CreatedAtUtc = config.CreatedAtUtc,
-            UpdatedAtUtc = config.UpdatedAtUtc
-        };
-
-        return Ok(resultDto);
     }
 
     /// <summary>

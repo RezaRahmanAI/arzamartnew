@@ -164,9 +164,13 @@ export default function CustomLandingPageRoute({
           }
         }
 
-        // Also fetch other active products from store so customer can always pick additional products
-        try {
-          const prodsRes = await productsService.getAll();
+        // Set page data and display the page immediately
+        setData(pageData);
+        setSettings(siteSettings);
+        setLoading(false);
+
+        // Fetch extra store products non-blockingly in the background
+        productsService.getAll().then((prodsRes) => {
           if (Array.isArray(prodsRes) && prodsRes.length > 0) {
             const currentProdId = pageData?.product?.id;
             const extraProds: RelatedProductItem[] = prodsRes
@@ -207,40 +211,21 @@ export default function CustomLandingPageRoute({
             }));
             setAllStoreProducts(mappedStoreProds);
 
-            if (pageData) {
-              if (!pageData.relatedProducts || pageData.relatedProducts.length === 0) {
-                pageData.relatedProducts = extraProds;
-              } else {
+            if (extraProds.length > 0) {
+              setData((prev) => {
+                if (!prev) return prev;
+                const existing = prev.relatedProducts || [];
+                const merged = [...existing];
                 extraProds.forEach((ep) => {
-                  if (!pageData?.relatedProducts?.some((rp) => rp.id === ep.id || (rp.slug && rp.slug === ep.slug))) {
-                    pageData?.relatedProducts?.push(ep);
+                  if (!merged.some((rp) => rp.id === ep.id || (rp.slug && rp.slug === ep.slug))) {
+                    merged.push(ep);
                   }
                 });
-              }
+                return { ...prev, relatedProducts: merged };
+              });
             }
           }
-        } catch {
-          const currentProdId = pageData?.product?.id;
-          const staticFallback: RelatedProductItem[] = staticProducts
-            .filter((p) => (p.id || p.slug) !== currentProdId && p.slug !== slug)
-            .map((p) => ({
-              id: p.id || p.slug,
-              name: p.name,
-              slug: p.slug,
-              price: p.price,
-              compareAtPrice: p.compareAt || null,
-              imageUrl: p.image || p.images?.[0] || "",
-              variants: (p.sizes || []).map((s) => ({ id: s, name: s, stockQuantity: 10 })),
-              colors: p.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
-            }));
-
-          if (pageData && (!pageData.relatedProducts || pageData.relatedProducts.length === 0)) {
-            pageData.relatedProducts = staticFallback;
-          }
-        }
-
-        setData(pageData);
-        setSettings(siteSettings);
+        }).catch(() => {});
 
         if (pageData?.product) {
           const mainProdColors = pageData.product.colors || staticProducts.find((sp) => sp.slug === pageData?.product.slug || sp.id === pageData?.product.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
@@ -915,14 +900,6 @@ export default function CustomLandingPageRoute({
 
             // Previous Discount CTA Design
             case "discount-cta": {
-              const mrp = config?.originalPrice || product.compareAtPrice || product.basePrice || product.price;
-              const mainSelectedSize = productSelections[product.id]?.selectedSize || "";
-              const sizePrice = (mainSelectedSize && config?.sizePrices?.[mainSelectedSize])
-                || (mainSelectedSize && product.variants?.find((v) => v.name === mainSelectedSize)?.priceOverride)
-                || product.price;
-              const hasDiscount = mrp > sizePrice;
-              const discountPercent = hasDiscount ? Math.round(((mrp - sizePrice) / mrp) * 100) : 0;
-
               return (
                 <section
                   key={sec.id}
@@ -934,30 +911,6 @@ export default function CustomLandingPageRoute({
                     <h3 className="text-xl md:text-2xl font-black">
                       {config?.promoText || "🔥 আজকের স্পেশাল কম্বো অফার!"}
                     </h3>
-
-                    {/* Price Display */}
-                    <div className="flex items-center justify-center gap-3 pt-1">
-                      {hasDiscount && (
-                        <span className="text-lg text-emerald-200 line-through font-medium">
-                          ৳{mrp.toLocaleString()}
-                        </span>
-                      )}
-                      <span className="text-3xl font-black">
-                        ৳{sizePrice.toLocaleString()}
-                      </span>
-                      {hasDiscount && (
-                        <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">
-                          {discountPercent}% ছাড়
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Selected Size */}
-                    {mainSelectedSize && (
-                      <p className="text-xs text-emerald-200">
-                        সাইজ: <span className="font-bold text-white">{mainSelectedSize}</span>
-                      </p>
-                    )}
 
                     <p className="text-xs md:text-sm text-emerald-100 leading-relaxed">
                       {config?.freeShippingThresholdQuantity
