@@ -119,6 +119,25 @@ class OrdersService {
     }
   }
 
+  public async getById(id: string): Promise<Order | null> {
+    if (!id) return null;
+    const { orders } = this.getLocalOrders();
+    const localMatch = orders.find((o) => o.id === id || o.id.toLowerCase() === id.toLowerCase());
+    if (localMatch) return localMatch;
+
+    try {
+      const order = await apiClient.get<Order>(`/orders/${encodeURIComponent(id)}`);
+      if (order?.id) {
+        const updated = [order, ...orders.filter((o) => o.id !== order.id)];
+        this.saveLocalOrders(updated);
+        return order;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   public async updateStatus(id: string, status: string): Promise<boolean> {
     const { orders } = this.getLocalOrders();
     const updated = orders.map((o) => (o.id === id ? { ...o, status: status as Order["status"] } : o));

@@ -1,18 +1,84 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { CheckCircle2, Printer, ShoppingBag, MapPin, Phone, CreditCard, Calendar } from "lucide-react";
-import { useOrders } from "@/lib/orders";
+import { CheckCircle2, Printer, ShoppingBag, MapPin, Phone, CreditCard, Calendar, Loader2 } from "lucide-react";
+import { useOrders, type Order } from "@/lib/orders";
+import { ordersService } from "@/lib/api/services/orders.service";
 import { formatBDT } from "@/lib/shop-data";
-
 
 export default function OrderConfirmationPage() {
   const params = useParams();
-  const orderId = params.orderId as string;
+  const orderId = (params.orderId as string) || "";
   const { orders } = useOrders();
 
-  const order = orders.find((o) => o.id === orderId);
+  const [order, setOrder] = useState<Order | null>(() => {
+    return orders.find((o) => o.id === orderId || o.id.toLowerCase() === orderId.toLowerCase()) || null;
+  });
+  const [loading, setLoading] = useState(!order);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function resolveOrder() {
+      // 1. Check in-memory orders
+      const memOrder = orders.find((o) => o.id === orderId || o.id.toLowerCase() === orderId.toLowerCase());
+      if (memOrder) {
+        if (isMounted) {
+          setOrder(memOrder);
+          setLoading(false);
+        }
+        return;
+      }
+
+      // 2. Check localStorage
+      try {
+        const raw = window.localStorage.getItem("arza-orders-v1");
+        if (raw) {
+          const localList: Order[] = JSON.parse(raw);
+          const found = localList.find((o) => o.id === orderId || o.id.toLowerCase() === orderId.toLowerCase());
+          if (found) {
+            if (isMounted) {
+              setOrder(found);
+              setLoading(false);
+            }
+            return;
+          }
+        }
+      } catch {}
+
+      // 3. Query API by ID or OrderNumber
+      try {
+        const remoteOrder = await ordersService.getById(orderId);
+        if (remoteOrder && isMounted) {
+          setOrder(remoteOrder);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
+
+    resolveOrder();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [orderId, orders]);
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-24 text-center">
+        <Loader2 className="size-10 text-primary animate-spin mx-auto mb-4" />
+        <h2 className="text-lg font-bold text-foreground">অর্ডার তথ্য খোঁজা হচ্ছে...</h2>
+        <p className="text-xs text-muted-foreground mt-1">অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন</p>
+      </div>
+    );
+  }
 
   if (!order) {
     return (

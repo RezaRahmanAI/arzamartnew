@@ -38,6 +38,7 @@ import { settingsService } from "@/lib/api/services/settings.service";
 import { ordersService } from "@/lib/api/services/orders.service";
 import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
 import { SystemSettings } from "@/types/settings";
+import { type Order } from "@/lib/orders";
 
 interface UnifiedProduct {
   id: string;
@@ -669,8 +670,47 @@ export default function CustomLandingPageRoute({
       };
 
       const res = await ordersService.createOrder(payload);
+      const orderId = res?.orderNumber || `ORD-${Date.now()}`;
+
+      // Save local order cache so order-confirmation page has it immediately
+      try {
+        const localOrder: Order = {
+          id: orderId,
+          customer: customerName.trim(),
+          phone: customerPhone.trim(),
+          address: customerAddress.trim(),
+          city: selectedCity,
+          area: selectedArea,
+          note: notes.trim(),
+          payment: "Cash on Delivery",
+          status: "pending",
+          date: new Date().toISOString().slice(0, 10),
+          total: grandTotal,
+          delivery: deliveryCharge,
+          source: "checkout",
+          items: selectedProductList.map((item) => {
+            const unitPrice = getProductPrice(item.product);
+            return {
+              name: item.product.name,
+              slug: item.product.slug || item.product.id,
+              size: item.selectedSize || "Standard",
+              color: item.selectedColor || "",
+              qty: item.quantity,
+              price: unitPrice,
+            };
+          }),
+        };
+        const rawOrders = window.localStorage.getItem("arza-orders-v1");
+        const ordersList = rawOrders ? JSON.parse(rawOrders) : [];
+        window.localStorage.setItem(
+          "arza-orders-v1",
+          JSON.stringify([localOrder, ...ordersList.filter((o: Order) => o.id !== orderId)])
+        );
+      } catch {
+        /* storage fallback */
+      }
+
       toast.success("আপনার অর্ডারটি সফলভাবে গৃহীত হয়েছে!");
-      const orderId = res?.orderNumber || "success";
       router.push(`/order-confirmation/${orderId}`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "অর্ডার সম্পন্ন করতে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন।");

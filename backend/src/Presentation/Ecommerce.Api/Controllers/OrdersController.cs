@@ -237,6 +237,96 @@ public class OrdersController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetOrderById(string id)
+    {
+        var cleanId = Uri.UnescapeDataString(id).Trim();
+
+        var query = _context.Orders
+            .AsNoTracking()
+            .Include(o => o.Customer)
+            .Include(o => o.Items)
+            .AsQueryable();
+
+        Order? order = null;
+        if (Guid.TryParse(cleanId, out var guidId))
+        {
+            order = await query.FirstOrDefaultAsync(o => o.Id == guidId);
+        }
+
+        if (order == null)
+        {
+            order = await query.FirstOrDefaultAsync(o => o.OrderNumber == cleanId || o.OrderNumber.ToLower() == cleanId.ToLower());
+        }
+
+        if (order == null)
+        {
+            return NotFound(new { message = $"Order '{id}' not found." });
+        }
+
+        var (sourceChannel, pageName) = ExtractOrderSources(order.ShippingAddressJson);
+        var isManual = !string.IsNullOrWhiteSpace(sourceChannel) || !string.IsNullOrWhiteSpace(pageName);
+        var notes = ExtractOrderNotes(order.ShippingAddressJson);
+
+        var customerNoteMatch = System.Text.RegularExpressions.Regex.Match(order.ShippingAddressJson ?? string.Empty, @"\(Note:\s*([^)\n]+)\)");
+        var customerNoteText = customerNoteMatch.Success ? customerNoteMatch.Groups[1].Value.Trim() : string.Empty;
+        if (!string.IsNullOrWhiteSpace(customerNoteText))
+        {
+            notes.Insert(0, new
+            {
+                id = Guid.NewGuid().ToString(),
+                text = customerNoteText,
+                author = "Customer",
+                timestamp = order.CreatedAtUtc.ToString("MMM dd, hh:mm tt")
+            });
+        }
+
+        var result = new
+        {
+            id = string.IsNullOrWhiteSpace(order.OrderNumber) ? $"ORD-{order.Id}" : order.OrderNumber,
+            customerId = order.CustomerId.ToString(),
+            customer = order.Customer?.FullName ?? "Customer User",
+            phone = order.Customer?.Phone ?? "",
+            address = order.ShippingAddressJson,
+            city = order.Customer?.District ?? "dhaka",
+            note = !string.IsNullOrWhiteSpace(customerNoteText) ? customerNoteText : "Delivery order",
+            hasNotes = notes.Count > 0,
+            notesList = notes,
+            payment = order.PaymentStatus.ToString().ToLower(),
+            subTotal = order.SubTotal,
+            discount = order.DiscountAmount,
+            couponCode = order.CouponCode,
+            total = order.TotalAmount,
+            delivery = order.ShippingFee,
+            status = StatusToFrontend(order.OrderStatus),
+            date = order.CreatedAtUtc.ToString("yyyy-MM-dd"),
+            source = isManual ? "manual" : "checkout",
+            socialMediaSourceName = sourceChannel,
+            sourcePageName = pageName,
+            items = order.Items.Select(i =>
+            {
+                var rawName = string.IsNullOrWhiteSpace(i.ProductName) ? $"Product Item #{i.ProductId}" : i.ProductName;
+                var sizeName = "Standard";
+                var match = System.Text.RegularExpressions.Regex.Match(rawName, @"\(([^)]+)\)$");
+                if (match.Success)
+                {
+                    sizeName = match.Groups[1].Value.Trim();
+                    rawName = rawName.Substring(0, match.Index).TrimEnd();
+                }
+                return new
+                {
+                    slug = "product",
+                    name = rawName,
+                    size = sizeName,
+                    qty = i.Quantity,
+                    price = i.UnitPrice
+                };
+            }).ToList()
+        };
+
+        return Ok(result);
+    }
+
     [HttpGet("incomplete")]
     public async Task<IActionResult> GetIncompleteOrders()
     {
