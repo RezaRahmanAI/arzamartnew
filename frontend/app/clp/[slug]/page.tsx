@@ -171,64 +171,6 @@ export default function CustomLandingPageRoute({
         setSettings(siteSettings);
         setLoading(false);
 
-        // Fetch extra store products non-blockingly in the background
-        productsService.getAll().then((prodsRes) => {
-          if (Array.isArray(prodsRes) && prodsRes.length > 0) {
-            const currentProdId = pageData?.product?.id;
-            const extraProds: RelatedProductItem[] = prodsRes
-              .filter((p) => p.id !== currentProdId && p.slug !== slug)
-              .map((p) => ({
-                id: p.id || p.slug,
-                name: p.name,
-                slug: p.slug,
-                price: p.price,
-                compareAtPrice: p.compareAt || null,
-                imageUrl: p.image || (p.images?.[0] ?? ""),
-                variants: (p.sizes || []).map((s) => ({
-                  id: s,
-                  name: s,
-                  stockQuantity: p.sizeStock?.[s] ?? 10,
-                  priceOverride: p.sizePrices?.[s],
-                })),
-                colors: p.colors || staticProducts.find((sp) => sp.slug === p.slug || sp.id === p.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
-              }));
-
-            const mappedStoreProds: UnifiedProduct[] = prodsRes.map((p) => ({
-              id: p.id || p.slug,
-              name: p.name,
-              slug: p.slug,
-              description: p.description || "",
-              shortDescription: p.description || "",
-              price: p.price,
-              compareAtPrice: p.compareAt || null,
-              imageUrl: p.image || (p.images?.[0] ?? ""),
-              images: (p.images || [p.image || ""]).map((img, idx) => ({ imageUrl: img, isMain: idx === 0 })),
-              variants: (p.sizes || []).map((s) => ({
-                id: s,
-                name: s,
-                stockQuantity: p.sizeStock?.[s] ?? 10,
-                priceOverride: p.sizePrices?.[s],
-              })),
-              colors: p.colors || staticProducts.find((sp) => sp.slug === p.slug || sp.id === p.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
-            }));
-            setAllStoreProducts(mappedStoreProds);
-
-            if (extraProds.length > 0) {
-              setData((prev) => {
-                if (!prev) return prev;
-                const existing = prev.relatedProducts || [];
-                const merged = [...existing];
-                extraProds.forEach((ep) => {
-                  if (!merged.some((rp) => rp.id === ep.id || (rp.slug && rp.slug === ep.slug))) {
-                    merged.push(ep);
-                  }
-                });
-                return { ...prev, relatedProducts: merged };
-              });
-            }
-          }
-        }).catch(() => {});
-
         if (pageData?.product) {
           const mainProdColors = pageData.product.colors || staticProducts.find((sp) => sp.slug === pageData?.product.slug || sp.id === pageData?.product.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
           const mainProd: UnifiedProduct = {
@@ -976,6 +918,10 @@ export default function CustomLandingPageRoute({
                             alt={config?.featuredProductName || product.name}
                             width={600}
                             height={600}
+                            // @ts-expect-error fetchpriority attribute
+                            fetchpriority="high"
+                            loading="eager"
+                            decoding="async"
                             className="w-full h-full object-cover"
                             onError={handleImageError}
                           />

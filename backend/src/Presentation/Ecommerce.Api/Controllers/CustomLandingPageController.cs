@@ -17,10 +17,12 @@ namespace Ecommerce.Api.Controllers;
 public class CustomLandingPageController : ControllerBase
 {
     private readonly IApplicationDbContext _context;
+    private readonly ICacheService _cache;
 
-    public CustomLandingPageController(IApplicationDbContext context)
+    public CustomLandingPageController(IApplicationDbContext context, ICacheService cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     /// <summary>
@@ -29,6 +31,12 @@ public class CustomLandingPageController : ControllerBase
     [HttpGet("{slug}")]
     public async Task<IActionResult> GetData(string slug, CancellationToken ct = default)
     {
+        var cacheKey = $"clp_data_{slug.Trim().ToLower()}";
+        var cached = await _cache.GetAsync<CustomLandingPageDataDto>(cacheKey, ct);
+        if (cached != null)
+        {
+            return Ok(cached);
+        }
         var productQuery = _context.Products
             .AsNoTracking()
             .Include(p => p.Images)
@@ -208,12 +216,16 @@ public class CustomLandingPageController : ControllerBase
             category = product.Category != null ? new { id = product.Category.Id, name = product.Category.Name, slug = product.Category.Slug } : null
         };
 
-        return Ok(new CustomLandingPageDataDto
+        var responseDto = new CustomLandingPageDataDto
         {
             Product = productDto,
             Config = configDto,
             RelatedProducts = combinedRelated
-        });
+        };
+
+        await _cache.SetAsync(cacheKey, responseDto, TimeSpan.FromMinutes(5), null, ct);
+
+        return Ok(responseDto);
     }
 
     /// <summary>
@@ -420,6 +432,13 @@ public class CustomLandingPageController : ControllerBase
 
             await _context.SaveChangesAsync(ct);
 
+            // Invalidate cache
+            await _cache.RemoveAsync($"clp_data_{targetProductId}", ct);
+            if (!string.IsNullOrWhiteSpace(dto.ProductSlug))
+            {
+                await _cache.RemoveAsync($"clp_data_{dto.ProductSlug.Trim().ToLower()}", ct);
+            }
+
             var resultDto = new CustomLandingPageConfigDto
             {
                 Id = config.Id,
@@ -494,6 +513,8 @@ public class CustomLandingPageController : ControllerBase
 
         _context.CustomLandingPageConfigs.Remove(config);
         await _context.SaveChangesAsync(ct);
+
+        await _cache.RemoveAsync($"clp_data_{productId}", ct);
 
         return Ok(new { message = "Custom landing page configuration reset to default successfully." });
     }
