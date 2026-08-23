@@ -45,20 +45,21 @@ public class CustomLandingPageController : ControllerBase
             .Include(p => p.Brand);
 
         Product? product = null;
-        if (Guid.TryParse(slug, out var guidId))
+        var rawSlug = slug?.Trim() ?? string.Empty;
+        if (Guid.TryParse(rawSlug, out var guidId))
         {
             product = await productQuery.FirstOrDefaultAsync(p => p.Id == guidId, ct);
         }
         
-        if (product == null)
+        if (product == null && !string.IsNullOrWhiteSpace(rawSlug))
         {
-            var cleanSlug = slug.Trim().ToLower();
+            var cleanSlug = rawSlug.ToLower();
+            var noHyphen = cleanSlug.Replace("-", "");
             string productSlug = cleanSlug.EndsWith("-offer") ? cleanSlug[..^6] : cleanSlug;
             product = await productQuery.FirstOrDefaultAsync(p => 
-                p.Slug.ToLower() == cleanSlug || 
-                p.Slug.ToLower() == productSlug ||
-                p.Name.ToLower() == cleanSlug ||
-                p.SKU.ToLower() == cleanSlug, ct);
+                (p.Slug != null && (p.Slug.ToLower() == cleanSlug || p.Slug.ToLower() == productSlug || p.Slug.ToLower().Replace("-", "") == noHyphen)) || 
+                (p.SKU != null && (p.SKU.ToLower() == cleanSlug || p.SKU.ToLower().Replace("-", "") == noHyphen)) ||
+                (p.Name != null && (p.Name.ToLower() == cleanSlug || p.Name.ToLower().Replace(" ", "-") == cleanSlug)), ct);
         }
 
         if (product == null)

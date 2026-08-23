@@ -22,6 +22,7 @@ import {
   LandingSection,
   DEFAULT_LANDING_SECTIONS,
   LandingPageProduct,
+  LandingPageData,
 } from "@/lib/api/services/custom-landing-page.service";
 import { productsService } from "@/lib/api/services/products.service";
 import { apiClient } from "@/lib/api/client";
@@ -69,15 +70,29 @@ function DesignerContent() {
     const loadDesignerData = async () => {
       try {
         setLoading(true);
-        // Load public data for product details
-        const lookupKey = slug || productId;
-        let pageData = await customLandingPageService.getBySlug(lookupKey);
+        // 1. Try loading by slug or productId from CLP endpoint
+        let pageData: LandingPageData | null = null;
+        if (slug) {
+          pageData = await customLandingPageService.getBySlug(slug);
+        }
+        if (!pageData?.product && productId && productId !== slug) {
+          pageData = await customLandingPageService.getBySlug(productId);
+        }
 
-        // Fallback: If not found by custom landing page endpoint, fetch from product endpoint or static shop data
+        // 2. Fallback: If not found by custom landing page endpoint, fetch from product endpoint or static shop data
         if (!pageData?.product) {
-          let fallbackProduct = await productsService.getBySlug(lookupKey);
+          let fallbackProduct = slug ? await productsService.getBySlug(slug) : undefined;
+          if (!fallbackProduct && productId && productId !== slug) {
+            fallbackProduct = await productsService.getBySlug(productId);
+          }
           if (!fallbackProduct) {
-            fallbackProduct = staticProducts.find((p) => p.slug === lookupKey || p.name.toLowerCase().replace(/\s+/g, "-") === lookupKey);
+            const searchKey = (slug || productId).toLowerCase();
+            fallbackProduct = staticProducts.find(
+              (p) =>
+                p.slug.toLowerCase() === searchKey ||
+                p.id?.toLowerCase() === searchKey ||
+                p.name.toLowerCase().replace(/\s+/g, "-") === searchKey
+            );
           }
           if (fallbackProduct) {
             const fallbackMainImg = fallbackProduct.image || (fallbackProduct.images && fallbackProduct.images.length > 0 ? fallbackProduct.images[0] : "");
@@ -221,7 +236,10 @@ function DesignerContent() {
   };
 
   const previewLookup = product?.slug || slug || productId;
-  const previewUrl = previewLookup ? `/clp/${previewLookup}?preview=true&v=${previewKey}` : "";
+  const targetId = product?.id || productId || "";
+  const previewUrl = previewLookup
+    ? `/clp/${previewLookup}?preview=true${targetId ? `&productId=${targetId}` : ""}&v=${previewKey}`
+    : "";
 
   const getDeviceFrameClass = () => {
     switch (previewDevice) {

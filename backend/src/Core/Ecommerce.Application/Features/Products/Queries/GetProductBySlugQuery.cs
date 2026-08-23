@@ -43,10 +43,19 @@ public class GetProductBySlugQueryHandler : IRequestHandler<GetProductBySlugQuer
 
     public async Task<Result<ProductDetailDto>> Handle(GetProductBySlugQuery request, CancellationToken cancellationToken)
     {
-        var product = await _unitOfWork.Repository<Product>()
+        var cleanSlug = request.Slug?.Trim().ToLower() ?? string.Empty;
+        var isGuid = Guid.TryParse(request.Slug?.Trim(), out var guidId);
+
+        var query = _unitOfWork.Repository<Product>()
             .Query()
-            .AsNoTracking()
-            .Where(p => p.Slug == request.Slug && p.IsActive)
+            .AsNoTracking();
+
+        var product = await query
+            .Where(p => 
+                (isGuid && p.Id == guidId) ||
+                (p.Slug != null && p.Slug.ToLower() == cleanSlug) ||
+                (p.SKU != null && p.SKU.ToLower() == cleanSlug) ||
+                (p.Name != null && p.Name.ToLower() == cleanSlug))
             .Select(p => new ProductDetailDto(
                 p.Id,
                 p.Name,

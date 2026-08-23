@@ -111,17 +111,32 @@ export default function CustomLandingPageRoute({
     async function loadPage() {
       try {
         setLoading(true);
+        const queryProductId = searchParams.get("productId");
         const [fetchedPageData, siteSettings] = await Promise.all([
           customLandingPageService.getBySlug(slug),
           settingsService.get().catch(() => null),
         ]);
         let pageData = fetchedPageData;
 
-        // Fallback: If custom landing page endpoint returns null, fetch product via productsService or shop-data
+        // Fallback 1: If custom landing page endpoint with slug returned null, try queryProductId if provided
+        if (!pageData?.product && queryProductId && queryProductId !== slug) {
+          pageData = await customLandingPageService.getBySlug(queryProductId);
+        }
+
+        // Fallback 2: If still null, fetch product via productsService or shop-data
         if (!pageData?.product) {
           let rawProduct = await productsService.getBySlug(slug);
+          if (!rawProduct && queryProductId && queryProductId !== slug) {
+            rawProduct = await productsService.getBySlug(queryProductId);
+          }
           if (!rawProduct) {
-            rawProduct = staticProducts.find((p) => p.slug === slug || p.name.toLowerCase().replace(/\s+/g, "-") === slug);
+            const searchKey = slug.toLowerCase();
+            rawProduct = staticProducts.find(
+              (p) =>
+                p.slug.toLowerCase() === searchKey ||
+                p.id?.toLowerCase() === searchKey ||
+                p.name.toLowerCase().replace(/\s+/g, "-") === searchKey
+            );
           }
           if (rawProduct) {
             const rawMainImg = rawProduct.image || (rawProduct.images && rawProduct.images.length > 0 ? rawProduct.images[0] : "");
@@ -131,7 +146,7 @@ export default function CustomLandingPageRoute({
 
             pageData = {
               product: {
-                id: rawProduct.id || slug,
+                id: rawProduct.id || queryProductId || slug,
                 name: rawProduct.name,
                 slug: rawProduct.slug,
                 description: rawProduct.description || "",
@@ -213,7 +228,7 @@ export default function CustomLandingPageRoute({
     }
 
     loadPage();
-  }, [slug]);
+  }, [slug, searchParams]);
 
   // Support real-time postMessage preview updates from Designer
   useEffect(() => {
@@ -222,12 +237,25 @@ export default function CustomLandingPageRoute({
     function handleMessage(event: MessageEvent) {
       if (event.data && event.data.type === "CLP_PREVIEW_UPDATE") {
         const { config: newConfig, sections: newSections, product: updatedProduct } = event.data;
-        if (newConfig) {
+        if (newConfig || updatedProduct) {
           setData((prev) => {
+            const currentProd = updatedProduct || prev?.product;
             if (!prev) {
+              if (currentProd) {
+                const firstSize = currentProd.variants?.[0]?.name || "";
+                const firstColor = currentProd.colors?.[0] || "Black";
+                setProductSelections({
+                  [currentProd.id]: {
+                    quantity: 1,
+                    selectedSize: firstSize,
+                    selectedColor: firstColor,
+                    product: currentProd,
+                  },
+                });
+              }
               return {
-                product: updatedProduct || { id: "", name: "", slug: "", description: "", shortDescription: "", price: 0, basePrice: 0, imageUrl: "", images: [], variants: [] },
-                config: { ...newConfig, sectionsJson: newSections ? JSON.stringify(newSections) : undefined },
+                product: currentProd || { id: "", name: "", slug: "", description: "", shortDescription: "", price: 0, basePrice: 0, imageUrl: "", images: [], variants: [] },
+                config: newConfig ? { ...newConfig, sectionsJson: newSections ? JSON.stringify(newSections) : undefined } : null,
               };
             }
             return {
@@ -235,7 +263,7 @@ export default function CustomLandingPageRoute({
               product: updatedProduct || prev.product,
               config: {
                 ...prev.config,
-                ...newConfig,
+                ...(newConfig || {}),
                 sectionsJson: newSections ? JSON.stringify(newSections) : prev.config?.sectionsJson,
               },
             };
