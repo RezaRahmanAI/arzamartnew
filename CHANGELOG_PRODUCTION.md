@@ -8,7 +8,12 @@
 
 ### 🟢 What Was Fixed & Added:
 
-1. **Backend Health Check Endpoint Added**:
+1. **Demo Admin & Staff Credentials Removed from Login Screen**:
+   - Removed "Demo Admin & Staff Credentials (Click to Autofill)" section from `frontend\app\admin\login\page.tsx`
+   - Eliminated hardcoded credential exposure in UI (Super Admin: admin@arza.com / Admin@123456, Arzamart Admin: admin@arzamart.com / admin123)
+   - Reduced attack surface by removing publicly visible demo credentials
+
+2. **Backend Health Check Endpoint Added**:
    - Added `builder.Services.AddHealthChecks()` and `app.MapHealthChecks("/health")` to `Program.cs`.
    - Allows lightweight, secret-safe uptime monitoring.
 

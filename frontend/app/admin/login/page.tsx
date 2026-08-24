@@ -90,32 +90,7 @@ export default function AdminLoginPage() {
           </Button>
         </form>
 
-        <div className="space-y-2 pt-2 border-t border-slate-800">
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 text-center">
-            Demo Admin & Staff Credentials (Click to Autofill):
-          </p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => autofillStaff("admin@arza.com", "Admin@123456")}
-              className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-amber-500/50 text-left transition-all cursor-pointer"
-            >
-              <div className="font-bold text-amber-400">Super Admin</div>
-              <div className="text-[10px] text-slate-400 truncate">admin@arza.com</div>
-              <div className="text-[10px] text-slate-500 font-mono">pass: Admin@123456</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => autofillStaff("admin@arzamart.com", "admin123")}
-              className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-amber-500/50 text-left transition-all cursor-pointer"
-            >
-              <div className="font-bold text-amber-400">Arzamart Admin</div>
-              <div className="text-[10px] text-slate-400 truncate">admin@arzamart.com</div>
-              <div className="text-[10px] text-slate-500 font-mono">pass: admin123</div>
-            </button>
-          </div>
-        </div>
+        
 
         <div className="text-center pt-2">
           <Link href="/" className="text-xs text-slate-400 hover:text-white underline">
