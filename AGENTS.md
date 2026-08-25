@@ -9,7 +9,7 @@ I have an e-commerce application with:
 * Frontend: Next.js
 * Backend: ASP.NET Core Web API
 * Database: SQL Server
-* Hosting: Windows Server
+* Hosting: Windows shared Server
 * Hosting Panel: Plesk
 * Web Server: IIS
 * Production environment does NOT use Docker unless absolutely necessary and supported by the hosting environment.

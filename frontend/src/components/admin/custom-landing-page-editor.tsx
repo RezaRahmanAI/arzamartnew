@@ -28,8 +28,8 @@ import {
   LandingSection,
   CustomLandingPageConfig,
 } from "@/lib/api/services/custom-landing-page.service";
-import { productsService } from "@/lib/api/services/products.service";
-import { Product, products as staticProducts } from "@/lib/shop-data";
+import { Product } from "@/lib/shop-data";
+import { useProducts } from "@/lib/products-store";
 import { ImageUploader } from "@/components/image-uploader";
 import { getImageUrl } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -79,26 +79,10 @@ export function CustomLandingPageEditor({
   product,
   onSyncProductPrices,
 }: CustomLandingPageEditorProps) {
+  const { products: availableStoreProducts } = useProducts();
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [availableStoreProducts, setAvailableStoreProducts] = useState<Product[]>([]);
   const [productSearchQuery, setProductSearchQuery] = useState("");
-
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        const prods = await productsService.getAll();
-        if (Array.isArray(prods) && prods.length > 0) {
-          setAvailableStoreProducts(prods);
-        } else {
-          setAvailableStoreProducts(staticProducts);
-        }
-      } catch {
-        setAvailableStoreProducts(staticProducts);
-      }
-    }
-    loadProducts();
-  }, []);
 
   const toggleExpand = (id: string) => {
     setExpandedSectionId((prev) => (prev === id ? null : id));
