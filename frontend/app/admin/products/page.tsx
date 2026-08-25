@@ -289,7 +289,6 @@ export default function AdminProducts() {
             <TableRow>
               <TableHead>Product</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Colors</TableHead>
               <TableHead className="text-right">Purchase</TableHead>
               <TableHead className="text-right">Base price</TableHead>
               <TableHead className="text-right">Sizes</TableHead>
@@ -661,10 +660,10 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-1">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="sizes">Sizes (comma separated)</Label>
-<Input
+                <Input
                   id="sizes"
                   value={form.sizes}
                   onChange={(e) => update("sizes", e.target.value)}
@@ -673,12 +672,13 @@ export default function AdminProducts() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="badge">Badge (optional)</Label>
-              <Input
-                id="badge"
-                value={form.badge}
-                onChange={(e) => update("badge", e.target.value)}
-                placeholder="Best seller"
-              />
+                <Input
+                  id="badge"
+                  value={form.badge}
+                  onChange={(e) => update("badge", e.target.value)}
+                  placeholder="Best seller"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">

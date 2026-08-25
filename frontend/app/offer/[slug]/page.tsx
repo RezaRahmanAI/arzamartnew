@@ -45,7 +45,7 @@ export default function OfferPage() {
   );
 
   const addToCart = () => {
-    items.forEach((p) => add({ slug: p.slug, size: p.sizes[0]!, color: p.colors[0]!, qty }));
+    items.forEach((p) => add({ slug: p.slug, size: p.sizes[0]!, qty }));
     toast.success(`${offer.title} added to cart`, {
       description: `${items.length} items × ${qty}`,
     });
@@ -135,7 +135,7 @@ export default function OfferPage() {
                   <div className="flex-1">
                     <p className="text-sm font-bold text-foreground">{p.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {p.colors[0]} · Size {p.sizes[0]}
+                      Size {p.sizes[0]}
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-muted-foreground">

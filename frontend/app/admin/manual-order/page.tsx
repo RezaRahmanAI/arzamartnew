@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrders, type Order, type OrderItem } from "@/lib/orders";
-import { getSizePrice, getColorHex, type Product } from "@/lib/shop-data";
+import { getSizePrice, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { CustomerSearchInput } from "@/components/admin/customer-search-input";
 import { useSettings } from "@/context/settings-context";
@@ -599,7 +599,6 @@ export default function AdminManualOrder() {
                         <th className="py-2 text-left font-semibold">Product</th>
                         <th className="py-2 text-center w-[90px] font-semibold">Qty</th>
                         <th className="py-2 text-left w-[70px] font-semibold">Size</th>
-                        <th className="py-2 text-left w-[85px] font-semibold">Color</th>
                         <th className="py-2 text-right w-[80px] font-semibold">Price</th>
                         <th className="py-2 text-right w-[75px] font-semibold">Total</th>
                         <th className="py-2 text-center w-[35px] font-semibold"></th>
@@ -995,7 +994,7 @@ export default function AdminManualOrder() {
                 Select Options
               </DialogTitle>
               <DialogDescription className="text-left">
-                Choose size, color and quantity for {selectedProductForModal.name}.
+                Choose size and quantity for {selectedProductForModal.name}.
               </DialogDescription>
             </DialogHeader>
 

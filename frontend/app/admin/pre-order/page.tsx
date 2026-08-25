@@ -564,7 +564,6 @@ export default function AdminPreOrderPage() {
                         <th className="py-2 text-left font-semibold">Product</th>
                         <th className="py-2 text-center w-[90px] font-semibold">Qty</th>
                         <th className="py-2 text-left w-[70px] font-semibold">Size</th>
-                        <th className="py-2 text-left w-[85px] font-semibold">Color</th>
                         <th className="py-2 text-right w-[80px] font-semibold">Price</th>
                         <th className="py-2 text-right w-[75px] font-semibold">Total</th>
                         <th className="py-2 text-center w-[35px] font-semibold"></th>
@@ -959,7 +958,7 @@ export default function AdminPreOrderPage() {
                 Select Options for Pre-order
               </DialogTitle>
               <DialogDescription className="text-left">
-                Choose size, color and quantity for {selectedProductForModal.name}.
+                Choose size and quantity for {selectedProductForModal.name}.
               </DialogDescription>
             </DialogHeader>
 

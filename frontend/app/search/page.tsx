@@ -16,8 +16,7 @@ function SearchContent() {
         (p) =>
           p.isActive !== false &&
           (p.name.toLowerCase().includes(term) ||
-            p.category.includes(term) ||
-            p.colors.some((c) => c.toLowerCase().includes(term)))
+            p.category.includes(term))
       )
     : [];
 

@@ -23,7 +23,6 @@ public class UpdateOrderItemRequest
     public string? ProductName { get; set; }
     public string? Size { get; set; }
     public string SizeValue => string.IsNullOrWhiteSpace(Size) ? "Standard" : Size.Trim();
-    public string? Color { get; set; }
     public int Qty { get; set; }
     public int? Quantity { get; set; }
     public int QuantityValue => Qty > 0 ? Qty : (Quantity ?? 1);
@@ -53,7 +52,6 @@ public class FrontendOrderItemDto
     public string Name { get; set; } = string.Empty;
     public string? ProductName { get; set; }
     public string Size { get; set; } = string.Empty;
-    public string Color { get; set; } = string.Empty;
     public int Qty { get; set; }
     public int? Quantity { get; set; }
     public decimal Price { get; set; }

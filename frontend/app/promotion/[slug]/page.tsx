@@ -30,7 +30,6 @@ export default function PromotionPage() {
 
   const { add } = useCart();
   const [size, setSize] = useState(product.sizes[0]!);
-  const [color, setColor] = useState(product.colors[0]!);
   const [qty, setQty] = useState(1);
   const unitPrice = getSizePrice(product, size);
 
@@ -39,8 +38,8 @@ export default function PromotionPage() {
     .slice(0, 4);
 
   const addToCart = () => {
-    add({ slug: product.slug, size, color, qty });
-    toast.success(`${product.name} added to cart`, { description: `${color} · Size ${size}` });
+    add({ slug: product.slug, size, qty });
+    toast.success(`${product.name} added to cart`, { description: `Size ${size}` });
   };
 
   const shareUrl =
@@ -149,26 +148,6 @@ export default function PromotionPage() {
                   </button>
                 );
               })}
-            </div>
-          </div>
-
-          <div className="mt-5">
-            <p className="text-xs font-bold uppercase tracking-wider text-foreground">Colour</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {product.colors.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={`rounded-lg border px-3 py-2 text-sm font-semibold transition-colors cursor-pointer ${
-                    c === color
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card text-foreground hover:border-primary"
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
             </div>
           </div>
 

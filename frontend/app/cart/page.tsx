@@ -190,7 +190,7 @@ export default function CartPage() {
                 Edit Options
               </DialogTitle>
               <DialogDescription className="text-left">
-                Modify configurations or add another size/color of {activeProduct.name} to the cart.
+                Modify configurations or add another size of {activeProduct.name} to the cart.
               </DialogDescription>
             </DialogHeader>
 

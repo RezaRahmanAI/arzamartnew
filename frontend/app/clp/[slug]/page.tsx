@@ -30,7 +30,7 @@ import {
   DEFAULT_LANDING_SECTIONS,
   RelatedProductItem,
 } from "@/lib/api/services/custom-landing-page.service";
-import { products as staticProducts, getColorHex } from "@/lib/shop-data";
+import { products as staticProducts } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { getImageUrl, handleImageError } from "@/lib/utils";
 import { CustomSectionRenderer } from "@/components/admin/custom-section-renderer";
@@ -131,7 +131,6 @@ export default function CustomLandingPageRoute({
           );
           if (rawProduct) {
             const rawMainImg = rawProduct.image || (rawProduct.images && rawProduct.images.length > 0 ? rawProduct.images[0] : "");
-            const fallbackColors = ["Black", "White", "Navy", "Olive", "Maroon"];
 
             pageData = {
               product: {
@@ -171,7 +170,6 @@ export default function CustomLandingPageRoute({
         setLoading(false);
 
         if (pageData?.product) {
-          const mainProdColors = ["Black", "White", "Navy", "Olive", "Maroon"];
           const mainProd: UnifiedProduct = {
             id: pageData.product.id,
             name: pageData.product.name,
@@ -186,27 +184,21 @@ export default function CustomLandingPageRoute({
             variants: pageData.product.variants,
           };
           const firstSize = mainProd.variants?.[0]?.name || "";
-          const firstColor = "Black";
 
           setProductSelections({
             [mainProd.id]: {
               quantity: 1,
               selectedSize: firstSize,
-              selectedColor: firstColor,
               product: mainProd,
             },
           });
           if (firstSize) {
             setLastSelectedSizes({ [mainProd.id]: firstSize });
           }
-          if (firstColor) {
-            setLastSelectedColors({ [mainProd.id]: firstColor });
-          }
         }
 
         // Populate allStoreProducts from cached products (no API call)
         if (cachedProducts.length > 0) {
-          const currentProdId = pageData?.product?.id;
           const mappedStoreProds: UnifiedProduct[] = cachedProducts.map((p) => ({
             id: p.id || p.slug,
             name: p.name,
@@ -223,7 +215,6 @@ export default function CustomLandingPageRoute({
               stockQuantity: p.sizeStock?.[s] ?? 10,
               priceOverride: p.sizePrices?.[s],
             })),
-            colors: ["Black", "White", "Navy", "Olive", "Maroon"],
           }));
           setAllStoreProducts(mappedStoreProds);
         }
@@ -250,12 +241,10 @@ export default function CustomLandingPageRoute({
             if (!prev) {
               if (currentProd) {
                 const firstSize = currentProd.variants?.[0]?.name || "";
-                const firstColor = "Black";
                 setProductSelections({
                   [currentProd.id]: {
                     quantity: 1,
                     selectedSize: firstSize,
-                    selectedColor: firstColor,
                     product: currentProd,
                   },
                 });
@@ -328,7 +317,6 @@ export default function CustomLandingPageRoute({
   // All selectable products pool (Main Product + Admin Configured Selected Products)
   const allSelectableProducts = useMemo(() => {
     if (!data?.product) return [];
-    const mainProdColors = ["Black", "White", "Navy", "Olive", "Maroon"];
     const mainProd: UnifiedProduct = {
       id: data.product.id,
       name: data.product.name,
@@ -341,7 +329,6 @@ export default function CustomLandingPageRoute({
       imageUrl: data.product.imageUrl,
       images: data.product.images,
       variants: data.product.variants,
-      colors: ["Black", "White", "Navy", "Olive", "Maroon"],
     };
 
     const list: UnifiedProduct[] = [mainProd];
@@ -361,7 +348,6 @@ export default function CustomLandingPageRoute({
 
         if (fromRelated) {
           if (!list.some((item) => item.id === fromRelated.id || (fromRelated.slug && item.slug === fromRelated.slug))) {
-            const rpColors = ["Black", "White", "Navy", "Olive", "Maroon"];
             list.push({
               id: fromRelated.id,
               name: fromRelated.name,
@@ -370,7 +356,6 @@ export default function CustomLandingPageRoute({
               compareAtPrice: fromRelated.compareAtPrice || null,
               imageUrl: fromRelated.imageUrl,
               variants: fromRelated.variants,
-              colors: ["Black", "White", "Navy", "Olive", "Maroon"],
             });
           }
           return;
@@ -411,7 +396,6 @@ export default function CustomLandingPageRoute({
                 stockQuantity: fromStatic.sizeStock?.[s] ?? 10,
                 priceOverride: fromStatic.sizePrices?.[s],
               })),
-              colors: ["Black", "White", "Navy", "Olive", "Maroon"],
             });
           }
         }
@@ -449,10 +433,6 @@ export default function CustomLandingPageRoute({
   const getUniqueSizes = (p: UnifiedProduct): string[] => {
     if (!p.variants || p.variants.length === 0) return [];
     return Array.from(new Set(p.variants.map((v) => v.name)));
-  };
-
-  const getUniqueColors = (p: UnifiedProduct): string[] => {
-    return ["Black", "White", "Navy", "Olive", "Maroon"];
   };
 
   const updateSelections = (product: UnifiedProduct, quantity: number, size?: string) => {
@@ -604,7 +584,6 @@ export default function CustomLandingPageRoute({
           name: item.product.name,
           slug: item.product.slug || item.product.id,
           size: item.selectedSize || "Standard",
-          color: item.selectedColor || "",
           qty: item.quantity,
           price: getProductPrice(item.product),
         })),
@@ -665,15 +644,13 @@ export default function CustomLandingPageRoute({
         notes: notes.trim(),
         items: selectedProductList.map((item) => {
           const unitPrice = getProductPrice(item.product);
-          const variantParts = [item.selectedColor, item.selectedSize].filter(Boolean);
           return {
             productId: item.product.id,
             productName: item.product.name,
             unitPrice: unitPrice,
             quantity: item.quantity,
-            color: item.selectedColor || "",
             size: item.selectedSize || "",
-            variantName: variantParts.join(" - ") || item.selectedSize || "",
+            variantName: item.selectedSize || "",
             totalPrice: unitPrice * item.quantity,
           };
         }),
@@ -709,7 +686,6 @@ export default function CustomLandingPageRoute({
               name: item.product.name,
               slug: item.product.slug || item.product.id,
               size: item.selectedSize || "Standard",
-              color: item.selectedColor || "",
               qty: item.quantity,
               price: unitPrice,
             };
@@ -1138,49 +1114,6 @@ export default function CustomLandingPageRoute({
                               </div>
                             </div>
 
-                            {/* Color Selection */}
-                            {uniqueColors.length > 0 && (
-                              <div className="mb-3">
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest">
-                                    কালার সিলেক্ট করুন
-                                  </p>
-                                  {selectedColor && (
-                                    <span className="text-[11px] font-bold text-primary">
-                                      {selectedColor}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {uniqueColors.map((col) => {
-                                    const isColorActive = selectedColor === col;
-                                    const colHex = getColorHex(col);
-                                    return (
-                                      <button
-                                        key={col}
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          selectProductColor(p, col);
-                                        }}
-                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold transition-all cursor-pointer ${
-                                          isColorActive
-                                            ? "bg-primary text-primary-foreground border-primary shadow-xs scale-105"
-                                            : "bg-card text-foreground border-border hover:border-primary/50"
-                                        }`}
-                                      >
-                                        <span
-                                          className="size-2.5 rounded-full border border-black/20 shrink-0"
-                                          style={{ backgroundColor: colHex }}
-                                        />
-                                        <span>{col}</span>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-
                             {/* Size Selection */}
                             {uniqueSizes.length > 0 && (
                               <div className="mb-4">
@@ -1507,15 +1440,6 @@ export default function CustomLandingPageRoute({
                                     <div className="min-w-0">
                                       <p className="font-bold text-foreground truncate text-xs">{item.product.name}</p>
                                       <div className="flex flex-wrap items-center gap-1 mt-0.5">
-                                        {item.selectedColor && (
-                                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-muted text-foreground border border-border px-1.5 py-0.2 rounded">
-                                            <span
-                                              className="size-2 rounded-full border border-black/20 shrink-0"
-                                              style={{ backgroundColor: getColorHex(item.selectedColor) }}
-                                            />
-                                            {item.selectedColor}
-                                          </span>
-                                        )}
                                         {item.selectedSize && (
                                           <span className="inline-block text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.2 rounded">
                                             সাইজ: {item.selectedSize}
@@ -1655,7 +1579,6 @@ export default function CustomLandingPageRoute({
           ? selectedProductForDetails.variants?.find((v) => v.name === modalSelectedSize)?.stockQuantity ?? 15
           : 15;
 
-        const modalUniqueColors = getUniqueColors(selectedProductForDetails);
         const modalUniqueSizes = getUniqueSizes(selectedProductForDetails);
         const isAlreadySelected = isProductSelected(selectedProductForDetails);
 
@@ -1794,42 +1717,6 @@ export default function CustomLandingPageRoute({
                       )}
                     </div>
 
-                    {/* Color Selector */}
-                    {modalUniqueColors.length > 0 && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-foreground">কালার সিলেক্ট করুন:</span>
-                          {modalSelectedColor && (
-                            <span className="font-semibold text-primary">{modalSelectedColor}</span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {modalUniqueColors.map((col) => {
-                            const isColActive = modalSelectedColor === col;
-                            const colHex = getColorHex(col);
-                            return (
-                              <button
-                                key={col}
-                                type="button"
-                                onClick={() => setModalSelectedColor(col)}
-                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold transition-all cursor-pointer ${
-                                  isColActive
-                                    ? "bg-primary text-primary-foreground border-primary shadow-xs scale-105"
-                                    : "bg-card text-foreground border-border hover:border-primary/50"
-                                }`}
-                              >
-                                <span
-                                  className="size-2.5 rounded-full border border-black/20 shrink-0"
-                                  style={{ backgroundColor: colHex }}
-                                />
-                                <span>{col}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
                     {/* Size Selector */}
                     {modalUniqueSizes.length > 0 && (
                       <div className="space-y-1.5">
@@ -1922,14 +1809,13 @@ export default function CustomLandingPageRoute({
                     updateSelections(
                       selectedProductForDetails,
                       modalQty,
-                      modalSelectedSize,
-                      modalSelectedColor
+                      modalSelectedSize
                     );
                     setShowDetailsModal(false);
                     toast.success(
                       `${selectedProductForDetails.name} অর্ডারে সফলভাবে যুক্ত হয়েছে!`,
                       {
-                        description: `কালার: ${modalSelectedColor || "Standard"} · সাইজ: ${modalSelectedSize || "Standard"} · পরিমাণ: ${modalQty}টি`,
+                        description: `সাইজ: ${modalSelectedSize || "Standard"} · পরিমাণ: ${modalQty}টি`,
                       }
                     );
                   }}
