@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { apiConfig } from "@/lib/api/config";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -31,11 +30,7 @@ export function getImageUrl(
     return clean;
   }
   if (clean.startsWith("/")) {
-    if (clean.startsWith("/src/assets") || clean.startsWith("/assets")) {
-      return FALLBACK_IMAGE;
-    }
-    const apiBase = apiConfig.baseUrl.replace(/\/api\/v1\/?$/, "");
-    return `${apiBase}${clean}`;
+    return clean;
   }
   return clean;
 }
@@ -44,4 +39,3 @@ export function handleImageError(e: React.SyntheticEvent<HTMLImageElement, Event
   e.currentTarget.onerror = null;
   e.currentTarget.src = FALLBACK_IMAGE;
 }
-

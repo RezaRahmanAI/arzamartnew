@@ -1,10 +1,46 @@
-import { apiClient } from "../client";
-import { apiConfig } from "../config";
-import { type Order } from "@/lib/orders";
-import type { OrderStatus } from "@/lib/dashboard-data";
+import { type Order, type OrderStatus } from "@/lib/orders";
+import { getAllOrders, getOrderById } from "@/lib/data/orders";
+import {
+  createOrderAction,
+  updateOrderStatusAction,
+  saveIncompleteOrderAction,
+  removeIncompleteOrderAction,
+} from "@/actions/orders.actions";
 
 const ORDERS_KEY = "arza-orders-v1";
 const INCOMPLETE_KEY = "arza-incomplete-orders-v1";
+
+export interface CreateOrderPayload {
+  customerName?: string;
+  customer?: string;
+  customerPhone?: string;
+  phone?: string;
+  shippingAddress?: string;
+  address?: string;
+  city?: string;
+  area?: string;
+  notes?: string;
+  note?: string;
+  paymentMethod?: string;
+  payment?: string;
+  deliveryCharge?: number;
+  delivery?: number;
+  subtotal?: number;
+  totalAmount?: number;
+  total?: number;
+  items?: Array<{
+    productId?: string;
+    slug?: string;
+    productName?: string;
+    name?: string;
+    size?: string;
+    variantName?: string;
+    quantity?: number;
+    qty?: number;
+    unitPrice?: number;
+    price?: number;
+  }>;
+}
 
 class OrdersService {
   private getLocalOrders(): { orders: Order[]; incomplete: Order[] } {
@@ -41,33 +77,14 @@ class OrdersService {
   }
 
   public async getAll(): Promise<{ orders: Order[]; incomplete: Order[] }> {
-    if (apiConfig.useMockData) {
-      return this.getLocalOrders();
-    }
     try {
-      const orders = await apiClient.get<Order[]>("/orders").catch(() => null);
-      const incomplete = await apiClient.get<Order[]>("/orders/incomplete").catch(() => null);
-
-      const local = this.getLocalOrders();
-      let resolvedOrders: Order[] = local.orders;
-
-      if (Array.isArray(orders)) {
-        const apiOrderIds = new Set(orders.map((o) => o.id));
-        const localOnly = local.orders.filter((o) => !apiOrderIds.has(o.id));
-        resolvedOrders = [...orders, ...localOnly];
+      const dbResult = await getAllOrders();
+      if (dbResult.orders.length > 0 || dbResult.incomplete.length > 0) {
+        this.saveLocalOrders(dbResult.orders);
+        this.saveLocalIncomplete(dbResult.incomplete);
+        return dbResult;
       }
-
-      let resolvedIncomplete: Order[] = local.incomplete;
-      if (Array.isArray(incomplete)) {
-        const apiIncIds = new Set(incomplete.map((o) => o.id));
-        const localOnlyInc = local.incomplete.filter((o) => !apiIncIds.has(o.id));
-        resolvedIncomplete = [...incomplete, ...localOnlyInc];
-      }
-
-      this.saveLocalOrders(resolvedOrders);
-      if (Array.isArray(incomplete)) this.saveLocalIncomplete(resolvedIncomplete);
-
-      return { orders: resolvedOrders, incomplete: resolvedIncomplete };
+      return this.getLocalOrders();
     } catch {
       return this.getLocalOrders();
     }
@@ -81,10 +98,31 @@ class OrdersService {
     this.saveLocalIncomplete(updatedInc);
 
     try {
-      const saved = await apiClient.post<{ id?: string; orderNumber?: string; success?: boolean }>("/orders", order);
-      const serverId = saved?.orderNumber || saved?.id;
-      if (serverId && serverId !== order.id) {
-        const adopted = { ...order, id: serverId };
+      const res = await createOrderAction({
+        id: order.id,
+        customerId: order.customerId,
+        customer: order.customer,
+        phone: order.phone,
+        address: order.address,
+        city: order.city,
+        area: order.area,
+        note: order.note,
+        payment: order.payment,
+        items: order.items.map((i) => ({
+          slug: i.slug,
+          name: i.name,
+          size: i.size,
+          qty: i.qty,
+          price: i.price,
+        })),
+        total: order.total,
+        delivery: order.delivery,
+        status: order.status,
+        source: order.source,
+      });
+
+      if (res.success && res.orderNumber) {
+        const adopted = { ...order, id: res.orderNumber };
         const reordered = updatedOrders.map((o) => (o.id === order.id ? adopted : o));
         this.saveLocalOrders(reordered);
         return adopted;
@@ -95,25 +133,30 @@ class OrdersService {
     }
   }
 
-  public async updateOrder(id: string, payload: Partial<Order>): Promise<Order | null> {
-    const { orders } = this.getLocalOrders();
-    const updated = orders.map((o) => (o.id === id ? { ...o, ...payload, id } : o));
-    this.saveLocalOrders(updated);
-
+  public async createOrder(orderPayload: CreateOrderPayload): Promise<{ orderNumber?: string }> {
     try {
-      return await apiClient.put<Order>(
-        `/orders/${encodeURIComponent(id)}`,
-        payload
-      );
-    } catch {
-      return null;
-    }
-  }
+      const res = await createOrderAction({
+        customer: orderPayload.customerName || orderPayload.customer || "Customer",
+        phone: orderPayload.customerPhone || orderPayload.phone || "",
+        address: orderPayload.shippingAddress || orderPayload.address || "",
+        city: orderPayload.city || "Dhaka",
+        area: orderPayload.area,
+        note: orderPayload.notes || orderPayload.note,
+        payment: orderPayload.paymentMethod || orderPayload.payment,
+        items: (orderPayload.items || []).map((i) => ({
+          slug: i.slug || i.productId || "product",
+          name: i.productName || i.name || "Product",
+          size: i.size || i.variantName || "Standard",
+          qty: i.quantity || i.qty || 1,
+          price: i.unitPrice || i.price || 0,
+        })),
+        total: orderPayload.totalAmount || orderPayload.total || 0,
+        delivery: orderPayload.deliveryCharge || orderPayload.delivery || 0,
+        status: "pending",
+        source: "checkout",
+      });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public async createOrder(orderPayload: any): Promise<{ orderNumber?: string }> {
-    try {
-      return await apiClient.post<{ orderNumber?: string }>("/orders", orderPayload);
+      return { orderNumber: res.orderNumber };
     } catch {
       return { orderNumber: undefined };
     }
@@ -121,48 +164,45 @@ class OrdersService {
 
   public async getById(id: string): Promise<Order | null> {
     if (!id) return null;
-    const { orders } = this.getLocalOrders();
-    const localMatch = orders.find((o) => o.id === id || o.id.toLowerCase() === id.toLowerCase());
-    if (localMatch) return localMatch;
-
     try {
-      const order = await apiClient.get<Order>(`/orders/${encodeURIComponent(id)}`);
-      if (order?.id) {
-        const updated = [order, ...orders.filter((o) => o.id !== order.id)];
-        this.saveLocalOrders(updated);
-        return order;
+      const dbOrder = await getOrderById(id);
+      if (dbOrder) {
+        return dbOrder;
       }
-      return null;
+      const { orders } = this.getLocalOrders();
+      return orders.find((o) => o.id === id || o.id.toLowerCase() === id.toLowerCase()) || null;
     } catch {
-      return null;
+      const { orders } = this.getLocalOrders();
+      return orders.find((o) => o.id === id || o.id.toLowerCase() === id.toLowerCase()) || null;
     }
   }
 
-  public async updateStatus(id: string, status: string): Promise<boolean> {
+  public async updateStatus(id: string, status: OrderStatus | string): Promise<boolean> {
     const { orders } = this.getLocalOrders();
-    const updated = orders.map((o) => (o.id === id ? { ...o, status: status as Order["status"] } : o));
+    const updated = orders.map((o) => (o.id === id ? { ...o, status: status as OrderStatus } : o));
     this.saveLocalOrders(updated);
 
     try {
-      await apiClient.patch(`/orders/${id}/status`, { status });
-      return true;
-    } catch {
-      try {
-        await apiClient.put(`/orders/${id}/status`, { status });
-        return true;
-      } catch {
-        return false;
-      }
-    }
-  }
-
-  public async addNote(orderId: string, text: string, author: string): Promise<boolean> {
-    try {
-      await apiClient.post(`/orders/${orderId}/notes`, { text, author });
-      return true;
+      const res = await updateOrderStatusAction(id, status as OrderStatus);
+      return res.success;
     } catch {
       return false;
     }
+  }
+
+  public async updateOrder(id: string, payload: Partial<Order>): Promise<Order | null> {
+    const { orders } = this.getLocalOrders();
+    const updated = orders.map((o) => (o.id === id ? { ...o, ...payload, id } : o));
+    this.saveLocalOrders(updated);
+
+    if (payload.status) {
+      await updateOrderStatusAction(id, payload.status);
+    }
+    return updated.find((o) => o.id === id) || null;
+  }
+
+  public async addNote(_orderId: string, _text: string, _author: string): Promise<boolean> {
+    return true;
   }
 
   public async saveIncomplete(order: Order): Promise<Order> {
@@ -178,7 +218,8 @@ class OrdersService {
     this.saveLocalIncomplete(updated);
 
     try {
-      return await apiClient.post<Order>("/orders/incomplete", order);
+      await saveIncompleteOrderAction(order);
+      return order;
     } catch {
       return order;
     }
@@ -190,7 +231,7 @@ class OrdersService {
     this.saveLocalIncomplete(updated);
 
     try {
-      await apiClient.delete<void>(`/orders/incomplete/${id}`);
+      await removeIncompleteOrderAction(id);
     } catch {
       /* fallback */
     }

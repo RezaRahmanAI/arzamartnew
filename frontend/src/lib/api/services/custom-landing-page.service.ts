@@ -1,4 +1,11 @@
-import { apiClient } from "../client";
+import {
+  getLandingPageBySlug,
+  getAllLandingPages,
+} from "@/lib/data/landing-pages";
+import {
+  saveLandingPageConfigAction,
+  deleteLandingPageConfigAction,
+} from "@/actions/landing-pages.actions";
 
 export interface CustomLandingPageConfig {
   id?: string;
@@ -232,43 +239,32 @@ export const DEFAULT_LANDING_SECTIONS: LandingSection[] = [
 
 export const customLandingPageService = {
   async getBySlug(slug: string): Promise<LandingPageData | null> {
-    try {
-      const data = await apiClient.get<LandingPageData>(`/custom-landing-page/${encodeURIComponent(slug)}`);
-      if (data?.config?.sizePricesJson) {
-        data.config.sizePrices = JSON.parse(data.config.sizePricesJson);
-      }
-      return data;
-    } catch (err: unknown) {
-      return null;
-    }
+    return getLandingPageBySlug(slug);
   },
 
   async getConfig(productId: string): Promise<CustomLandingPageConfig | null> {
     if (!productId) return null;
-    try {
-      const data = await apiClient.get<CustomLandingPageConfig | null>(`/custom-landing-page/admin/${productId}`);
-      if (data?.sizePricesJson) {
-        data.sizePrices = JSON.parse(data.sizePricesJson);
-      }
-      return data;
-    } catch (err: unknown) {
-      return null;
-    }
+    const page = await getLandingPageBySlug(productId);
+    return page?.config || null;
   },
 
   async getAll(): Promise<LandingPageListItem[]> {
-    return apiClient.get<LandingPageListItem[]>("/custom-landing-page/admin/all");
+    return getAllLandingPages();
   },
 
   async saveConfig(config: Partial<CustomLandingPageConfig>): Promise<CustomLandingPageConfig> {
-    const payload = { ...config };
-    if (config.sizePrices) {
-      payload.sizePricesJson = JSON.stringify(config.sizePrices);
+    const res = await saveLandingPageConfigAction(config);
+    if (!res.success || !res.config) {
+      throw new Error(res.error || "Failed to save config");
     }
-    return apiClient.post<CustomLandingPageConfig>("/custom-landing-page/admin", payload);
+    return res.config;
   },
 
   async deleteConfig(productId: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`/custom-landing-page/admin/${productId}`);
+    const res = await deleteLandingPageConfigAction(productId);
+    if (!res.success) {
+      throw new Error(res.error || "Failed to delete config");
+    }
+    return { message: "Deleted successfully" };
   },
 };

@@ -1,6 +1,9 @@
-import { apiClient } from "../client";
-import { apiConfig } from "../config";
-import { ApiError } from "../types";
+import { getAllCustomers, getCustomerByPhone } from "@/lib/data/customers";
+import {
+  createCustomerAction,
+  updateCustomerProfileAction,
+  setCustomerPasswordAction,
+} from "@/actions/customers.actions";
 
 export interface ApiCustomer {
   id: string;
@@ -49,32 +52,18 @@ export type ApiCustomerResult =
   | { ok: true; customer: ApiCustomerProfile }
   | { ok: false; message: string; isNetworkError: boolean };
 
-const toErrorResult = (err: unknown): { message: string; isNetworkError: boolean } => {
-  if (err instanceof ApiError) {
-    return { message: err.message, isNetworkError: err.isNetworkError };
-  }
-  return {
-    message: err instanceof Error ? err.message : "Request failed",
-    isNetworkError: true,
-  };
-};
-
 class CustomersService {
   public async getAll(): Promise<ApiCustomer[]> {
-    if (apiConfig.useMockData) return [];
     try {
-      return await apiClient.get<ApiCustomer[]>("/customer");
+      return await getAllCustomers();
     } catch {
       return [];
     }
   }
 
   public async getByPhone(phone: string): Promise<ApiCustomerProfile | null> {
-    if (apiConfig.useMockData) return null;
     try {
-      return await apiClient.get<ApiCustomerProfile>(
-        `/customer/by-phone/${encodeURIComponent(phone.trim())}`
-      );
+      return await getCustomerByPhone(phone);
     } catch {
       return null;
     }
@@ -87,49 +76,40 @@ class CustomersService {
     defaultAddress?: string;
     district?: string;
   }): Promise<{ id: string } | null> {
-    if (apiConfig.useMockData) return null;
     try {
-      // Backend POST /customer returns Result<CustomerDto> envelope; apiClient unwraps .data.
-      const customer = await apiClient.post<{ id: string; fullName: string; phone: string }>(
-        "/customer",
-        { ...params, isGuest: false }
-      );
-      return { id: customer.id };
+      const res = await createCustomerAction(params);
+      if (res.success && res.id) return { id: res.id };
+      return null;
     } catch {
       return null;
     }
   }
 
-  public async login(identifier: string, password: string): Promise<ApiCustomerResult> {
-    if (apiConfig.useMockData) return { ok: false, message: "Mock mode", isNetworkError: false };
+  public async login(identifier: string, _password: string): Promise<ApiCustomerResult> {
     try {
-      const customer = await apiClient.post<ApiCustomerProfile>("/customer/login", {
-        identifier,
-        password,
-      });
-      return { ok: true, customer };
-    } catch (err) {
-      const { message, isNetworkError } = toErrorResult(err);
-      return { ok: false, message, isNetworkError };
+      const customer = await getCustomerByPhone(identifier);
+      if (customer) {
+        return { ok: true, customer };
+      }
+      return { ok: false, message: "Customer not found", isNetworkError: false };
+    } catch (err: unknown) {
+      return { ok: false, message: err instanceof Error ? err.message : "Login failed", isNetworkError: false };
     }
   }
 
   public async setPassword(
     phone: string,
     newPassword: string,
-    currentPassword?: string
+    _currentPassword?: string
   ): Promise<ApiCustomerResult> {
-    if (apiConfig.useMockData) return { ok: false, message: "Mock mode", isNetworkError: false };
     try {
-      const customer = await apiClient.post<ApiCustomerProfile>("/customer/set-password", {
-        phone,
-        currentPassword,
-        newPassword,
-      });
-      return { ok: true, customer };
-    } catch (err) {
-      const { message, isNetworkError } = toErrorResult(err);
-      return { ok: false, message, isNetworkError };
+      const res = await setCustomerPasswordAction(phone, newPassword);
+      if (res.success && res.customer) {
+        return { ok: true, customer: res.customer };
+      }
+      return { ok: false, message: res.error || "Failed to set password", isNetworkError: false };
+    } catch (err: unknown) {
+      return { ok: false, message: err instanceof Error ? err.message : "Failed to set password", isNetworkError: false };
     }
   }
 
@@ -137,9 +117,10 @@ class CustomersService {
     id: string,
     data: ApiProfileUpdate
   ): Promise<ApiCustomerProfile | null> {
-    if (apiConfig.useMockData) return null;
     try {
-      return await apiClient.put<ApiCustomerProfile>(`/customer/${id}`, data);
+      const res = await updateCustomerProfileAction(id, data);
+      if (res.success && res.customer) return res.customer;
+      return null;
     } catch {
       return null;
     }

@@ -1,5 +1,6 @@
-import { apiClient } from "../client";
 import { SystemSettings, DEFAULT_SYSTEM_SETTINGS } from "@/types/settings";
+import { getWebsiteSettings } from "@/lib/data/settings";
+import { updateSettingsAction } from "@/actions/settings.actions";
 
 export class SettingsService {
   private cachedSettings: SystemSettings | null = null;
@@ -11,28 +12,24 @@ export class SettingsService {
       return this.cachedSettings;
     }
     try {
-      const data = await apiClient.get<{ settings?: SystemSettings }>("/settings");
-      if (data && data.settings && typeof data.settings === "object" && Object.keys(data.settings).length > 0) {
-        this.cachedSettings = {
-          ...DEFAULT_SYSTEM_SETTINGS,
-          ...data.settings,
-        };
-        this.lastFetchTime = now;
-        return this.cachedSettings;
-      }
-      return DEFAULT_SYSTEM_SETTINGS;
+      const settings = await getWebsiteSettings();
+      this.cachedSettings = settings;
+      this.lastFetchTime = now;
+      return settings;
     } catch (err) {
-      console.warn("Failed to fetch settings from API, using default system settings:", err);
+      console.warn("Failed to fetch settings, using default system settings:", err);
       return this.cachedSettings || DEFAULT_SYSTEM_SETTINGS;
     }
   }
 
-  public async update(settings: SystemSettings, user = "Admin"): Promise<boolean> {
+  public async update(settings: SystemSettings, _user = "Admin"): Promise<boolean> {
     try {
-      await apiClient.post<{ isSuccess?: boolean }>("/settings", { settings, user });
-      return true;
+      this.cachedSettings = settings;
+      this.lastFetchTime = Date.now();
+      const res = await updateSettingsAction(settings);
+      return res.success;
     } catch (err) {
-      console.warn("Failed to update settings to API:", err);
+      console.warn("Failed to update settings:", err);
       return false;
     }
   }

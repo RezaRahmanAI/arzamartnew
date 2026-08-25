@@ -1,123 +1,85 @@
-import { apiClient } from "../client";
 import type { Product } from "@/lib/shop-data";
-
-export interface RawApiProduct {
-  id?: string;
-  slug: string;
-  name: string;
-  categoryName?: string;
-  basePrice?: number;
-  discountPrice?: number;
-  mainImageUrl?: string;
-  shortDescription?: string;
-  fullDescription?: string;
-  badge?: string;
-  purchaseRate?: number;
-  isBundle?: boolean;
-  bundleProducts?: string[];
-  variants?: { name: string; priceOverride?: number; stockQuantity?: number }[];
-  images?: string[] | string;
-}
-
-export interface PagedProductResponse {
-  items?: RawApiProduct[];
-  totalCount?: number;
-}
+import { getProducts, getProductBySlug } from "@/lib/data/products";
+import { createProductAction, updateProductAction, deleteProductAction } from "@/actions/products.actions";
 
 class ProductsService {
-  private mapApiProductToFrontend(p: RawApiProduct): Product {
-    const basePrice = p.basePrice ?? 0;
-    const discountPrice = p.discountPrice;
-    return {
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      category: p.categoryName ? p.categoryName.toLowerCase() : "t-shirts",
-      price: discountPrice ?? basePrice,
-      compareAt: discountPrice && discountPrice < basePrice ? basePrice : undefined,
-      mrp: basePrice,
-      image: p.mainImageUrl || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
-      sizes: p.variants && p.variants.length > 0 ? p.variants.map((v) => v.name.replace("Size: ", "")) : ["M", "L", "XL", "XXL"],
-      description: p.shortDescription || p.fullDescription || "",
-      purchaseRate: p.purchaseRate ?? basePrice * 0.7,
-      badge: p.badge,
-      isBundle: p.isBundle ?? false,
-      bundleProducts: p.bundleProducts ?? undefined,
-      sizePrices: p.variants && p.variants.length > 0
-        ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.priceOverride ?? basePrice]))
-        : {},
-      sizeStock: p.variants && p.variants.length > 0
-        ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.stockQuantity ?? 15]))
-        : {},
-      images: (() => { const imgs = p.images; if (Array.isArray(imgs) && imgs.length > 0) return imgs.filter(Boolean); if (typeof imgs === "string" && imgs.trim()) return imgs.trim().split(/\s+/).filter(Boolean); return [p.mainImageUrl || ""]; })()
-    };
-  }
-
   public async getAll(): Promise<Product[]> {
     try {
-      // Backend returns Result<PagedResult<ProductDto>> => { isSuccess, value: { items, totalCount, ... } }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await apiClient.get<any>("/products?pageIndex=1&pageSize=50");
-      let items: RawApiProduct[] = [];
-
-      if (Array.isArray(response)) {
-        items = response;
-      } else if (response?.value && Array.isArray(response.value.items)) {
-        // Unwrap Result<PagedResult<T>> wrapper
-        items = response.value.items;
-      } else if (response && Array.isArray(response.items)) {
-        items = response.items;
-      }
-      return items.map((p) => this.mapApiProductToFrontend(p));
+      const result = await getProducts({ limit: 100 });
+      return result.products;
     } catch (err) {
-      console.error("Failed to fetch products from API:", err);
+      console.error("Failed to fetch products:", err);
       return [];
     }
   }
 
   public async getBySlug(slug: string): Promise<Product | undefined> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await apiClient.get<any>(`/products/${slug}`);
-      const raw = response?.value || response;
-      if (!raw) return undefined;
-
-      // Extract main image and gallery
-      let mainImg = raw.mainImageUrl;
-      const gallery: string[] = [];
-
-      if (Array.isArray(raw.images)) {
-        for (const img of raw.images) {
-          const url = typeof img === "string" ? img : img?.imageUrl;
-          if (url) {
-            if (img?.isMain && !mainImg) mainImg = url;
-            gallery.push(url);
-          }
-        }
-      }
-
-      const p: RawApiProduct = {
-        ...raw,
-        mainImageUrl: mainImg || (gallery.length > 0 ? gallery[0] : undefined),
-        images: gallery.length > 0 ? gallery : (mainImg ? [mainImg] : undefined)
-      };
-
-      return this.mapApiProductToFrontend(p);
+      const prod = await getProductBySlug(slug);
+      return prod ?? undefined;
     } catch {
       return undefined;
     }
   }
 
   public async create(product: Product): Promise<Product> {
-    return apiClient.post<Product>("/products", product);
+    const res = await createProductAction({
+      name: product.name,
+      slug: product.slug,
+      category: product.category,
+      price: product.price,
+      compareAt: product.compareAt,
+      mrp: product.mrp,
+      image: product.image,
+      images: product.images,
+      sizes: product.sizes,
+      sizePrices: product.sizePrices,
+      sizeStock: product.sizeStock,
+      description: product.description,
+      badge: product.badge,
+      purchaseRate: product.purchaseRate,
+      isBundle: product.isBundle,
+      bundleProducts: product.bundleProducts,
+      isActive: product.isActive,
+    });
+
+    if (!res.success) {
+      throw new Error(res.error || "Failed to create product");
+    }
+    return product;
   }
 
   public async update(slug: string, updated: Product): Promise<Product> {
-    return apiClient.put<Product>(`/products/${slug}`, updated);
+    const res = await updateProductAction(slug, {
+      name: updated.name,
+      category: updated.category,
+      price: updated.price,
+      compareAt: updated.compareAt,
+      mrp: updated.mrp,
+      image: updated.image,
+      images: updated.images,
+      sizes: updated.sizes,
+      sizePrices: updated.sizePrices,
+      sizeStock: updated.sizeStock,
+      description: updated.description,
+      badge: updated.badge,
+      purchaseRate: updated.purchaseRate,
+      isBundle: updated.isBundle,
+      bundleProducts: updated.bundleProducts,
+      isActive: updated.isActive,
+    });
+
+    if (!res.success) {
+      throw new Error(res.error || "Failed to update product");
+    }
+    return updated;
   }
 
   public async delete(slug: string): Promise<void> {
-    return apiClient.delete<void>(`/products/${slug}`);
+    const res = await deleteProductAction(slug);
+    if (!res.success) {
+      throw new Error(res.error || "Failed to delete product");
+    }
   }
 }
 

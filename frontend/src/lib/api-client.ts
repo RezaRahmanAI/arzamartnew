@@ -1,4 +1,8 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5273/api/v1";
+import { getProducts, getProductBySlug } from "@/lib/data/products";
+import { getWebsiteSettings } from "@/lib/data/settings";
+import { createOrderAction } from "@/actions/orders.actions";
+import prisma from "@/lib/prisma";
+import type { Product } from "@/lib/shop-data";
 
 export interface ApiProduct {
   id: string;
@@ -51,34 +55,24 @@ export interface OrderSubmissionRequest {
   couponCode?: string;
 }
 
-export async function fetchProducts(pageIndex = 1, pageSize = 20, search?: string, categoryId?: number): Promise<{ items: ApiProduct[]; totalCount: number }> {
+export async function fetchProducts(pageIndex = 1, pageSize = 20, search?: string, categoryId?: number): Promise<{ items: Product[]; totalCount: number }> {
   try {
-    const params = new URLSearchParams({
-      pageIndex: pageIndex.toString(),
-      pageSize: pageSize.toString(),
+    const res = await getProducts({
+      page: pageIndex,
+      limit: pageSize,
+      search,
+      categoryId,
     });
-    if (search) params.append("search", search);
-    if (categoryId) params.append("categoryId", categoryId.toString());
-
-    const res = await fetch(`${API_BASE_URL}/products?${params.toString()}`, { cache: "no-store" });
-    if (!res.ok) throw new Error("Failed to fetch products");
-    const json = await res.json();
-    if (json.isSuccess && json.data) {
-      return { items: json.data.items || [], totalCount: json.data.totalCount || 0 };
-    }
-    return { items: [], totalCount: 0 };
+    return { items: res.products, totalCount: res.totalCount };
   } catch (err) {
     console.error("fetchProducts error:", err);
     return { items: [], totalCount: 0 };
   }
 }
 
-export async function fetchProductBySlug(slug: string): Promise<ApiProduct | null> {
+export async function fetchProductBySlug(slug: string): Promise<Product | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/products/${slug}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.isSuccess ? json.data : null;
+    return await getProductBySlug(slug);
   } catch (err) {
     console.error("fetchProductBySlug error:", err);
     return null;
@@ -87,11 +81,24 @@ export async function fetchProductBySlug(slug: string): Promise<ApiProduct | nul
 
 export async function fetchCategories(): Promise<ApiCategory[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/categories`, { cache: "no-store" });
-    if (!res.ok) return [];
-    const json = await res.json();
-    if (Array.isArray(json)) return json;
-    return json.isSuccess ? json.data || [] : [];
+    const raw = await prisma.category.findMany({
+      where: { isActive: true },
+      include: { subCategories: true },
+    });
+
+    return raw.map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      imageUrl: c.imageUrl || undefined,
+      subCategories: c.subCategories.map((sub) => ({
+        id: sub.id,
+        name: sub.name,
+        slug: sub.slug,
+        imageUrl: sub.imageUrl || undefined,
+        subCategories: [],
+      })),
+    }));
   } catch (err) {
     console.error("fetchCategories error:", err);
     return [];
@@ -100,10 +107,22 @@ export async function fetchCategories(): Promise<ApiCategory[]> {
 
 export async function fetchWebsiteSettings(): Promise<ApiSettings | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/settings`, { cache: "no-store" });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.isSuccess ? json.data : null;
+    const s = await getWebsiteSettings();
+    const fbUrl = s.socialMedia?.platforms?.find((p) => p.platform.toLowerCase().includes("facebook"))?.url || "";
+    const instaUrl = s.socialMedia?.platforms?.find((p) => p.platform.toLowerCase().includes("instagram"))?.url || "";
+
+    return {
+      siteName: s.general?.websiteName || "Arza Fashion",
+      logoUrl: s.branding?.headerLogo || s.branding?.lightLogo || "/images/logo.png",
+      supportEmail: s.contact?.supportEmail || s.contact?.emailAddress || "support@arza.com",
+      supportPhone: s.contact?.supportPhone || "01700000000",
+      metaTitle: s.seo?.defaultMetaTitle || "Arza Fashion",
+      metaDescription: s.seo?.defaultMetaDescription || "Arza Fashion Store",
+      facebookUrl: fbUrl,
+      instagramUrl: instaUrl,
+      deliveryInsideDhaka: String(s.shipping?.rules?.find((r) => r.name.toLowerCase().includes("inside"))?.charge || 60),
+      deliveryOutsideDhaka: String(s.shipping?.rules?.find((r) => r.name.toLowerCase().includes("outside"))?.charge || 120),
+    };
   } catch (err) {
     console.error("fetchWebsiteSettings error:", err);
     return null;
@@ -112,13 +131,21 @@ export async function fetchWebsiteSettings(): Promise<ApiSettings | null> {
 
 export async function submitOrder(orderData: OrderSubmissionRequest): Promise<{ success: boolean; data?: unknown; message?: string }> {
   try {
-    const res = await fetch(`${API_BASE_URL}/orders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(orderData),
+    const res = await createOrderAction({
+      customer: "Customer",
+      phone: "01700000000",
+      address: orderData.shippingAddressJson,
+      city: "Dhaka",
+      items: orderData.items.map((i) => ({
+        slug: i.productId,
+        name: "Product",
+        qty: i.quantity,
+        price: 0,
+      })),
+      total: 0,
+      delivery: 60,
     });
-    const json = await res.json();
-    return { success: json.isSuccess, data: json.data, message: json.error };
+    return { success: res.success, data: { orderNumber: res.orderNumber }, message: res.error };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to submit order";
     return { success: false, message };

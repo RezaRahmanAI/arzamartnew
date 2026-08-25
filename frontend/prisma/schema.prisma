@@ -1,0 +1,400 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  email        String        @unique @map("Email") @db.NVarChar(256)
+  passwordHash String        @map("PasswordHash") @db.NVarChar(Max)
+  firstName    String        @map("FirstName") @db.NVarChar(100)
+  lastName     String        @map("LastName") @db.NVarChar(100)
+  phoneNumber  String?       @map("PhoneNumber") @db.NVarChar(20)
+  role         Int           @default(1) @map("Role")
+  isActive     Boolean       @default(true) @map("IsActive")
+  createdAtUtc DateTime      @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime?     @updatedAt @map("UpdatedAtUtc")
+
+  customer      Customer?
+  refreshTokens RefreshToken[]
+  wishlistItems WishlistItem[]
+  reviews       Review[]
+  notifications Notification[]
+
+  @@map("Users")
+}
+
+model Customer {
+  id             String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  userId         String?   @unique @map("UserId") @db.UniqueIdentifier
+  fullName       String    @map("FullName") @db.NVarChar(150)
+  email          String    @map("Email") @db.NVarChar(255)
+  phone          String    @unique @map("Phone") @db.NVarChar(20)
+  googleId       String?   @map("GoogleId") @db.NVarChar(Max)
+  googleEmail    String?   @map("GoogleEmail") @db.NVarChar(255)
+  profileImage   String?   @map("ProfileImage") @db.NVarChar(Max)
+  defaultAddress String?   @map("DefaultAddress") @db.NVarChar(500)
+  area           String?   @map("Area") @db.NVarChar(200)
+  district       String    @default("Dhaka") @map("District") @db.NVarChar(100)
+  postalCode     String?   @map("PostalCode") @db.NVarChar(20)
+  defaultNote    String?   @map("DefaultNote") @db.NVarChar(1000)
+  isGuest        Boolean   @default(false) @map("IsGuest")
+  passwordHash   String?   @map("PasswordHash") @db.NVarChar(256)
+  lastLoginAtUtc DateTime? @map("LastLoginAtUtc")
+  createdAtUtc   DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc   DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orders Order[]
+
+  @@map("Customers")
+}
+
+model Brand {
+  id           Int       @id @default(autoincrement()) @map("Id")
+  name         String    @map("Name") @db.NVarChar(Max)
+  slug         String    @map("Slug") @db.NVarChar(Max)
+  logoUrl      String?   @map("LogoUrl") @db.NVarChar(Max)
+  isActive     Boolean   @default(true) @map("IsActive")
+  createdAtUtc DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  products Product[]
+
+  @@map("Brands")
+}
+
+model Category {
+  id               Int       @id @default(autoincrement()) @map("Id")
+  parentCategoryId Int?      @map("ParentCategoryId")
+  name             String    @map("Name") @db.NVarChar(Max)
+  slug             String    @map("Slug") @db.NVarChar(Max)
+  imageUrl         String?   @map("ImageUrl") @db.NVarChar(Max)
+  blurb            String?   @map("Blurb") @db.NVarChar(Max)
+  displayOrder     Int       @default(0) @map("DisplayOrder")
+  isActive         Boolean   @default(true) @map("IsActive")
+  createdAtUtc     DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc     DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  parentCategory Category?  @relation("SubCategories", fields: [parentCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subCategories  Category[] @relation("SubCategories")
+  products       Product[]
+
+  @@map("Categories")
+}
+
+model Product {
+  id               String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  brandId          Int       @map("BrandId")
+  categoryId       Int       @map("CategoryId")
+  name             String    @map("Name") @db.NVarChar(250)
+  slug             String    @unique @map("Slug") @db.NVarChar(280)
+  sku              String    @unique @map("SKU") @db.NVarChar(50)
+  shortDescription String    @map("ShortDescription") @db.NVarChar(Max)
+  fullDescription  String    @map("FullDescription") @db.NVarChar(Max)
+  basePrice        Decimal   @map("BasePrice") @db.Decimal(18, 4)
+  discountPrice    Decimal?  @map("DiscountPrice") @db.Decimal(18, 4)
+  isFeatured       Boolean   @default(false) @map("IsFeatured")
+  isActive         Boolean   @default(true) @map("IsActive")
+  isBundle         Boolean   @default(false) @map("IsBundle")
+  bundleProducts   String?   @map("BundleProducts") @db.NVarChar(2000)
+  averageRating    Decimal   @default(0) @map("AverageRating") @db.Decimal(3, 2)
+  reviewCount      Int       @default(0) @map("ReviewCount")
+  purchaseRate     Decimal   @default(0) @map("PurchaseRate") @db.Decimal(18, 4)
+  badge            String?   @map("Badge") @db.NVarChar(100)
+  createdAtUtc     DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc     DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  brand                  Brand                   @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category               Category                @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  variants               ProductVariant[]
+  images                 ProductImage[]
+  reviews                Review[]
+  orderItems             OrderItem[]
+  inventories            Inventory[]
+  wishlistItems          WishlistItem[]
+  customLandingPageConfig CustomLandingPageConfig?
+
+  @@index([isActive, categoryId, createdAtUtc], map: "IX_Products_IsActive_CategoryId_CreatedAtUtc")
+  @@index([categoryId, basePrice], map: "IX_Products_CategoryId_BasePrice")
+  @@map("Products")
+}
+
+model ProductVariant {
+  id            String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  productId     String    @map("ProductId") @db.UniqueIdentifier
+  name          String    @map("Name") @db.NVarChar(Max)
+  sku           String    @map("SKU") @db.NVarChar(Max)
+  priceOverride Decimal?  @map("PriceOverride") @db.Decimal(18, 2)
+  stockQuantity Int       @default(0) @map("StockQuantity")
+  isActive      Boolean   @default(true) @map("IsActive")
+  createdAtUtc  DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc  DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventories Inventory[]
+
+  @@map("ProductVariants")
+}
+
+model ProductImage {
+  id           Int       @id @default(autoincrement()) @map("Id")
+  productId    String    @map("ProductId") @db.UniqueIdentifier
+  imageUrl     String    @map("ImageUrl") @db.NVarChar(Max)
+  displayOrder Int       @default(0) @map("DisplayOrder")
+  isMain       Boolean   @default(false) @map("IsMain")
+  createdAtUtc DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("ProductImages")
+}
+
+model Order {
+  id                  String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  orderNumber         String    @unique @map("OrderNumber") @db.NVarChar(50)
+  customerId          String    @map("CustomerId") @db.UniqueIdentifier
+  subTotal            Decimal   @map("SubTotal") @db.Decimal(18, 2)
+  discountAmount      Decimal   @default(0) @map("DiscountAmount") @db.Decimal(18, 2)
+  shippingFee         Decimal   @default(0) @map("ShippingFee") @db.Decimal(18, 2)
+  totalAmount         Decimal   @map("TotalAmount") @db.Decimal(18, 2)
+  orderStatus         Int       @default(1) @map("OrderStatus")
+  paymentStatus       Int       @default(1) @map("PaymentStatus")
+  shippingAddressJson String    @map("ShippingAddressJson") @db.NVarChar(Max)
+  couponCode          String?   @map("CouponCode") @db.NVarChar(Max)
+  createdAtUtc        DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc        DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  customer Customer    @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  items    OrderItem[]
+
+  @@index([orderStatus, createdAtUtc], map: "IX_Orders_OrderStatus_CreatedAtUtc")
+  @@index([createdAtUtc], map: "IX_Orders_CreatedAtUtc")
+  @@map("Orders")
+}
+
+model OrderItem {
+  id           Int       @id @default(autoincrement()) @map("Id")
+  orderId      String    @map("OrderId") @db.UniqueIdentifier
+  productId    String    @map("ProductId") @db.UniqueIdentifier
+  variantId    String?   @map("VariantId") @db.UniqueIdentifier
+  productName  String    @map("ProductName") @db.NVarChar(Max)
+  unitPrice    Decimal   @map("UnitPrice") @db.Decimal(18, 2)
+  quantity     Int       @map("Quantity")
+  createdAtUtc DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("OrderItems")
+}
+
+model IncompleteOrder {
+  id           String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  orderId      String    @unique @map("OrderId") @db.NVarChar(64)
+  phone        String    @map("Phone") @db.NVarChar(32)
+  orderJson    String    @map("OrderJson") @db.NVarChar(Max)
+  createdAtUtc DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  @@map("IncompleteOrders")
+}
+
+model CustomLandingPageConfig {
+  id                            String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  productId                     String    @unique @map("ProductId") @db.UniqueIdentifier
+  relativeTimerTotalMinutes     Int?      @default(120) @map("RelativeTimerTotalMinutes")
+  isTimerVisible                Boolean   @default(true) @map("IsTimerVisible")
+  headerTitle                   String?   @map("HeaderTitle") @db.NVarChar(Max)
+  isProductDetailsVisible       Boolean   @default(true) @map("IsProductDetailsVisible")
+  productDetailsTitle           String?   @map("ProductDetailsTitle") @db.NVarChar(Max)
+  isFabricVisible               Boolean   @default(true) @map("IsFabricVisible")
+  isDesignVisible               Boolean   @default(true) @map("IsDesignVisible")
+  isTrustBannerVisible          Boolean   @default(true) @map("IsTrustBannerVisible")
+  trustBannerText               String?   @map("TrustBannerText") @db.NVarChar(Max)
+  trustBannerDescription        String?   @map("TrustBannerDescription") @db.NVarChar(Max)
+  isFeaturedOrderVisible        Boolean   @default(true) @map("IsFeaturedOrderVisible")
+  featuredProductName           String?   @map("FeaturedProductName") @db.NVarChar(Max)
+  promoPrice                    Decimal?  @map("PromoPrice") @db.Decimal(18, 2)
+  originalPrice                 Decimal?  @map("OriginalPrice") @db.Decimal(18, 2)
+  sizePricesJson                String?   @map("SizePricesJson") @db.NVarChar(Max)
+  promoText                     String?   @map("PromoText") @db.NVarChar(Max)
+  freeShippingThresholdQuantity Int?      @map("FreeShippingThresholdQuantity")
+  isMarqueeVisible              Boolean   @default(true) @map("IsMarqueeVisible")
+  marqueeText                   String?   @map("MarqueeText") @db.NVarChar(Max)
+  customHeroImageUrl            String?   @map("CustomHeroImageUrl") @db.NVarChar(Max)
+  customHeroDescription         String?   @map("CustomHeroDescription") @db.NVarChar(Max)
+  customHeroBgColor             String?   @default("#9333ea") @map("CustomHeroBgColor") @db.NVarChar(Max)
+  customHeroTextColor           String?   @default("#ffffff") @map("CustomHeroTextColor") @db.NVarChar(Max)
+  sectionsJson                  String?   @map("SectionsJson") @db.NVarChar(Max)
+  createdAtUtc                  DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc                  DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId], map: "IX_CustomLandingPageConfigs_ProductId")
+  @@map("CustomLandingPageConfigs")
+}
+
+model Banner {
+  id           Int       @id @default(autoincrement()) @map("Id")
+  title        String    @map("Title") @db.NVarChar(Max)
+  subtitle     String    @map("Subtitle") @db.NVarChar(Max)
+  imageUrl     String    @map("ImageUrl") @db.NVarChar(Max)
+  targetUrl    String    @map("TargetUrl") @db.NVarChar(Max)
+  displayOrder Int       @default(0) @map("DisplayOrder")
+  isActive     Boolean   @default(true) @map("IsActive")
+  position     String    @default("slider") @map("Position") @db.NVarChar(Max)
+  createdAtUtc DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  @@map("Banners")
+}
+
+model WebsiteSettings {
+  id                   Int       @id @default(autoincrement()) @map("Id")
+  siteName             String    @default("Arza Fashion") @map("SiteName") @db.NVarChar(Max)
+  logoUrl              String    @default("/images/logo.png") @map("LogoUrl") @db.NVarChar(Max)
+  supportEmail         String    @default("support@arza.com") @map("SupportEmail") @db.NVarChar(Max)
+  supportPhone         String    @default("01700000000") @map("SupportPhone") @db.NVarChar(Max)
+  currencySymbol       String    @default("TK") @map("CurrencySymbol") @db.NVarChar(Max)
+  metaTitle            String    @map("MetaTitle") @db.NVarChar(Max)
+  metaDescription      String    @map("MetaDescription") @db.NVarChar(Max)
+  keywords             String    @map("Keywords") @db.NVarChar(Max)
+  facebookUrl          String    @map("FacebookUrl") @db.NVarChar(Max)
+  instagramUrl         String    @map("InstagramUrl") @db.NVarChar(Max)
+  youtubeUrl           String    @map("YoutubeUrl") @db.NVarChar(Max)
+  footerCopyright      String    @map("FooterCopyright") @db.NVarChar(Max)
+  deliveryInsideDhaka  String    @default("60") @map("DeliveryInsideDhaka") @db.NVarChar(Max)
+  deliveryOutsideDhaka String    @default("120") @map("DeliveryOutsideDhaka") @db.NVarChar(Max)
+  settingsJson         String    @map("SettingsJson") @db.NVarChar(Max)
+  createdAtUtc         DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc         DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  @@map("WebsiteSettings")
+}
+
+model Review {
+  id           Int       @id @default(autoincrement()) @map("Id")
+  productId    String    @map("ProductId") @db.UniqueIdentifier
+  userId       String    @map("UserId") @db.UniqueIdentifier
+  rating       Int       @map("Rating")
+  comment      String    @map("Comment") @db.NVarChar(Max)
+  isApproved   Boolean   @default(true) @map("IsApproved")
+  createdAtUtc DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("Reviews")
+}
+
+model Coupon {
+  id                 Int       @id @default(autoincrement()) @map("Id")
+  code               String    @unique @map("Code") @db.NVarChar(100)
+  discountPercentage Decimal?  @map("DiscountPercentage") @db.Decimal(18, 2)
+  discountAmount     Decimal?  @map("DiscountAmount") @db.Decimal(18, 2)
+  minimumSpend       Decimal   @default(0) @map("MinimumSpend") @db.Decimal(18, 2)
+  expirationDate     DateTime  @map("ExpirationDate")
+  usageLimit         Int       @default(100) @map("UsageLimit")
+  usageCount         Int       @default(0) @map("UsageCount")
+  isActive           Boolean   @default(true) @map("IsActive")
+  createdAtUtc       DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc       DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  @@map("Coupons")
+}
+
+model ShippingMethod {
+  id                    Int       @id @default(autoincrement()) @map("Id")
+  name                  String    @map("Name") @db.NVarChar(Max)
+  description           String    @map("Description") @db.NVarChar(Max)
+  baseCost              Decimal   @default(60) @map("BaseCost") @db.Decimal(18, 2)
+  freeShippingThreshold Decimal   @default(1000) @map("FreeShippingThreshold") @db.Decimal(18, 2)
+  isActive              Boolean   @default(true) @map("IsActive")
+  createdAtUtc          DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc          DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  @@map("ShippingMethods")
+}
+
+model Inventory {
+  id                Int       @id @default(autoincrement()) @map("Id")
+  productId         String    @map("ProductId") @db.UniqueIdentifier
+  variantId         String?   @map("VariantId") @db.UniqueIdentifier
+  warehouseLocation String    @default("Main Warehouse") @map("WarehouseLocation") @db.NVarChar(Max)
+  availableQuantity Int       @default(0) @map("AvailableQuantity")
+  reservedQuantity  Int       @default(0) @map("ReservedQuantity")
+  reorderLevel      Int       @default(10) @map("ReorderLevel")
+  createdAtUtc      DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc      DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("Inventories")
+}
+
+model WishlistItem {
+  id           Int       @id @default(autoincrement()) @map("Id")
+  userId       String    @map("UserId") @db.UniqueIdentifier
+  productId    String    @map("ProductId") @db.UniqueIdentifier
+  createdAtUtc DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("WishlistItems")
+}
+
+model Notification {
+  id           Int       @id @default(autoincrement()) @map("Id")
+  userId       String?   @map("UserId") @db.UniqueIdentifier
+  title        String    @map("Title") @db.NVarChar(Max)
+  message      String    @map("Message") @db.NVarChar(Max)
+  targetUrl    String    @map("TargetUrl") @db.NVarChar(Max)
+  isRead       Boolean   @default(false) @map("IsRead")
+  createdAtUtc DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("Notifications")
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  userId       String    @map("UserId") @db.UniqueIdentifier
+  token        String    @map("Token") @db.NVarChar(Max)
+  jwtId        String    @map("JwtId") @db.NVarChar(Max)
+  isRevoked    Boolean   @default(false) @map("IsRevoked")
+  expiresAtUtc DateTime  @map("ExpiresAtUtc")
+  createdAtUtc DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("RefreshTokens")
+}
+
+model AuditLog {
+  id            BigInt   @id @default(autoincrement()) @map("Id")
+  userId        String?  @map("UserId") @db.NVarChar(Max)
+  action        String   @map("Action") @db.NVarChar(Max)
+  entityName    String   @map("EntityName") @db.NVarChar(Max)
+  entityId      String   @map("EntityId") @db.NVarChar(Max)
+  oldValuesJson String?  @map("OldValuesJson") @db.NVarChar(Max)
+  newValuesJson String?  @map("NewValuesJson") @db.NVarChar(Max)
+  ipAddress     String?  @map("IpAddress") @db.NVarChar(Max)
+  timestampUtc  DateTime @default(now()) @map("TimestampUtc")
+
+  @@map("AuditLogs")
+}
