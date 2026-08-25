@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { useParams, useRouter, notFound } from "next/navigation";
 import { Minus, Plus, RotateCcw, ShoppingBag, Truck, Star, ChevronLeft, ChevronRight, Heart } from "lucide-react";
@@ -10,7 +8,7 @@ import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
 import { useReviews } from "@/lib/reviews";
 import { useProducts } from "@/lib/products-store";
-import { formatBDT, getSizePrice, getSizeStock, getColorHex, products as staticProducts } from "@/lib/shop-data";
+import { formatBDT, getSizePrice, getSizeStock, products as staticProducts } from "@/lib/shop-data";
 import { getImageUrl, handleImageError, FALLBACK_IMAGE } from "@/lib/utils";
 
 
@@ -31,7 +29,6 @@ export default function ProductPage() {
   const isWishlisted = isInWishlist(product.slug);
   const { reviews, addReview } = useReviews();
   const [size, setSize] = useState(product.sizes[0]!);
-  const [color, setColor] = useState(product.colors[0]!);
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState<"description" | "video" | "return">("description");
   const [activeImage, setActiveImage] = useState(product.image);
@@ -126,8 +123,8 @@ export default function ProductPage() {
   };
 
   const addToCart = () => {
-    add({ slug: product.slug, size, color, qty });
-    toast.success(`${product.name} added to cart`, { description: `${color} · Size ${size}` });
+    add({ slug: product.slug, size, qty });
+    toast.success(`${product.name} added to cart`, { description: `Size ${size}` });
   };
 
   return (
@@ -346,37 +343,6 @@ export default function ProductPage() {
                 )}
               </p>
             )}
-          </div>
-
-          <div className="mt-5">
-            <p className="text-xs font-bold uppercase tracking-wider text-foreground">
-              Colour: <span className="font-semibold text-primary">{color}</span>
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-2.5">
-              {product.colors.map((c) => {
-                const hex = getColorHex(c);
-                const isSelected = c === color;
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setColor(c)}
-                    title={c}
-                    className={`group relative flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                      isSelected
-                        ? "border-primary bg-primary/10 text-primary ring-2 ring-primary ring-offset-1 shadow-sm"
-                        : "border-border bg-card text-foreground hover:border-primary/50"
-                    }`}
-                  >
-                    <span
-                      className="size-4 rounded-full border border-black/10 shadow-sm inline-block"
-                      style={{ backgroundColor: hex }}
-                    />
-                    
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">

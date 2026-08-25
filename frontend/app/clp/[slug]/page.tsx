@@ -60,7 +60,6 @@ interface ProductSelectionState {
   [productId: string]: {
     quantity: number;
     selectedSize: string;
-    selectedColor: string;
     product: UnifiedProduct;
   };
 }
@@ -85,14 +84,12 @@ export default function CustomLandingPageRoute({
   // Selection State
   const [productSelections, setProductSelections] = useState<ProductSelectionState>({});
   const [lastSelectedSizes, setLastSelectedSizes] = useState<{ [productId: string]: string }>({});
-  const [lastSelectedColors, setLastSelectedColors] = useState<{ [productId: string]: string }>({});
 
   // Quick Details Modal
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedProductForDetails, setSelectedProductForDetails] = useState<UnifiedProduct | null>(null);
   const [modalActiveImg, setModalActiveImg] = useState<string>("");
   const [modalSelectedSize, setModalSelectedSize] = useState<string>("");
-  const [modalSelectedColor, setModalSelectedColor] = useState<string>("");
   const [modalQty, setModalQty] = useState<number>(1);
 
   // Checkout Form State
@@ -463,10 +460,6 @@ export default function CustomLandingPageRoute({
     return Array.from(new Set(p.variants.map((v) => v.name)));
   };
 
-  const getSelectedColor = (p: UnifiedProduct): string => {
-    return productSelections[p.id]?.selectedColor || lastSelectedColors[p.id] || p.colors?.[0] || getUniqueColors(p)[0] || "";
-  };
-
   const getUniqueColors = (p: UnifiedProduct): string[] => {
     if (p.colors && p.colors.length > 0) return p.colors;
     const staticMatch = staticProducts.find((sp) => sp.slug === p.slug || sp.id === p.id || sp.name.toLowerCase() === p.name.toLowerCase());
@@ -474,11 +467,10 @@ export default function CustomLandingPageRoute({
     return ["Black", "White", "Navy", "Olive", "Maroon"];
   };
 
-  const updateSelections = (product: UnifiedProduct, quantity: number, size?: string, color?: string) => {
+  const updateSelections = (product: UnifiedProduct, quantity: number, size?: string) => {
     setProductSelections((prev) => {
       const current = prev[product.id];
       const newSize = size !== undefined ? size : (current?.selectedSize || lastSelectedSizes[product.id] || product.variants?.[0]?.name || "");
-      const newColor = color !== undefined ? color : (current?.selectedColor || lastSelectedColors[product.id] || product.colors?.[0] || getUniqueColors(product)[0] || "");
 
       if (quantity <= 0) {
         const copy = { ...prev };
@@ -491,7 +483,6 @@ export default function CustomLandingPageRoute({
         [product.id]: {
           quantity,
           selectedSize: newSize,
-          selectedColor: newColor,
           product,
         },
       };
@@ -501,43 +492,29 @@ export default function CustomLandingPageRoute({
   const toggleProductCheck = (p: UnifiedProduct) => {
     const currentQty = productSelections[p.id]?.quantity ?? 0;
     const currentSize = productSelections[p.id]?.selectedSize || lastSelectedSizes[p.id] || p.variants?.[0]?.name || "";
-    const currentColor = productSelections[p.id]?.selectedColor || lastSelectedColors[p.id] || p.colors?.[0] || getUniqueColors(p)[0] || "";
 
     if (currentQty > 0) {
       if (currentSize) {
         setLastSelectedSizes((prev) => ({ ...prev, [p.id]: currentSize }));
       }
-      if (currentColor) {
-        setLastSelectedColors((prev) => ({ ...prev, [p.id]: currentColor }));
-      }
       updateSelections(p, 0);
     } else {
       const rememberedSize = lastSelectedSizes[p.id] || p.variants?.[0]?.name || "";
-      const rememberedColor = lastSelectedColors[p.id] || p.colors?.[0] || getUniqueColors(p)[0] || "";
-      updateSelections(p, 1, rememberedSize, rememberedColor);
+      updateSelections(p, 1, rememberedSize);
     }
   };
 
   const selectProductSize = (p: UnifiedProduct, size: string) => {
     setLastSelectedSizes((prev) => ({ ...prev, [p.id]: size }));
     const currentQty = productSelections[p.id]?.quantity ?? 0;
-    const currentColor = getSelectedColor(p);
-    updateSelections(p, currentQty > 0 ? currentQty : 1, size, currentColor);
-  };
-
-  const selectProductColor = (p: UnifiedProduct, color: string) => {
-    setLastSelectedColors((prev) => ({ ...prev, [p.id]: color }));
-    const currentQty = productSelections[p.id]?.quantity ?? 0;
-    const currentSize = getSelectedSize(p);
-    updateSelections(p, currentQty > 0 ? currentQty : 1, currentSize, color);
+    updateSelections(p, currentQty > 0 ? currentQty : 1, size);
   };
 
   const updateProductQuantity = (p: UnifiedProduct, delta: number) => {
     const currentQty = productSelections[p.id]?.quantity ?? 0;
     const newQty = Math.max(0, currentQty + delta);
     const size = getSelectedSize(p);
-    const color = getSelectedColor(p);
-    updateSelections(p, newQty, size, color);
+    updateSelections(p, newQty, size);
   };
 
   const selectedProductList = useMemo(() => {
@@ -549,10 +526,8 @@ export default function CustomLandingPageRoute({
     const firstImg = p.imageUrl || p.images?.[0]?.imageUrl || "";
     setModalActiveImg(firstImg);
     const currSize = getSelectedSize(p);
-    const currColor = getSelectedColor(p);
     const currQty = getProductQuantity(p) || 1;
     setModalSelectedSize(currSize);
-    setModalSelectedColor(currColor);
     setModalQty(currQty);
     setShowDetailsModal(true);
   };
@@ -1096,8 +1071,6 @@ export default function CustomLandingPageRoute({
                         const qty = getProductQuantity(p);
                         const selectedSize = getSelectedSize(p);
                         const uniqueSizes = getUniqueSizes(p);
-                        const selectedColor = getSelectedColor(p);
-                        const uniqueColors = getUniqueColors(p);
                         const hasDiscount = p.compareAtPrice && p.compareAtPrice > p.price;
 
                         return (

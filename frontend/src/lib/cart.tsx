@@ -13,7 +13,6 @@ import { useProducts } from "./products-store";
 export type CartLine = {
   slug: string;
   size: string;
-  color: string;
   qty: number;
 };
 
@@ -57,7 +56,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const add = useCallback((line: CartLine) => {
     setLines((prev) => {
       const i = prev.findIndex(
-        (l) => l.slug === line.slug && l.size === line.size && l.color === line.color,
+        (l) => l.slug === line.slug && l.size === line.size,
       );
       if (i === -1) return [...prev, line];
       const next = [...prev];
@@ -72,7 +71,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const next = [...prev];
       next[index] = line;
       const duplicateIndex = next.findIndex(
-        (l, i) => i !== index && l.slug === line.slug && l.size === line.size && l.color === line.color,
+        (l, i) => i !== index && l.slug === line.slug && l.size === line.size,
       );
       if (duplicateIndex !== -1) {
         next[duplicateIndex] = {

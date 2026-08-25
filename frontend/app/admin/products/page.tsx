@@ -28,8 +28,6 @@ import { formatBDT } from "@/lib/dashboard-data";
 import { type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { useCategories } from "@/lib/categories-store";
-import { W3ColorPicker } from "@/components/ui/color-picker";
-import { ColorSwatches } from "@/components/ui/color-swatch";
 import { ImageUploader, getImageUrl, handleImageError } from "@/components/image-uploader";
 import { apiClient } from "@/lib/api/client";
 
@@ -43,7 +41,6 @@ type FormState = {
   compareAt: number;
   purchaseRate: number;
   sizes: string;
-  colors: string;
   description: string;
   badge: string;
   sizePrices: Record<string, number>;
@@ -64,7 +61,6 @@ const emptyForm: FormState = {
   compareAt: 0,
   purchaseRate: 0,
   sizes: "M, L, XL, XXL",
-  colors: "Black, White, Navy, Olive, Maroon",
   description: "",
   badge: "",
   sizePrices: {},
@@ -151,7 +147,6 @@ export default function AdminProducts() {
       compareAt: p.mrp ?? p.compareAt ?? 0,
       purchaseRate: p.purchaseRate,
       sizes: p.sizes.join(", "),
-      colors: p.colors.join(", "),
       description: p.description,
       badge: p.badge ?? "",
       sizePrices: p.sizePrices ?? {},
@@ -180,10 +175,6 @@ export default function AdminProducts() {
       return;
     }
     const sizes = sizesArray;
-    const colors = form.colors
-      .split(",")
-      .map((c) => c.trim())
-      .filter(Boolean);
     const sizePrices: Record<string, number> = {};
     sizes.forEach((s) => {
       const sp = form.sizePrices[s];
@@ -202,7 +193,6 @@ export default function AdminProducts() {
       mrp: Number(form.compareAt) > 0 ? Number(form.compareAt) : undefined,
       image: form.image || "/src/assets/cat-tshirt.jpg",
       sizes,
-      colors,
       description: form.description || "No description yet.",
       badge: form.badge || undefined,
       purchaseRate: Number(form.purchaseRate) || 0,
@@ -345,9 +335,6 @@ export default function AdminProducts() {
                     </div>
                   </TableCell>
                   <TableCell className="capitalize text-muted-foreground">{p.category}</TableCell>
-                  <TableCell>
-                    <ColorSwatches colors={p.colors} size="sm" />
-                  </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {formatBDT(p.purchaseRate)}
                   </TableCell>
@@ -677,7 +664,7 @@ export default function AdminProducts() {
             <div className="grid gap-4 sm:grid-cols-1">
               <div className="space-y-1.5">
                 <Label htmlFor="sizes">Sizes (comma separated)</Label>
-                <Input
+<Input
                   id="sizes"
                   value={form.sizes}
                   onChange={(e) => update("sizes", e.target.value)}
@@ -685,19 +672,7 @@ export default function AdminProducts() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Product Colours (W3 Color Picker)</Label>
-                <W3ColorPicker
-                  selectedColors={form.colors
-                    .split(",")
-                    .map((c) => c.trim())
-                    .filter(Boolean)}
-                  onChange={(colorsArr) => update("colors", colorsArr.join(", "))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="badge">Badge (optional)</Label>
+                <Label htmlFor="badge">Badge (optional)</Label>
               <Input
                 id="badge"
                 value={form.badge}

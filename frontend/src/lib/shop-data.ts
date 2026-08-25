@@ -34,7 +34,6 @@ export type Product = {
   image: string;
   imageUrl?: string;
   sizes: string[];
-  colors: string[];
   description: string;
   badge?: string;
   purchaseRate: number;
@@ -115,7 +114,6 @@ export const products: Product[] = [
     mrp: 990,
     image: catTshirt,
     sizes: SIZES,
-    colors: ["Black", "White", "Navy", "Olive", "Maroon"],
     description:
       "A 240 GSM combed cotton tee with a boxy fall, ribbed neck and pre-shrunk finish. Keeps its shape after every wash.",
     badge: "Best seller",
@@ -131,7 +129,6 @@ export const products: Product[] = [
     mrp: 1090,
     image: catTshirt,
     sizes: SIZES,
-    colors: ["Black", "White", "Navy", "Olive", "Charcoal"],
     description:
       "Oversized silhouette with a hand-drawn print, screen printed with water-based ink so the graphic stays soft.",
     purchaseRate: 520,
@@ -147,7 +144,6 @@ export const products: Product[] = [
     mrp: 1890,
     image: catShirt,
     sizes: SIZES,
-    colors: ["White", "Navy", "Beige", "Olive", "Charcoal", "Black"],
     description:
       "Airy 100% linen weave with a soft collar and coconut buttons. Built for humid afternoons and long commutes.",
     badge: "New",
@@ -163,7 +159,6 @@ export const products: Product[] = [
     mrp: 1550,
     image: catShirt,
     sizes: SIZES,
-    colors: ["White", "Navy", "Charcoal", "Olive", "Black"],
     description:
       "Classic oxford cotton with a slightly relaxed fit. Works tucked in for the office and open over a tee.",
     purchaseRate: 850,
@@ -179,7 +174,6 @@ export const products: Product[] = [
     mrp: 2790,
     image: catPanjabi,
     sizes: SIZES,
-    colors: ["Black", "White", "Cream", "Navy", "Maroon", "Olive"],
     description:
       "Fine cotton panjabi with tonal chikan-style embroidery along the placket and cuffs. Festive without the fuss.",
     badge: "Eid pick",
@@ -195,7 +189,6 @@ export const products: Product[] = [
     mrp: 2290,
     image: catPanjabi,
     sizes: SIZES,
-    colors: ["Black", "White", "Navy", "Beige", "Maroon"],
     description:
       "Slim-cut panjabi in breathable viscose-cotton with a mandarin collar and side vents for easy movement.",
     purchaseRate: 1300,
@@ -211,7 +204,6 @@ export const products: Product[] = [
     mrp: 2190,
     image: catHoodie,
     sizes: SIZES,
-    colors: ["Black", "White", "Navy", "Charcoal", "Olive", "Maroon"],
     description:
       "Brushed fleece inside, dense knit outside, with a double-layer hood and kangaroo pocket that holds its shape.",
     purchaseRate: 1150,
@@ -226,7 +218,6 @@ export const products: Product[] = [
     mrp: 1990,
     image: catTrouser,
     sizes: ["30", "32", "34", "36", "38"],
-    colors: ["Black", "Navy", "Olive", "Beige", "Charcoal"],
     description:
       "Mid-rise chino in stretch twill with a tapered leg and deep pockets. Holds a crease, survives a rickshaw ride.",
     badge: "New",
@@ -242,7 +233,6 @@ export const products: Product[] = [
     mrp: 1680,
     image: catTshirt,
     sizes: ["Standard"],
-    colors: ["Default"],
     description: "Pair our bestselling heavyweight tee with the active stretch trousers. A versatile combo.",
     badge: "Bundle Save",
     purchaseRate: 800,
@@ -258,7 +248,6 @@ export const products: Product[] = [
     mrp: 2380,
     image: catShirt,
     sizes: ["Standard"],
-    colors: ["Default"],
     description: "Two premium light linen shirts to beat the summer heat.",
     badge: "Bundle Save",
     purchaseRate: 1100,
@@ -274,7 +263,6 @@ export const products: Product[] = [
     mrp: 1770,
     image: catTshirt,
     sizes: ["Standard"],
-    colors: ["Default"],
     description: "Get 3 of our premium combed cotton tees in a single package.",
     badge: "Popular Bundle",
     purchaseRate: 900,

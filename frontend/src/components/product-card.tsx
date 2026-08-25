@@ -1,8 +1,6 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { formatBDT, type Product, getSizePrice, getColorHex } from "@/lib/shop-data";
+import { formatBDT, type Product, getSizePrice } from "@/lib/shop-data";
 import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
 import { getImageUrl, FALLBACK_IMAGE } from "@/lib/utils";
@@ -24,7 +22,6 @@ export function ProductCard({ product }: { product: Product }) {
   const isWishlisted = isInWishlist(product.slug);
   const [isOpen, setIsOpen] = useState(false);
   const [size, setSize] = useState(product.sizes?.[0] || "M");
-  const [color, setColor] = useState(product.colors?.[0] || "Default");
   const [qty, setQty] = useState(1);
 
   const unitPrice = getSizePrice(product, size);
@@ -57,12 +54,11 @@ export function ProductCard({ product }: { product: Product }) {
     add({
       slug: product.slug,
       size,
-      color,
       qty,
     });
 
     toast.success(`${product.name} added to cart`, {
-      description: `${color} · Size ${size} · Qty ${qty}`,
+      description: `Size ${size} · Qty ${qty}`,
     });
     setIsOpen(false);
   };
@@ -144,7 +140,7 @@ export function ProductCard({ product }: { product: Product }) {
               Select Options
             </DialogTitle>
             <DialogDescription className="text-left">
-              Choose your size and color for {product.name}.
+              Choose your size for {product.name}.
             </DialogDescription>
           </DialogHeader>
 
@@ -190,33 +186,6 @@ export function ProductCard({ product }: { product: Product }) {
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            {/* Color Selector */}
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Colour: <span className="font-semibold text-primary">{color}</span>
-              </span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {product.colors.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setColor(c)}
-                    title={c}
-                    className={`group relative flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                      c === color
-                        ? "border-primary bg-primary/10 text-primary ring-2 ring-primary ring-offset-1 shadow-sm"
-                        : "border-border bg-card text-foreground hover:border-primary/50"
-                    }`}
-                  >
-                    <span
-                      className="size-4 rounded-full border border-black/10 shadow-sm inline-block"
-                      style={{ backgroundColor: getColorHex(c) }}
-                    />
-                  </button>
-                ))}
               </div>
             </div>
 

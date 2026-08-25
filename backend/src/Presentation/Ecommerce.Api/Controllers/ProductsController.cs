@@ -252,7 +252,6 @@ public class ProductsController : ControllerBase
         decimal? Mrp,
         string? Image,
         List<string>? Sizes,
-        List<string>? Colors,
         string? Description,
         string? Badge,
         decimal? PurchaseRate,

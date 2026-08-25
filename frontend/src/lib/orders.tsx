@@ -32,7 +32,6 @@ export type OrderItem = {
   slug: string;
   name: string;
   size: string;
-  color: string;
   qty: number;
   price: number;
 };

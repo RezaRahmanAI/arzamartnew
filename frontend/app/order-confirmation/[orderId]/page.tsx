@@ -189,7 +189,7 @@ export default function OrderConfirmationPage() {
                     <td className="py-3">
                       <p className="font-semibold">{item.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.color} · Size {item.size}
+                        Size {item.size}
                       </p>
                     </td>
                     <td className="py-3 text-center">{item.qty}</td>
