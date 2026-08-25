@@ -188,17 +188,6 @@ export default function CustomLandingPageRoute({
             variants: pageData.product.variants,
           };
           const firstSize = mainProd.variants?.[0]?.name || "Standard";
-          const itemKey = `${mainProd.id}__${firstSize}`;
-
-          setProductSelections({
-            [itemKey]: {
-              key: itemKey,
-              productId: mainProd.id,
-              selectedSize: firstSize,
-              quantity: 1,
-              product: mainProd,
-            },
-          });
           setActiveCardSizes({ [mainProd.id]: firstSize });
         }
 
@@ -246,16 +235,6 @@ export default function CustomLandingPageRoute({
             if (!prev) {
               if (currentProd) {
                 const firstSize = currentProd.variants?.[0]?.name || "Standard";
-                const itemKey = `${currentProd.id}__${firstSize}`;
-                setProductSelections({
-                  [itemKey]: {
-                    key: itemKey,
-                    productId: currentProd.id,
-                    selectedSize: firstSize,
-                    quantity: 1,
-                    product: currentProd,
-                  },
-                });
                 setActiveCardSizes({ [currentProd.id]: firstSize });
               }
               return {
@@ -1480,63 +1459,71 @@ export default function CustomLandingPageRoute({
                             </div>
 
                             {/* Cart Products List */}
-                            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                              {selectedProductList.map((item) => (
-                                <div
-                                  key={item.key}
-                                  className="flex items-center justify-between gap-2.5 p-2.5 bg-background rounded-lg border border-border text-xs shadow-sm"
-                                >
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <img
-                                      src={getImageUrl(item.product.imageUrl || (item.product.images?.[0]?.imageUrl ?? ""), "thumb")}
-                                      alt={item.product.name}
-                                      width={40}
-                                      height={40}
-                                      loading="lazy"
-                                      decoding="async"
-                                      className="size-10 rounded-md object-cover border border-border shrink-0"
-                                      onError={handleImageError}
-                                    />
-                                    <div className="min-w-0">
-                                      <p className="font-bold text-foreground truncate text-xs">{item.product.name}</p>
-                                      <div className="flex flex-wrap items-center gap-1 mt-0.5">
-                                        {item.selectedSize && (
-                                          <span className="inline-block text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.2 rounded">
-                                            সাইজ: {item.selectedSize}
-                                          </span>
-                                        )}
+                            {selectedProductList.length === 0 ? (
+                              <div className="py-5 px-3 text-center rounded-lg border border-dashed border-border bg-background/50 space-y-1.5">
+                                <ShoppingBag className="size-6 text-muted-foreground/50 mx-auto" />
+                                <p className="text-xs font-bold text-muted-foreground">এখনও কোনো পণ্য নির্বাচন করা হয়নি</p>
+                                <p className="text-[11px] text-muted-foreground/70">উপরের প্রোডাক্ট কার্ড থেকে সাইজ সিলেক্ট করে "যুক্ত করুন" বাটনে ক্লিক করুন</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                                {selectedProductList.map((item) => (
+                                  <div
+                                    key={item.key}
+                                    className="flex items-center justify-between gap-2.5 p-2.5 bg-background rounded-lg border border-border text-xs shadow-sm"
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <img
+                                        src={getImageUrl(item.product.imageUrl || (item.product.images?.[0]?.imageUrl ?? ""), "thumb")}
+                                        alt={item.product.name}
+                                        width={40}
+                                        height={40}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="size-10 rounded-md object-cover border border-border shrink-0"
+                                        onError={handleImageError}
+                                      />
+                                      <div className="min-w-0">
+                                        <p className="font-bold text-foreground truncate text-xs">{item.product.name}</p>
+                                        <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                                          {item.selectedSize && (
+                                            <span className="inline-block text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.2 rounded">
+                                              সাইজ: {item.selectedSize}
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
 
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    <div className="flex items-center border border-border rounded bg-muted/40">
-                                      <button
-                                        type="button"
-                                        onClick={() => updateSizeQuantity(item.product, item.selectedSize, item.quantity - 1)}
-                                        className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
-                                        aria-label="Decrease quantity"
-                                      >
-                                        <Minus className="size-2.5" />
-                                      </button>
-                                      <span className="w-5 text-center font-bold text-xs">{item.quantity}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => updateSizeQuantity(item.product, item.selectedSize, item.quantity + 1)}
-                                        className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
-                                        aria-label="Increase quantity"
-                                      >
-                                        <Plus className="size-2.5" />
-                                      </button>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <div className="flex items-center border border-border rounded bg-muted/40">
+                                        <button
+                                          type="button"
+                                          onClick={() => updateSizeQuantity(item.product, item.selectedSize, item.quantity - 1)}
+                                          className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                          aria-label="Decrease quantity"
+                                        >
+                                          <Minus className="size-2.5" />
+                                        </button>
+                                        <span className="w-5 text-center font-bold text-xs">{item.quantity}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => updateSizeQuantity(item.product, item.selectedSize, item.quantity + 1)}
+                                          className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                          aria-label="Increase quantity"
+                                        >
+                                          <Plus className="size-2.5" />
+                                        </button>
+                                      </div>
+
+                                      <span className="font-bold text-foreground text-xs min-w-14 text-right">
+                                        ৳{(getItemPrice(item.product, item.selectedSize) * item.quantity).toLocaleString()}
+                                      </span>
                                     </div>
-
-                                    <span className="font-bold text-foreground text-xs min-w-14 text-right">
-                                      ৳{(getItemPrice(item.product, item.selectedSize) * item.quantity).toLocaleString()}
-                                    </span>
                                   </div>
-                                </div>
-                              ))}
-                            </div>
+                                ))}
+                              </div>
+                            )}
 
                             {/* Pricing Breakdown */}
                             <div className="p-3.5 bg-background rounded-xl border border-border space-y-2 text-xs">
@@ -1570,6 +1557,11 @@ export default function CustomLandingPageRoute({
                                 <>
                                   <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                   <span>অর্ডার প্রসেস হচ্ছে...</span>
+                                </>
+                              ) : selectedProductList.length === 0 ? (
+                                <>
+                                  <ShoppingBag className="size-5" />
+                                  <span>প্রথমে পণ্য নির্বাচন করুন</span>
                                 </>
                               ) : (
                                 <>
