@@ -16,6 +16,14 @@ export function getImageUrl(
   }
   let clean = url.trim();
 
+  // Clean any old legacy API URLs stored in localStorage
+  if (clean.includes("api.arzamart.com/_next/")) {
+    clean = clean.replace(/https?:\/\/api\.arzamart\.com\/?/, "/");
+  }
+  if (clean.includes("testapi.arzamart.com/_next/")) {
+    clean = clean.replace(/https?:\/\/testapi\.arzamart\.com\/?/, "/");
+  }
+
   // If a specific responsive variant is requested and the URL follows our optimized variant pattern
   if (size) {
     if (clean.includes("-large.webp") || clean.includes("-medium.webp") || clean.includes("-thumb.webp")) {
@@ -32,7 +40,7 @@ export function getImageUrl(
   if (clean.startsWith("/")) {
     return clean;
   }
-  return clean;
+  return `/${clean}`;
 }
 
 export function handleImageError(e: React.SyntheticEvent<HTMLImageElement, Event>) {

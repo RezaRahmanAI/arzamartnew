@@ -1,8 +1,8 @@
-import { apiClient } from "../client";
 import { SystemSettings, DEFAULT_SYSTEM_SETTINGS } from "@/types/settings";
 import { type HeroSlide, initialMockSlides } from "./banners.service";
 import { type Category, type Product, products as staticProducts, categories as staticCategories } from "@/lib/shop-data";
 import { type Review } from "@/lib/reviews";
+import { getImageUrl } from "@/lib/utils";
 
 export interface RawApiInitProduct {
   id?: string;
@@ -78,12 +78,13 @@ export interface AppInitData {
   timestamp: number;
 }
 
-export const APP_INIT_STORAGE_KEY = "arzamart_app_init_cache_v2";
+export const APP_INIT_STORAGE_KEY = "arzamart_app_init_cache_v3";
 
 class InitService {
   private mapRawProductToFrontend(p: RawApiInitProduct): Product {
     const basePrice = p.basePrice ?? p.price ?? 0;
     const discountPrice = p.discountPrice;
+    const mainImg = getImageUrl(p.mainImageUrl || p.image);
     return {
       id: p.id ? String(p.id) : undefined,
       slug: p.slug,
@@ -92,7 +93,7 @@ class InitService {
       price: discountPrice && discountPrice > 0 ? discountPrice : basePrice,
       compareAt: discountPrice && discountPrice < basePrice ? basePrice : undefined,
       mrp: basePrice,
-      image: p.mainImageUrl || p.image || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
+      image: mainImg,
       sizes: p.variants && Array.isArray(p.variants) && p.variants.length > 0
         ? p.variants.map((v) => v.name.replace("Size: ", ""))
         : Array.isArray(p.sizes) && p.sizes.length > 0
@@ -110,8 +111,8 @@ class InitService {
         ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.stockQuantity ?? 15]))
         : p.sizeStock || {},
       images: Array.isArray(p.images) && p.images.length > 0
-        ? p.images.filter(Boolean)
-        : [p.mainImageUrl || p.image || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"]
+        ? p.images.map((img) => getImageUrl(img)).filter(Boolean)
+        : [mainImg]
     };
   }
 
@@ -120,7 +121,7 @@ class InitService {
       id: String(b.id),
       title: b.title || "",
       subtitle: b.subtitle || "",
-      image: b.imageUrl || b.image || "",
+      image: getImageUrl(b.imageUrl || b.image),
       href: b.targetUrl || b.href || "/",
       position: b.position || "slider",
       displayOrder: b.displayOrder ?? 0,
@@ -133,7 +134,7 @@ class InitService {
     return {
       slug: c.slug,
       name: c.name,
-      image: c.imageUrl || c.image || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
+      image: getImageUrl(c.imageUrl || c.image),
       blurb: c.blurb || "",
     };
   }
@@ -151,11 +152,15 @@ class InitService {
   }
 
   /**
-   * Synchronous 0ms local storage cache read for instant hydration
+   * Synchronous local storage cache read
    */
   public getCachedData(): AppInitData | null {
     if (typeof window === "undefined") return null;
     try {
+      // Purge old legacy cache if present
+      localStorage.removeItem("arzamart_app_init_cache_v2");
+      localStorage.removeItem("arzamart_app_init_cache_v1");
+
       const stored = localStorage.getItem(APP_INIT_STORAGE_KEY);
       if (!stored) return null;
       const parsed: AppInitData = JSON.parse(stored);
@@ -170,7 +175,7 @@ class InitService {
   }
 
   /**
-   * Static fallback data if no network and no cache
+   * Static fallback data
    */
   public getFallbackData(): AppInitData {
     return {
@@ -184,11 +189,13 @@ class InitService {
   }
 
   /**
-   * Single round-trip API call to GET /api/v1/init
+   * Direct internal Next.js API call to /api/init (which queries Prisma directly)
    */
   public async fetchFreshData(): Promise<AppInitData> {
     try {
-      const raw = await apiClient.get<RawInitResponse>("/init");
+      const res = await fetch("/api/init", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw: RawInitResponse = await res.json();
 
       // 1. Map Settings
       let parsedSettings: SystemSettings = DEFAULT_SYSTEM_SETTINGS;
@@ -243,7 +250,7 @@ class InitService {
         timestamp: Date.now(),
       };
 
-      // Save to localStorage for instant 0ms hydration on subsequent visits
+      // Save to localStorage
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem(APP_INIT_STORAGE_KEY, JSON.stringify(result));
@@ -254,7 +261,7 @@ class InitService {
 
       return result;
     } catch (err) {
-      console.warn("InitService.fetchFreshData failed:", err);
+      console.warn("InitService.fetchFreshData failed, using cached/fallback:", err);
       const cached = this.getCachedData();
       return cached || this.getFallbackData();
     }

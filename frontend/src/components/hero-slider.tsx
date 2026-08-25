@@ -17,8 +17,8 @@ interface HeroSliderProps {
 export function HeroSlider({ initialSlides }: HeroSliderProps) {
   const { slides: contextSlides } = useBanners();
 
-  // Prefer context (live SWR data) once loaded, fallback to server-provided initialSlides
-  const rawSlides = contextSlides.length > 0 ? contextSlides : (initialSlides || []);
+  // Prioritize server-rendered initialSlides for perfect SSR hydration and fresh database data
+  const rawSlides = initialSlides && initialSlides.length > 0 ? initialSlides : contextSlides;
   const slides = rawSlides.filter(
     (s) => s.isActive !== false && s.position !== "offer" && s.href !== "/offers"
   );

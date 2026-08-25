@@ -13,18 +13,11 @@ interface AppInitContextType {
 const AppInitContext = createContext<AppInitContextType | undefined>(undefined);
 
 export function AppInitProvider({ children }: { children: React.ReactNode }) {
-  // 0ms Instant Hydration: Synchronously initialize state from cached data or static fallback
-  const [initData, setInitData] = useState<AppInitData>(() => {
-    if (typeof window !== "undefined") {
-      const cached = initService.getCachedData();
-      if (cached) return cached;
-    }
-    return initService.getFallbackData();
-  });
-
+  // Always initialize with static fallback on first render for 100% SSR Hydration consistency (prevents error #418)
+  const [initData, setInitData] = useState<AppInitData>(() => initService.getFallbackData());
   const [isFreshLoaded, setIsFreshLoaded] = useState<boolean>(false);
 
-  // Background SWR (Stale-While-Revalidate): Single Consolidated Network Request
+  // Background SWR (Stale-While-Revalidate): Single Consolidated Network Request to /api/init
   const refetchInit = useCallback(async () => {
     try {
       const fresh = await initService.fetchFreshData();
@@ -54,7 +47,12 @@ export function AppInitProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // If we only had fallback data or on mount, fetch fresh data once
+    // 1. Immediately adopt valid local cache after mounting without causing SSR hydration mismatch
+    const cached = initService.getCachedData();
+    if (cached) {
+      setInitData(cached);
+    }
+    // 2. Fetch fresh data from direct Next.js /api/init
     refetchInit();
   }, [refetchInit]);
 
