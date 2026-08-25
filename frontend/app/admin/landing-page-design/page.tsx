@@ -162,7 +162,7 @@ function DesignerContent() {
     };
 
     loadDesignerData();
-  }, [productId, slug]);
+  }, [productId, slug, allProducts]);
 
   // Send real-time updates to iframe preview on every change
   const sendPreviewUpdate = useCallback(

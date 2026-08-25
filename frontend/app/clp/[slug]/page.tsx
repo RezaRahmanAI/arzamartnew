@@ -220,7 +220,7 @@ export default function CustomLandingPageRoute({
     }
 
     loadPage();
-  }, [slug, searchParams]);
+  }, [slug, searchParams, cachedProducts]);
 
   // Support real-time postMessage preview updates from Designer
   useEffect(() => {
