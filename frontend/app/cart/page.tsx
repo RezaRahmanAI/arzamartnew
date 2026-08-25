@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { Minus, Plus, Trash2, Pencil } from "lucide-react";
 import { useCart } from "@/lib/cart";
@@ -34,7 +32,6 @@ export default function CartPage() {
   // Edit State
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editSize, setEditSize] = useState("");
-  const [editColor, setEditColor] = useState("");
   const [editQty, setEditQty] = useState(1);
 
   const activeEditItem = editingIndex !== null ? detailedLines[editingIndex] : null;
@@ -46,7 +43,6 @@ export default function CartPage() {
     if (!item) return;
     setEditingIndex(index);
     setEditSize(item.size);
-    setEditColor(item.color);
     setEditQty(item.qty);
   };
 
@@ -55,7 +51,6 @@ export default function CartPage() {
     update(editingIndex, {
       slug: activeProduct.slug,
       size: editSize,
-      color: editColor,
       qty: editQty,
     });
     toast.success("Cart item updated successfully");
@@ -67,11 +62,10 @@ export default function CartPage() {
     add({
       slug: activeProduct.slug,
       size: editSize,
-      color: editColor,
       qty: editQty,
     });
     toast.success(`${activeProduct.name} added to cart`, {
-      description: `${editColor} · Size ${editSize} · Qty ${editQty}`,
+      description: `Size ${editSize} · Qty ${editQty}`,
     });
     setEditingIndex(null);
   };
@@ -95,7 +89,7 @@ export default function CartPage() {
           <ul className="space-y-3">
             {detailedLines.map((line, i) => (
               <li
-                key={`${line.slug}-${line.size}-${line.color}`}
+                key={`${line.slug}-${line.size}`}
                 className="flex gap-4 rounded-xl border border-border bg-card p-3 shadow-card"
               >
                 <img
@@ -110,7 +104,7 @@ export default function CartPage() {
                 <div className="flex-1">
                   <p className="text-sm font-bold text-foreground">{line.product.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {line.color} · Size {line.size}
+                    Size {line.size}
                   </p>
                   <p className="mt-1 text-sm font-bold text-price">
                     {formatBDT(getSizePrice(line.product, line.size))}
@@ -240,27 +234,6 @@ export default function CartPage() {
                       </button>
                     );
                   })}
-                </div>
-              </div>
-
-              {/* Color Selector */}
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Colour</span>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {activeProduct.colors.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setEditColor(c)}
-                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                        c === editColor
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-card text-foreground hover:border-primary"
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
                 </div>
               </div>
 

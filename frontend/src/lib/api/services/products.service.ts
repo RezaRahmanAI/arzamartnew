@@ -38,7 +38,6 @@ class ProductsService {
       mrp: basePrice,
       image: p.mainImageUrl || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
       sizes: p.variants && p.variants.length > 0 ? p.variants.map((v) => v.name.replace("Size: ", "")) : ["M", "L", "XL", "XXL"],
-      colors: ["Black", "White", "Navy", "Olive", "Maroon"],
       description: p.shortDescription || p.fullDescription || "",
       purchaseRate: p.purchaseRate ?? basePrice * 0.7,
       badge: p.badge,

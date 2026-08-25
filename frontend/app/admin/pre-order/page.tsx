@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus, Search, Trash2, RotateCcw, ShoppingBag, X, Check, ChevronsUpDown, Calendar, Clock } from "lucide-react";
@@ -22,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrders, type Order, type OrderItem } from "@/lib/orders";
-import { getSizePrice, getColorHex, type Product } from "@/lib/shop-data";
+import { getSizePrice, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { CustomerSearchInput } from "@/components/admin/customer-search-input";
 import { useSettings } from "@/context/settings-context";
@@ -46,11 +44,9 @@ type CartLine = {
   slug: string;
   name: string;
   size: string;
-  color: string;
   qty: number;
   price: number;
   availableSizes?: string[];
-  availableColors?: string[];
 };
 
 let uniqueKeyCounter = 0;

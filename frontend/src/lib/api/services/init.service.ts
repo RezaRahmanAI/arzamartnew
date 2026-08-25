@@ -24,7 +24,6 @@ export interface RawApiInitProduct {
   bundleProducts?: string[];
   variants?: { id?: string; name: string; sku?: string; priceOverride?: number; stockQuantity?: number }[];
   sizes?: string[];
-  colors?: string[];
   sizePrices?: Record<string, number>;
   sizeStock?: Record<string, number>;
   images?: string[];
@@ -99,7 +98,6 @@ class InitService {
         : Array.isArray(p.sizes) && p.sizes.length > 0
         ? p.sizes
         : ["M", "L", "XL", "XXL"],
-      colors: Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : ["Black", "White", "Navy", "Olive", "Maroon"],
       description: p.shortDescription || p.fullDescription || p.description || "",
       purchaseRate: p.purchaseRate ?? basePrice * 0.7,
       badge: p.badge,
