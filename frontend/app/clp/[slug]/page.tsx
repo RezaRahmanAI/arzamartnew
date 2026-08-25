@@ -55,12 +55,16 @@ interface UnifiedProduct {
   isPreOrder?: boolean;
 }
 
+interface SelectedCartItem {
+  key: string;
+  productId: string;
+  selectedSize: string;
+  quantity: number;
+  product: UnifiedProduct;
+}
+
 interface ProductSelectionState {
-  [productId: string]: {
-    quantity: number;
-    selectedSize: string;
-    product: UnifiedProduct;
-  };
+  [itemKey: string]: SelectedCartItem;
 }
 
 export default function CustomLandingPageRoute({
@@ -80,9 +84,9 @@ export default function CustomLandingPageRoute({
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [allStoreProducts, setAllStoreProducts] = useState<UnifiedProduct[]>([]);
 
-  // Selection State
+  // Multi-Size Selection State (keyed by `${productId}__${size}`)
   const [productSelections, setProductSelections] = useState<ProductSelectionState>({});
-  const [lastSelectedSizes, setLastSelectedSizes] = useState<{ [productId: string]: string }>({});
+  const [activeCardSizes, setActiveCardSizes] = useState<{ [productId: string]: string }>({});
 
   // Quick Details Modal
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -183,18 +187,19 @@ export default function CustomLandingPageRoute({
             images: pageData.product.images,
             variants: pageData.product.variants,
           };
-          const firstSize = mainProd.variants?.[0]?.name || "";
+          const firstSize = mainProd.variants?.[0]?.name || "Standard";
+          const itemKey = `${mainProd.id}__${firstSize}`;
 
           setProductSelections({
-            [mainProd.id]: {
-              quantity: 1,
+            [itemKey]: {
+              key: itemKey,
+              productId: mainProd.id,
               selectedSize: firstSize,
+              quantity: 1,
               product: mainProd,
             },
           });
-          if (firstSize) {
-            setLastSelectedSizes({ [mainProd.id]: firstSize });
-          }
+          setActiveCardSizes({ [mainProd.id]: firstSize });
         }
 
         // Populate allStoreProducts from cached products (no API call)
@@ -240,14 +245,18 @@ export default function CustomLandingPageRoute({
             const currentProd = updatedProduct || prev?.product;
             if (!prev) {
               if (currentProd) {
-                const firstSize = currentProd.variants?.[0]?.name || "";
+                const firstSize = currentProd.variants?.[0]?.name || "Standard";
+                const itemKey = `${currentProd.id}__${firstSize}`;
                 setProductSelections({
-                  [currentProd.id]: {
-                    quantity: 1,
+                  [itemKey]: {
+                    key: itemKey,
+                    productId: currentProd.id,
                     selectedSize: firstSize,
+                    quantity: 1,
                     product: currentProd,
                   },
                 });
+                setActiveCardSizes({ [currentProd.id]: firstSize });
               }
               return {
                 product: currentProd || { id: "", name: "", slug: "", description: "", shortDescription: "", price: 0, basePrice: 0, imageUrl: "", images: [], variants: [] },
@@ -406,8 +415,11 @@ export default function CustomLandingPageRoute({
   }, [data, activeSections, allStoreProducts]);
 
   // Selection Helper Methods
-  const getProductPrice = useCallback((p: UnifiedProduct) => {
-    const size = productSelections[p.id]?.selectedSize;
+  const getItemKey = useCallback((productId: string, size?: string): string => {
+    return `${productId}__${size || "Standard"}`;
+  }, []);
+
+  const getItemPrice = useCallback((p: UnifiedProduct, size?: string): number => {
     if (size && data?.config?.sizePrices?.[size]) {
       return data.config.sizePrices[size];
     }
@@ -416,74 +428,83 @@ export default function CustomLandingPageRoute({
       if (v?.priceOverride) return v.priceOverride;
     }
     return p.price;
-  }, [productSelections, data?.config?.sizePrices]);
+  }, [data?.config?.sizePrices]);
 
-  const isProductSelected = (p: UnifiedProduct): boolean => {
-    return (productSelections[p.id]?.quantity ?? 0) > 0;
-  };
+  const getQtyForSize = useCallback((productId: string, size?: string): number => {
+    const key = getItemKey(productId, size);
+    return productSelections[key]?.quantity ?? 0;
+  }, [productSelections, getItemKey]);
 
-  const getProductQuantity = (p: UnifiedProduct): number => {
-    return productSelections[p.id]?.quantity ?? 0;
-  };
+  const getTotalQtyForProduct = useCallback((productId: string): number => {
+    return Object.values(productSelections)
+      .filter((item) => item.productId === productId)
+      .reduce((sum, item) => sum + item.quantity, 0);
+  }, [productSelections]);
 
-  const getSelectedSize = (p: UnifiedProduct): string => {
-    return productSelections[p.id]?.selectedSize || lastSelectedSizes[p.id] || p.variants?.[0]?.name || "";
-  };
+  const isProductSelected = useCallback((p: UnifiedProduct): boolean => {
+    return getTotalQtyForProduct(p.id) > 0;
+  }, [getTotalQtyForProduct]);
 
-  const getUniqueSizes = (p: UnifiedProduct): string[] => {
+  const getProductSelectedSizes = useCallback((productId: string): SelectedCartItem[] => {
+    return Object.values(productSelections).filter(
+      (item) => item.productId === productId && item.quantity > 0
+    );
+  }, [productSelections]);
+
+  const getActiveCardSize = useCallback((p: UnifiedProduct): string => {
+    return activeCardSizes[p.id] || p.variants?.[0]?.name || "Standard";
+  }, [activeCardSizes]);
+
+  const getUniqueSizes = useCallback((p: UnifiedProduct): string[] => {
     if (!p.variants || p.variants.length === 0) return [];
     return Array.from(new Set(p.variants.map((v) => v.name)));
-  };
+  }, []);
 
-  const updateSelections = (product: UnifiedProduct, quantity: number, size?: string) => {
+  const updateSizeQuantity = useCallback((product: UnifiedProduct, size: string, quantity: number) => {
+    const targetSize = size || product.variants?.[0]?.name || "Standard";
+    const key = getItemKey(product.id, targetSize);
+
     setProductSelections((prev) => {
-      const current = prev[product.id];
-      const newSize = size !== undefined ? size : (current?.selectedSize || lastSelectedSizes[product.id] || product.variants?.[0]?.name || "");
-
       if (quantity <= 0) {
+        if (!prev[key]) return prev;
         const copy = { ...prev };
-        delete copy[product.id];
+        delete copy[key];
         return copy;
       }
 
       return {
         ...prev,
-        [product.id]: {
+        [key]: {
+          key,
+          productId: product.id,
+          selectedSize: targetSize,
           quantity,
-          selectedSize: newSize,
           product,
         },
       };
     });
-  };
+  }, [getItemKey]);
 
-  const toggleProductCheck = (p: UnifiedProduct) => {
-    const currentQty = productSelections[p.id]?.quantity ?? 0;
-    const currentSize = productSelections[p.id]?.selectedSize || lastSelectedSizes[p.id] || p.variants?.[0]?.name || "";
+  const selectCardSize = useCallback((p: UnifiedProduct, size: string) => {
+    setActiveCardSizes((prev) => ({ ...prev, [p.id]: size }));
+  }, []);
 
-    if (currentQty > 0) {
-      if (currentSize) {
-        setLastSelectedSizes((prev) => ({ ...prev, [p.id]: currentSize }));
-      }
-      updateSelections(p, 0);
-    } else {
-      const rememberedSize = lastSelectedSizes[p.id] || p.variants?.[0]?.name || "";
-      updateSelections(p, 1, rememberedSize);
-    }
-  };
-
-  const selectProductSize = (p: UnifiedProduct, size: string) => {
-    setLastSelectedSizes((prev) => ({ ...prev, [p.id]: size }));
-    const currentQty = productSelections[p.id]?.quantity ?? 0;
-    updateSelections(p, currentQty > 0 ? currentQty : 1, size);
-  };
-
-  const updateProductQuantity = (p: UnifiedProduct, delta: number) => {
-    const currentQty = productSelections[p.id]?.quantity ?? 0;
+  const changeActiveCardSizeQuantity = useCallback((p: UnifiedProduct, delta: number) => {
+    const activeSize = getActiveCardSize(p);
+    const currentQty = getQtyForSize(p.id, activeSize);
     const newQty = Math.max(0, currentQty + delta);
-    const size = getSelectedSize(p);
-    updateSelections(p, newQty, size);
-  };
+    updateSizeQuantity(p, activeSize, newQty);
+  }, [getActiveCardSize, getQtyForSize, updateSizeQuantity]);
+
+  const toggleProductActiveSize = useCallback((p: UnifiedProduct) => {
+    const activeSize = getActiveCardSize(p);
+    const currentQty = getQtyForSize(p.id, activeSize);
+    if (currentQty > 0) {
+      updateSizeQuantity(p, activeSize, 0);
+    } else {
+      updateSizeQuantity(p, activeSize, 1);
+    }
+  }, [getActiveCardSize, getQtyForSize, updateSizeQuantity]);
 
   const selectedProductList = useMemo(() => {
     return Object.values(productSelections).filter((s) => s.quantity > 0);
@@ -493,10 +514,10 @@ export default function CustomLandingPageRoute({
     setSelectedProductForDetails(p);
     const firstImg = p.imageUrl || p.images?.[0]?.imageUrl || "";
     setModalActiveImg(firstImg);
-    const currSize = getSelectedSize(p);
-    const currQty = getProductQuantity(p) || 1;
-    setModalSelectedSize(currSize);
-    setModalQty(currQty);
+    const initialSize = getActiveCardSize(p);
+    setModalSelectedSize(initialSize);
+    const existingQty = getQtyForSize(p.id, initialSize);
+    setModalQty(existingQty > 0 ? existingQty : 1);
     setShowDetailsModal(true);
   };
 
@@ -538,10 +559,10 @@ export default function CustomLandingPageRoute({
 
   const subtotal = useMemo(() => {
     return selectedProductList.reduce((sum, item) => {
-      const price = getProductPrice(item.product);
+      const price = getItemPrice(item.product, item.selectedSize);
       return sum + price * item.quantity;
     }, 0);
-  }, [selectedProductList, getProductPrice]);
+  }, [selectedProductList, getItemPrice]);
 
   const grandTotal = subtotal + deliveryCharge;
 
@@ -585,7 +606,7 @@ export default function CustomLandingPageRoute({
           slug: item.product.slug || item.product.id,
           size: item.selectedSize || "Standard",
           qty: item.quantity,
-          price: getProductPrice(item.product),
+          price: getItemPrice(item.product, item.selectedSize),
         })),
       };
 
@@ -605,7 +626,7 @@ export default function CustomLandingPageRoute({
     grandTotal,
     deliveryCharge,
     draftId,
-    getProductPrice,
+    getItemPrice,
   ]);
 
   // Submit Direct Order
@@ -643,14 +664,14 @@ export default function CustomLandingPageRoute({
         paymentMethod: "Cash on Delivery",
         notes: notes.trim(),
         items: selectedProductList.map((item) => {
-          const unitPrice = getProductPrice(item.product);
+          const unitPrice = getItemPrice(item.product, item.selectedSize);
           return {
             productId: item.product.id,
             productName: item.product.name,
             unitPrice: unitPrice,
             quantity: item.quantity,
-            size: item.selectedSize || "",
-            variantName: item.selectedSize || "",
+            size: item.selectedSize || "Standard",
+            variantName: item.selectedSize || "Standard",
             totalPrice: unitPrice * item.quantity,
           };
         }),
@@ -681,7 +702,7 @@ export default function CustomLandingPageRoute({
           delivery: deliveryCharge,
           source: "checkout",
           items: selectedProductList.map((item) => {
-            const unitPrice = getProductPrice(item.product);
+            const unitPrice = getItemPrice(item.product, item.selectedSize);
             return {
               name: item.product.name,
               slug: item.product.slug || item.product.id,
@@ -1031,11 +1052,14 @@ export default function CustomLandingPageRoute({
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                       {allSelectableProducts.map((p) => {
-                        const isSelected = isProductSelected(p);
-                        const qty = getProductQuantity(p);
-                        const selectedSize = getSelectedSize(p);
+                        const activeSize = getActiveCardSize(p);
+                        const activeSizeQty = getQtyForSize(p.id, activeSize);
+                        const totalProductQty = getTotalQtyForProduct(p.id);
+                        const isSelected = totalProductQty > 0;
                         const uniqueSizes = getUniqueSizes(p);
-                        const hasDiscount = p.compareAtPrice && p.compareAtPrice > p.price;
+                        const cardPrice = getItemPrice(p, activeSize);
+                        const hasDiscount = p.compareAtPrice && p.compareAtPrice > cardPrice;
+                        const chosenSizes = getProductSelectedSizes(p.id);
 
                         return (
                           <div
@@ -1051,7 +1075,7 @@ export default function CustomLandingPageRoute({
                               className="absolute -top-3 -left-3 z-10"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleProductCheck(p);
+                                toggleProductActiveSize(p);
                               }}
                             >
                               <div
@@ -1068,7 +1092,7 @@ export default function CustomLandingPageRoute({
                             {/* Top-Right OFF Badge */}
                             {hasDiscount && (
                               <div className="absolute top-3 right-3 z-10 bg-rose-600 text-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-sm shadow-xs">
-                                ৳{(p.compareAtPrice! - p.price)} OFF
+                                ৳{(p.compareAtPrice! - cardPrice)} OFF
                               </div>
                             )}
 
@@ -1098,13 +1122,13 @@ export default function CustomLandingPageRoute({
                             </div>
 
                             {/* Title & Price */}
-                            <div className="space-y-1 mb-4">
+                            <div className="space-y-1 mb-3">
                               <h4 className="text-sm font-bold text-foreground line-clamp-1">
                                 {p.name}
                               </h4>
                               <div className="flex items-center gap-2">
                                 <span className="text-primary font-bold text-base whitespace-nowrap">
-                                  ৳{getProductPrice(p).toLocaleString()}
+                                  ৳{cardPrice.toLocaleString()}
                                 </span>
                                 {hasDiscount && (
                                   <span className="text-muted-foreground line-through text-xs whitespace-nowrap">
@@ -1112,6 +1136,19 @@ export default function CustomLandingPageRoute({
                                   </span>
                                 )}
                               </div>
+                              {chosenSizes.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1 pt-1">
+                                  <span className="text-[10px] text-muted-foreground font-semibold">নির্বাচিত:</span>
+                                  {chosenSizes.map((cs) => (
+                                    <span
+                                      key={cs.key}
+                                      className="inline-flex items-center text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 rounded"
+                                    >
+                                      {cs.selectedSize} ({cs.quantity})
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
 
                             {/* Size Selection */}
@@ -1121,30 +1158,36 @@ export default function CustomLandingPageRoute({
                                   <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest">
                                     সাইজ সিলেক্ট করুন
                                   </p>
-                                  {selectedSize && (
+                                  {activeSize && (
                                     <span className="text-[11px] font-bold text-primary">
-                                      {selectedSize}
+                                      {activeSize} {activeSizeQty > 0 ? `(${activeSizeQty}টি কার্টে)` : ""}
                                     </span>
                                   )}
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
                                   {uniqueSizes.map((size) => {
-                                    const isSizeActive = selectedSize === size;
+                                    const isSizeActive = activeSize === size;
+                                    const sizeInCartQty = getQtyForSize(p.id, size);
                                     return (
                                       <button
                                         key={size}
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          selectProductSize(p, size);
+                                          selectCardSize(p, size);
                                         }}
-                                        className={`w-9 h-9 flex items-center justify-center transition-all border text-xs font-bold rounded-sm cursor-pointer ${
+                                        className={`relative min-w-9 h-9 px-2 flex items-center justify-center transition-all border text-xs font-bold rounded-sm cursor-pointer ${
                                           isSizeActive
                                             ? "bg-primary text-primary-foreground border-primary shadow-md scale-105"
                                             : "bg-card text-foreground border-border hover:border-primary/50"
                                         }`}
                                       >
-                                        {size}
+                                        <span>{size}</span>
+                                        {sizeInCartQty > 0 && !isSizeActive && (
+                                          <span className="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-emerald-600 text-[9px] text-white font-black flex items-center justify-center shadow-xs">
+                                            {sizeInCartQty}
+                                          </span>
+                                        )}
                                       </button>
                                     );
                                   })}
@@ -1152,51 +1195,68 @@ export default function CustomLandingPageRoute({
                               </div>
                             )}
 
-                            {/* Bottom Controls: Bistarito (Details) & Quantity Selection */}
-                            <div className="flex items-center justify-between gap-2 pt-3 border-t border-border/70">
+                            {/* Bottom Controls: Bistarito (Details) & Quantity Selection + Add Button */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border/70">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openProductDetails(p);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/60 hover:bg-muted text-foreground border border-border text-xs font-bold transition-all cursor-pointer hover:border-primary/50"
+                                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-muted/60 hover:bg-muted text-foreground border border-border text-xs font-bold transition-all cursor-pointer hover:border-primary/50"
                               >
                                 <span>বিস্তারিত</span>
                                 <ChevronRight className="size-3.5 text-muted-foreground" />
                               </button>
 
                               <div className="flex items-center gap-1.5">
-                                <span className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest hidden sm:inline-block">
-                                  Qty
-                                </span>
+                                {/* Quantity Stepper */}
                                 <div className="flex items-center border border-border rounded-md overflow-hidden bg-background">
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      updateProductQuantity(p, -1);
+                                      changeActiveCardSizeQuantity(p, -1);
                                     }}
-                                    className="w-8 sm:w-9 h-8 sm:h-9 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                    className="w-7 sm:w-8 h-8 sm:h-9 flex items-center justify-center hover:bg-muted cursor-pointer"
                                     aria-label="Decrease quantity"
                                   >
                                     <Minus className="size-2.5" />
                                   </button>
-                                  <div className="w-8 sm:w-9 h-8 sm:h-9 flex items-center justify-center font-bold text-xs sm:text-sm text-foreground">
-                                    {qty || 1}
+                                  <div className="w-7 sm:w-8 h-8 sm:h-9 flex items-center justify-center font-bold text-xs sm:text-sm text-foreground">
+                                    {activeSizeQty || 0}
                                   </div>
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      updateProductQuantity(p, 1);
+                                      changeActiveCardSizeQuantity(p, 1);
                                     }}
-                                    className="w-8 sm:w-9 h-8 sm:h-9 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                    className="w-7 sm:w-8 h-8 sm:h-9 flex items-center justify-center hover:bg-muted cursor-pointer"
                                     aria-label="Increase quantity"
                                   >
                                     <Plus className="size-2.5" />
                                   </button>
                                 </div>
+
+                                {/* Add Button */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const currentQty = getQtyForSize(p.id, activeSize);
+                                    const newQty = currentQty > 0 ? currentQty + 1 : 1;
+                                    updateSizeQuantity(p, activeSize, newQty);
+                                    toast.success(`${p.name} (${activeSize}) কার্টে যুক্ত হয়েছে!`, {
+                                      description: `মোট পরিমাণ: ${newQty}টি · দাম: ৳${(cardPrice * newQty).toLocaleString()}`,
+                                    });
+                                  }}
+                                  className="flex items-center gap-1 px-2.5 sm:px-3 h-8 sm:h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-md shadow-xs transition-all cursor-pointer active:scale-95"
+                                  title={`${activeSize} সাইজ কার্টে যোগ করুন`}
+                                >
+                                  <ShoppingBag className="size-3.5" />
+                                  <span>যুক্ত করুন</span>
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -1423,7 +1483,7 @@ export default function CustomLandingPageRoute({
                             <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                               {selectedProductList.map((item) => (
                                 <div
-                                  key={item.product.id}
+                                  key={item.key}
                                   className="flex items-center justify-between gap-2.5 p-2.5 bg-background rounded-lg border border-border text-xs shadow-sm"
                                 >
                                   <div className="flex items-center gap-2.5 min-w-0">
@@ -1453,23 +1513,25 @@ export default function CustomLandingPageRoute({
                                     <div className="flex items-center border border-border rounded bg-muted/40">
                                       <button
                                         type="button"
-                                        onClick={() => updateProductQuantity(item.product, -1)}
+                                        onClick={() => updateSizeQuantity(item.product, item.selectedSize, item.quantity - 1)}
                                         className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                        aria-label="Decrease quantity"
                                       >
                                         <Minus className="size-2.5" />
                                       </button>
                                       <span className="w-5 text-center font-bold text-xs">{item.quantity}</span>
                                       <button
                                         type="button"
-                                        onClick={() => updateProductQuantity(item.product, 1)}
+                                        onClick={() => updateSizeQuantity(item.product, item.selectedSize, item.quantity + 1)}
                                         className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                        aria-label="Increase quantity"
                                       >
                                         <Plus className="size-2.5" />
                                       </button>
                                     </div>
 
                                     <span className="font-bold text-foreground text-xs min-w-14 text-right">
-                                      ৳{(getProductPrice(item.product) * item.quantity).toLocaleString()}
+                                      ৳{(getItemPrice(item.product, item.selectedSize) * item.quantity).toLocaleString()}
                                     </span>
                                   </div>
                                 </div>
@@ -1580,7 +1642,8 @@ export default function CustomLandingPageRoute({
           : 15;
 
         const modalUniqueSizes = getUniqueSizes(selectedProductForDetails);
-        const isAlreadySelected = isProductSelected(selectedProductForDetails);
+        const modalSelectedQty = getQtyForSize(selectedProductForDetails.id, modalSelectedSize);
+        const isSizeInCart = modalSelectedQty > 0;
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
@@ -1723,24 +1786,36 @@ export default function CustomLandingPageRoute({
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-bold text-foreground">সাইজ সিলেক্ট করুন:</span>
                           {modalSelectedSize && (
-                            <span className="font-semibold text-primary">{modalSelectedSize}</span>
+                            <span className="font-semibold text-primary">
+                              {modalSelectedSize} {isSizeInCart ? `(${modalSelectedQty}টি কার্টে)` : ""}
+                            </span>
                           )}
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {modalUniqueSizes.map((sz) => {
                             const isSzActive = modalSelectedSize === sz;
+                            const szCartQty = getQtyForSize(selectedProductForDetails.id, sz);
                             return (
                               <button
                                 key={sz}
                                 type="button"
-                                onClick={() => setModalSelectedSize(sz)}
-                                className={`w-10 h-9 flex items-center justify-center transition-all border text-xs font-bold rounded-md cursor-pointer ${
+                                onClick={() => {
+                                  setModalSelectedSize(sz);
+                                  const existingQty = getQtyForSize(selectedProductForDetails.id, sz);
+                                  setModalQty(existingQty > 0 ? existingQty : 1);
+                                }}
+                                className={`relative min-w-10 h-9 px-2 flex items-center justify-center transition-all border text-xs font-bold rounded-md cursor-pointer ${
                                   isSzActive
                                     ? "bg-primary text-primary-foreground border-primary shadow-xs scale-105"
                                     : "bg-card text-foreground border-border hover:border-primary/50"
                                 }`}
                               >
-                                {sz}
+                                <span>{sz}</span>
+                                {szCartQty > 0 && !isSzActive && (
+                                  <span className="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-emerald-600 text-[9px] text-white font-black flex items-center justify-center shadow-xs">
+                                    {szCartQty}
+                                  </span>
+                                )}
                               </button>
                             );
                           })}
@@ -1789,31 +1864,31 @@ export default function CustomLandingPageRoute({
 
               {/* Modal Footer Actions */}
               <div className="px-5 py-3.5 border-t border-border bg-muted/20 flex items-center gap-3 flex-shrink-0">
-                {isAlreadySelected && (
+                {isSizeInCart && (
                   <button
                     type="button"
                     onClick={() => {
-                      updateSelections(selectedProductForDetails, 0);
+                      updateSizeQuantity(selectedProductForDetails, modalSelectedSize, 0);
                       setShowDetailsModal(false);
-                      toast.info(`${selectedProductForDetails.name} সিলেকশন থেকে সরানো হয়েছে`);
+                      toast.info(`${selectedProductForDetails.name} (সাইজ: ${modalSelectedSize}) কার্ট থেকে সরানো হয়েছে`);
                     }}
                     className="px-4 py-2.5 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-bold cursor-pointer transition-colors"
                   >
-                    বাদ দিন
+                    এই সাইজটি বাদ দিন
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => {
-                    updateSelections(
+                    updateSizeQuantity(
                       selectedProductForDetails,
-                      modalQty,
-                      modalSelectedSize
+                      modalSelectedSize,
+                      modalQty
                     );
                     setShowDetailsModal(false);
                     toast.success(
-                      `${selectedProductForDetails.name} অর্ডারে সফলভাবে যুক্ত হয়েছে!`,
+                      `${selectedProductForDetails.name} (${modalSelectedSize || "Standard"}) অর্ডারে সফলভাবে যুক্ত হয়েছে!`,
                       {
                         description: `সাইজ: ${modalSelectedSize || "Standard"} · পরিমাণ: ${modalQty}টি`,
                       }
@@ -1823,9 +1898,9 @@ export default function CustomLandingPageRoute({
                 >
                   <CheckCircle2 className="size-4" />
                   <span>
-                    {isAlreadySelected
+                    {isSizeInCart
                       ? `সিলেকশন আপডেট করুন (৳${(modalSizePrice * modalQty).toLocaleString()})`
-                      : `অর্ডারে সিলেক্ট করুন (৳${(modalSizePrice * modalQty).toLocaleString()})`}
+                      : `অর্ডারে যুক্ত করুন (৳${(modalSizePrice * modalQty).toLocaleString()})`}
                   </span>
                 </button>
               </div>
