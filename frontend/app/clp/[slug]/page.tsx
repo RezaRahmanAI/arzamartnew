@@ -30,8 +30,8 @@ import {
   DEFAULT_LANDING_SECTIONS,
   RelatedProductItem,
 } from "@/lib/api/services/custom-landing-page.service";
-import { productsService } from "@/lib/api/services/products.service";
 import { products as staticProducts, getColorHex } from "@/lib/shop-data";
+import { useProducts } from "@/lib/products-store";
 import { getImageUrl, handleImageError } from "@/lib/utils";
 import { CustomSectionRenderer } from "@/components/admin/custom-section-renderer";
 import { settingsService } from "@/lib/api/services/settings.service";
@@ -75,6 +75,7 @@ export default function CustomLandingPageRoute({
   const router = useRouter();
   const searchParams = useSearchParams();
   const isPreview = searchParams.get("preview") === "true";
+  const { products: cachedProducts } = useProducts();
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<LandingPageData | null>(null);
@@ -123,21 +124,15 @@ export default function CustomLandingPageRoute({
           pageData = await customLandingPageService.getBySlug(queryProductId);
         }
 
-        // Fallback 2: If still null, fetch product via productsService or shop-data
+        // Fallback 2: If still null, use cached products (no API call)
         if (!pageData?.product) {
-          let rawProduct = await productsService.getBySlug(slug);
-          if (!rawProduct && queryProductId && queryProductId !== slug) {
-            rawProduct = await productsService.getBySlug(queryProductId);
-          }
-          if (!rawProduct) {
-            const searchKey = slug.toLowerCase();
-            rawProduct = staticProducts.find(
-              (p) =>
-                p.slug.toLowerCase() === searchKey ||
-                p.id?.toLowerCase() === searchKey ||
-                p.name.toLowerCase().replace(/\s+/g, "-") === searchKey
-            );
-          }
+          const searchKey = slug.toLowerCase();
+          const rawProduct = cachedProducts.find(
+            (p) =>
+              p.slug.toLowerCase() === searchKey ||
+              p.id?.toLowerCase() === searchKey ||
+              p.name.toLowerCase().replace(/\s+/g, "-") === searchKey
+          );
           if (rawProduct) {
             const rawMainImg = rawProduct.image || (rawProduct.images && rawProduct.images.length > 0 ? rawProduct.images[0] : "");
             const fallbackColors = rawProduct.colors && rawProduct.colors.length > 0
@@ -219,6 +214,30 @@ export default function CustomLandingPageRoute({
           if (firstColor) {
             setLastSelectedColors({ [mainProd.id]: firstColor });
           }
+        }
+
+        // Populate allStoreProducts from cached products (no API call)
+        if (cachedProducts.length > 0) {
+          const currentProdId = pageData?.product?.id;
+          const mappedStoreProds: UnifiedProduct[] = cachedProducts.map((p) => ({
+            id: p.id || p.slug,
+            name: p.name,
+            slug: p.slug,
+            description: p.description || "",
+            shortDescription: p.description || "",
+            price: p.price,
+            compareAtPrice: p.compareAt || null,
+            imageUrl: p.image || (p.images?.[0] ?? ""),
+            images: (p.images || [p.image || ""]).map((img, idx) => ({ imageUrl: img, isMain: idx === 0 })),
+            variants: (p.sizes || []).map((s) => ({
+              id: s,
+              name: s,
+              stockQuantity: p.sizeStock?.[s] ?? 10,
+              priceOverride: p.sizePrices?.[s],
+            })),
+            colors: p.colors || staticProducts.find((sp) => sp.slug === p.slug || sp.id === p.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
+          }));
+          setAllStoreProducts(mappedStoreProds);
         }
       } catch (err: unknown) {
         toast.error(err instanceof Error ? err.message : "Failed to load landing page");

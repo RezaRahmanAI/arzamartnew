@@ -24,9 +24,9 @@ import {
   LandingPageProduct,
   LandingPageData,
 } from "@/lib/api/services/custom-landing-page.service";
-import { productsService } from "@/lib/api/services/products.service";
 import { apiClient } from "@/lib/api/client";
 import { products as staticProducts } from "@/lib/shop-data";
+import { useProducts } from "@/lib/products-store";
 import { CustomLandingPageEditor } from "@/components/admin/custom-landing-page-editor";
 
 function DesignerContent() {
@@ -34,6 +34,7 @@ function DesignerContent() {
   const router = useRouter();
   const productId = searchParams.get("productId") || "";
   const slug = searchParams.get("slug") || "";
+  const { products: allProducts } = useProducts();
 
   const [loading, setLoading] = useState(true);
   const [isSaving, startSaving] = useTransition();
@@ -79,21 +80,12 @@ function DesignerContent() {
           pageData = await customLandingPageService.getBySlug(productId);
         }
 
-        // 2. Fallback: If not found by custom landing page endpoint, fetch from product endpoint or static shop data
+        // 2. Fallback: If not found by custom landing page endpoint, use cached products (no API call)
         if (!pageData?.product) {
-          let fallbackProduct = slug ? await productsService.getBySlug(slug) : undefined;
-          if (!fallbackProduct && productId && productId !== slug) {
-            fallbackProduct = await productsService.getBySlug(productId);
-          }
-          if (!fallbackProduct) {
-            const searchKey = (slug || productId).toLowerCase();
-            fallbackProduct = staticProducts.find(
-              (p) =>
-                p.slug.toLowerCase() === searchKey ||
-                p.id?.toLowerCase() === searchKey ||
-                p.name.toLowerCase().replace(/\s+/g, "-") === searchKey
-            );
-          }
+          const lookupKey = slug || productId;
+          const fallbackProduct = allProducts.find(
+            (p) => p.slug === lookupKey || p.id === lookupKey || p.name.toLowerCase().replace(/\s+/g, "-") === lookupKey
+          );
           if (fallbackProduct) {
             const fallbackMainImg = fallbackProduct.image || (fallbackProduct.images && fallbackProduct.images.length > 0 ? fallbackProduct.images[0] : "");
             pageData = {
