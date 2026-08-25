@@ -52,7 +52,6 @@ interface UnifiedProduct {
   imageUrl?: string;
   images?: { imageUrl: string; isMain: boolean }[];
   variants?: { id: string; name: string; priceOverride?: number; stockQuantity?: number }[];
-  colors?: string[];
   isPreOrder?: boolean;
 }
 
@@ -132,9 +131,7 @@ export default function CustomLandingPageRoute({
           );
           if (rawProduct) {
             const rawMainImg = rawProduct.image || (rawProduct.images && rawProduct.images.length > 0 ? rawProduct.images[0] : "");
-            const fallbackColors = rawProduct.colors && rawProduct.colors.length > 0
-              ? rawProduct.colors
-              : ["Black", "White", "Navy", "Olive", "Maroon"];
+            const fallbackColors = ["Black", "White", "Navy", "Olive", "Maroon"];
 
             pageData = {
               product: {
@@ -155,7 +152,6 @@ export default function CustomLandingPageRoute({
                   stockQuantity: rawProduct.sizeStock?.[s] ?? 10,
                   priceOverride: rawProduct.sizePrices?.[s],
                 })),
-                colors: fallbackColors,
               },
               config: null,
             };
@@ -167,10 +163,6 @@ export default function CustomLandingPageRoute({
               pageData.product.imageUrl = firstImg;
             }
           }
-          if (!pageData.product.colors || pageData.product.colors.length === 0) {
-            const matchedStatic = staticProducts.find((sp) => sp.slug === pageData?.product.slug || sp.id === pageData?.product.id || sp.name.toLowerCase() === pageData?.product.name.toLowerCase());
-            pageData.product.colors = matchedStatic?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
-          }
         }
 
         // Set page data and display the page immediately
@@ -179,7 +171,7 @@ export default function CustomLandingPageRoute({
         setLoading(false);
 
         if (pageData?.product) {
-          const mainProdColors = pageData.product.colors || staticProducts.find((sp) => sp.slug === pageData?.product.slug || sp.id === pageData?.product.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
+          const mainProdColors = ["Black", "White", "Navy", "Olive", "Maroon"];
           const mainProd: UnifiedProduct = {
             id: pageData.product.id,
             name: pageData.product.name,
@@ -192,10 +184,9 @@ export default function CustomLandingPageRoute({
             imageUrl: pageData.product.imageUrl,
             images: pageData.product.images,
             variants: pageData.product.variants,
-            colors: mainProdColors,
           };
           const firstSize = mainProd.variants?.[0]?.name || "";
-          const firstColor = mainProd.colors?.[0] || "";
+          const firstColor = "Black";
 
           setProductSelections({
             [mainProd.id]: {
@@ -232,7 +223,7 @@ export default function CustomLandingPageRoute({
               stockQuantity: p.sizeStock?.[s] ?? 10,
               priceOverride: p.sizePrices?.[s],
             })),
-            colors: p.colors || staticProducts.find((sp) => sp.slug === p.slug || sp.id === p.id)?.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
+            colors: ["Black", "White", "Navy", "Olive", "Maroon"],
           }));
           setAllStoreProducts(mappedStoreProds);
         }
@@ -259,7 +250,7 @@ export default function CustomLandingPageRoute({
             if (!prev) {
               if (currentProd) {
                 const firstSize = currentProd.variants?.[0]?.name || "";
-                const firstColor = currentProd.colors?.[0] || "Black";
+                const firstColor = "Black";
                 setProductSelections({
                   [currentProd.id]: {
                     quantity: 1,
@@ -337,7 +328,7 @@ export default function CustomLandingPageRoute({
   // All selectable products pool (Main Product + Admin Configured Selected Products)
   const allSelectableProducts = useMemo(() => {
     if (!data?.product) return [];
-    const mainProdColors = data.product.colors || staticProducts.find((sp) => sp.slug === data.product.slug || sp.id === data.product.id || sp.name.toLowerCase() === data.product.name.toLowerCase())?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
+    const mainProdColors = ["Black", "White", "Navy", "Olive", "Maroon"];
     const mainProd: UnifiedProduct = {
       id: data.product.id,
       name: data.product.name,
@@ -350,7 +341,7 @@ export default function CustomLandingPageRoute({
       imageUrl: data.product.imageUrl,
       images: data.product.images,
       variants: data.product.variants,
-      colors: mainProdColors,
+      colors: ["Black", "White", "Navy", "Olive", "Maroon"],
     };
 
     const list: UnifiedProduct[] = [mainProd];
@@ -370,7 +361,7 @@ export default function CustomLandingPageRoute({
 
         if (fromRelated) {
           if (!list.some((item) => item.id === fromRelated.id || (fromRelated.slug && item.slug === fromRelated.slug))) {
-            const rpColors = fromRelated.colors || staticProducts.find((sp) => sp.slug === fromRelated.slug || sp.id === fromRelated.id || sp.name.toLowerCase() === fromRelated.name.toLowerCase())?.colors || ["Black", "White", "Navy", "Olive", "Maroon"];
+            const rpColors = ["Black", "White", "Navy", "Olive", "Maroon"];
             list.push({
               id: fromRelated.id,
               name: fromRelated.name,
@@ -379,7 +370,7 @@ export default function CustomLandingPageRoute({
               compareAtPrice: fromRelated.compareAtPrice || null,
               imageUrl: fromRelated.imageUrl,
               variants: fromRelated.variants,
-              colors: rpColors,
+              colors: ["Black", "White", "Navy", "Olive", "Maroon"],
             });
           }
           return;
@@ -420,7 +411,7 @@ export default function CustomLandingPageRoute({
                 stockQuantity: fromStatic.sizeStock?.[s] ?? 10,
                 priceOverride: fromStatic.sizePrices?.[s],
               })),
-              colors: fromStatic.colors || ["Black", "White", "Navy", "Olive", "Maroon"],
+              colors: ["Black", "White", "Navy", "Olive", "Maroon"],
             });
           }
         }
@@ -461,9 +452,6 @@ export default function CustomLandingPageRoute({
   };
 
   const getUniqueColors = (p: UnifiedProduct): string[] => {
-    if (p.colors && p.colors.length > 0) return p.colors;
-    const staticMatch = staticProducts.find((sp) => sp.slug === p.slug || sp.id === p.id || sp.name.toLowerCase() === p.name.toLowerCase());
-    if (staticMatch?.colors && staticMatch.colors.length > 0) return staticMatch.colors;
     return ["Black", "White", "Navy", "Olive", "Maroon"];
   };
 

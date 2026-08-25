@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { useParams, useRouter, notFound } from "next/navigation";
 import { Minus, Plus, RotateCcw, ShoppingBag, Truck, Star, ChevronLeft, ChevronRight, Heart } from "lucide-react";

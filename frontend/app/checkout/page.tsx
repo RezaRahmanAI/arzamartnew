@@ -295,13 +295,13 @@ export default function CheckoutPage() {
           <ul className="mt-4 space-y-3">
             {detailedLines.map((line) => (
               <li
-                key={`${line.slug}-${line.size}-${line.color}`}
+                key={`${line.slug}-${line.size}`}
                 className="flex justify-between gap-3 text-sm"
               >
                 <span className="text-muted-foreground">
                   {line.product.name}
                   <span className="block text-xs">
-                    {line.color} · {line.size} · ×{line.qty}
+                    {line.size} · ×{line.qty}
                   </span>
                 </span>
                 <span className="font-semibold">

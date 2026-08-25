@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus, Search, Trash2, RotateCcw, ShoppingBag, X, Check, ChevronsUpDown, Calendar, Clock } from "lucide-react";
@@ -207,11 +209,9 @@ export default function AdminPreOrderPage() {
                 slug: it.slug,
                 name: rawName,
                 size: finalSize,
-                color: it.color && it.color !== "Default" ? it.color : (matchedProd?.colors?.[0] || "Default"),
                 qty: it.qty,
                 price: it.price,
                 availableSizes: matchedProd?.sizes && matchedProd.sizes.length > 0 ? matchedProd.sizes : ["S", "M", "L", "XL", "XXL"],
-                availableColors: matchedProd?.colors && matchedProd.colors.length > 0 ? matchedProd.colors : ["Standard"],
               };
             })
           );
@@ -233,7 +233,6 @@ export default function AdminPreOrderPage() {
   // Product Options Modal state
   const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
   const [modalSize, setModalSize] = useState("M");
-  const [modalColor, setModalColor] = useState("Default");
   const [modalQty, setModalQty] = useState(1);
 
   // Product Catalog Search state
@@ -331,7 +330,6 @@ export default function AdminPreOrderPage() {
   const openSelectOptionsModal = (product: Product, initialSize?: string) => {
     setSelectedProductForModal(product);
     setModalSize(initialSize || product.sizes[0] || "M");
-    setModalColor(product.colors[0] || "Default");
     setModalQty(1);
   };
 
@@ -342,7 +340,7 @@ export default function AdminPreOrderPage() {
 
     setLines((prev) => {
       const existingIdx = prev.findIndex(
-        (l) => l.slug === selectedProductForModal.slug && l.size === modalSize && l.color === modalColor
+        (l) => l.slug === selectedProductForModal.slug && l.size === modalSize
       );
       if (existingIdx >= 0) {
         const next = [...prev];
@@ -359,16 +357,14 @@ export default function AdminPreOrderPage() {
           slug: selectedProductForModal.slug,
           name: selectedProductForModal.name,
           size: modalSize,
-          color: modalColor,
           qty: modalQty,
           price: unitPrice,
           availableSizes: selectedProductForModal.sizes || ["S", "M", "L", "XL"],
-          availableColors: selectedProductForModal.colors || ["Standard"],
         },
       ];
     });
 
-    toast.success(`Added ${selectedProductForModal.name} (${modalSize} · ${modalColor}) to Pre-order`);
+    toast.success(`Added ${selectedProductForModal.name} (${modalSize}) to Pre-order`);
     setSelectedProductForModal(null);
   };
 
@@ -396,12 +392,6 @@ export default function AdminPreOrderPage() {
         }
         return l;
       })
-    );
-  };
-
-  const updateLineColor = (key: string, newColor: string) => {
-    setLines((prev) =>
-      prev.map((l) => (l.key === key ? { ...l, color: newColor } : l))
     );
   };
 
@@ -440,7 +430,6 @@ export default function AdminPreOrderPage() {
       slug: l.slug,
       name: l.name,
       size: l.size,
-      color: l.color,
       qty: l.qty,
       price: l.price,
     }));
@@ -615,19 +604,6 @@ export default function AdminPreOrderPage() {
                               {(l.availableSizes || [l.size]).map((s) => (
                                 <option key={s} value={s}>
                                   {s}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="py-2.5 px-1 align-middle">
-                            <select
-                              value={l.color}
-                              onChange={(e) => updateLineColor(l.key, e.target.value)}
-                              className="h-7 w-[78px] rounded border border-border bg-background px-1 text-xs font-medium text-left truncate"
-                            >
-                              {(l.availableColors && l.availableColors.length > 0 ? l.availableColors : [l.color || "Standard"]).map((c) => (
-                                <option key={c} value={c}>
-                                  {c}
                                 </option>
                               ))}
                             </select>
@@ -1047,33 +1023,6 @@ export default function AdminPreOrderPage() {
                       </button>
                     );
                   })}
-                </div>
-              </div>
-
-              {/* Color Selector */}
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Colour: <span className="font-semibold text-primary">{modalColor}</span>
-                </span>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedProductForModal.colors.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setModalColor(c)}
-                      title={c}
-                      className={`group relative flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                        c === modalColor
-                          ? "border-primary bg-primary/10 text-primary ring-2 ring-primary ring-offset-1 shadow-sm"
-                          : "border-border bg-card text-foreground hover:border-primary/50"
-                      }`}
-                    >
-                      <span
-                        className="size-4 rounded-full border border-black/10 shadow-sm inline-block"
-                        style={{ backgroundColor: getColorHex(c) }}
-                      />
-                    </button>
-                  ))}
                 </div>
               </div>
 

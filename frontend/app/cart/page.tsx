@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Minus, Plus, Trash2, Pencil } from "lucide-react";
 import { useCart } from "@/lib/cart";
