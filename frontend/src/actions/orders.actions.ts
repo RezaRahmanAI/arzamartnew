@@ -221,9 +221,14 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{ succ
 
     // 6. Delete draft if it was an incomplete order
     if (input.id) {
+      const cleanDraftId = input.id.trim();
+      const deleteConditions: Array<{ orderId?: string; id?: string }> = [{ orderId: cleanDraftId }];
+      if (cleanDraftId.length === 36 && cleanDraftId.includes("-")) {
+        deleteConditions.push({ id: cleanDraftId });
+      }
       await prisma.incompleteOrder.deleteMany({
         where: {
-          OR: [{ orderId: input.id }, { id: input.id.length === 36 ? input.id : undefined }],
+          OR: deleteConditions,
         },
       }).catch(() => null);
     }
@@ -370,9 +375,15 @@ export async function saveIncompleteOrderAction(draft: { id: string; phone?: str
 
 export async function removeIncompleteOrderAction(orderId: string): Promise<{ success: boolean }> {
   try {
+    const cleanId = orderId.trim();
+    const deleteConditions: Array<{ orderId?: string; id?: string }> = [{ orderId: cleanId }];
+    if (cleanId.length === 36 && cleanId.includes("-")) {
+      deleteConditions.push({ id: cleanId });
+    }
+
     await prisma.incompleteOrder.deleteMany({
       where: {
-        OR: [{ orderId }, { id: orderId.length === 36 ? orderId : undefined }],
+        OR: deleteConditions,
       },
     });
     revalidatePath("/admin/incomplete");

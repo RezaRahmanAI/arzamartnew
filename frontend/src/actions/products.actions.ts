@@ -50,29 +50,37 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
     }
 
     const name = input.name.trim();
-    const slug = input.slug?.trim().toLowerCase() || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    let slug = input.slug?.trim().toLowerCase() || name.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "");
+
+    if (!slug) {
+      slug = `prod-${Date.now().toString().slice(-6)}`;
+    }
 
     // Check slug uniqueness
     const existing = await prisma.product.findUnique({
       where: { slug },
     });
     if (existing) {
-      return { success: false, error: `A product with slug '${slug}' already exists.` };
+      slug = `${slug}-${Date.now().toString().slice(-4)}`;
     }
 
     // Resolve Category
-    const categorySlug = input.category?.trim().toLowerCase() || "t-shirts";
+    const categoryNameOrSlug = input.category?.trim() || "General";
     let category = await prisma.category.findFirst({
       where: {
-        OR: [{ slug: categorySlug }, { name: categorySlug }],
+        OR: [
+          { slug: categoryNameOrSlug.toLowerCase() },
+          { name: categoryNameOrSlug },
+        ],
       },
     });
 
     if (!category) {
+      const generatedCatSlug = categoryNameOrSlug.toLowerCase().replace(/[^a-z0-9-]+/g, "-") || `cat-${Date.now().toString().slice(-4)}`;
       category = await prisma.category.create({
         data: {
-          name: input.category?.trim() || "General",
-          slug: categorySlug,
+          name: categoryNameOrSlug,
+          slug: generatedCatSlug,
           displayOrder: 0,
           isActive: true,
         },
@@ -91,9 +99,11 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
       });
     }
 
-    const basePrice = input.mrp ?? input.compareAt ?? input.price ?? 0;
-    const discountPrice = input.price > 0 && input.price < basePrice ? input.price : null;
-    const sku = `SKU-${slug.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const price = Number(input.price) || 0;
+    const basePrice = Number(input.mrp ?? input.compareAt ?? price);
+    const discountPrice = price > 0 && price < basePrice ? price : null;
+    const purchaseRate = input.purchaseRate !== undefined ? Number(input.purchaseRate) : basePrice * 0.7;
+    const sku = `SKU-${slug.toUpperCase().slice(0, 20)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const product = await prisma.product.create({
       data: {
@@ -110,7 +120,7 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
         isActive: input.isActive ?? true,
         isBundle: input.isBundle ?? false,
         bundleProducts: input.bundleProducts && input.bundleProducts.length > 0 ? JSON.stringify(input.bundleProducts) : null,
-        purchaseRate: input.purchaseRate ?? basePrice * 0.7,
+        purchaseRate,
         badge: input.badge?.trim() || null,
       },
     });
@@ -198,29 +208,29 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
     }
     if (input.isActive !== undefined) updateData.isActive = input.isActive;
     if (input.badge !== undefined) updateData.badge = input.badge?.trim() || null;
-    if (input.purchaseRate !== undefined) updateData.purchaseRate = input.purchaseRate;
+    if (input.purchaseRate !== undefined) updateData.purchaseRate = Number(input.purchaseRate);
 
     if (input.isBundle !== undefined) {
       updateData.isBundle = input.isBundle;
       updateData.bundleProducts = input.isBundle && input.bundleProducts ? JSON.stringify(input.bundleProducts) : null;
     }
 
-    if (input.mrp !== undefined && input.mrp > 0) {
-      updateData.basePrice = input.mrp;
-    } else if (input.compareAt !== undefined && input.compareAt > 0) {
-      updateData.basePrice = input.compareAt;
+    if (input.mrp !== undefined && Number(input.mrp) > 0) {
+      updateData.basePrice = Number(input.mrp);
+    } else if (input.compareAt !== undefined && Number(input.compareAt) > 0) {
+      updateData.basePrice = Number(input.compareAt);
     }
 
     if (input.price !== undefined) {
-      updateData.discountPrice = input.price;
+      updateData.discountPrice = Number(input.price);
     }
 
     // Update Category if provided
     if (input.category?.trim()) {
-      const catSlug = input.category.trim().toLowerCase();
+      const catNameOrSlug = input.category.trim();
       const category = await prisma.category.findFirst({
         where: {
-          OR: [{ slug: catSlug }, { name: catSlug }],
+          OR: [{ slug: catNameOrSlug.toLowerCase() }, { name: catNameOrSlug }],
         },
       });
       if (category) {
@@ -285,7 +295,7 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
             where: { id: match.id },
             data: {
               priceOverride: price ? Number(price) : null,
-              stockQuantity: Math.max(0, stock),
+              stockQuantity: Math.max(0, Number(stock)),
               isActive: true,
             },
           });
@@ -296,7 +306,7 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
               name: cleanSize,
               sku: `${product.sku}-${cleanSize}`.toUpperCase(),
               priceOverride: price ? Number(price) : null,
-              stockQuantity: Math.max(0, stock),
+              stockQuantity: Math.max(0, Number(stock)),
               isActive: true,
             },
           });
@@ -313,7 +323,7 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
         if (variant) {
           await prisma.productVariant.update({
             where: { id: variant.id },
-            data: { stockQuantity: Math.max(0, qty) },
+            data: { stockQuantity: Math.max(0, Number(qty)) },
           });
         }
       }

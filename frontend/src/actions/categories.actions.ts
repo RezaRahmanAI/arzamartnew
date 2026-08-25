@@ -17,14 +17,18 @@ export async function createCategoryAction(data: {
     }
 
     const name = data.name.trim();
-    const slug = data.slug?.trim().toLowerCase() || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    let slug = data.slug?.trim().toLowerCase() || name.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "");
+
+    if (!slug) {
+      slug = `cat-${Date.now().toString().slice(-6)}`;
+    }
 
     const existing = await prisma.category.findFirst({
       where: { slug },
     });
 
     if (existing) {
-      return { success: false, error: `Category with slug '${slug}' already exists.` };
+      slug = `${slug}-${Date.now().toString().slice(-4)}`;
     }
 
     const maxOrder = await prisma.category.aggregate({
