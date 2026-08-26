@@ -18,7 +18,7 @@ export function FloatingActions() {
     setMounted(true);
   }, []);
 
-  if (pathname.startsWith("/admin") || pathname.startsWith("/clp")) {
+  if (pathname.startsWith("/admin")) {
     return null;
   }
 
