@@ -98,7 +98,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-ink-foreground/10 py-5 text-center text-xs text-ink-foreground/50">
-        {footer?.copyrightText || `© ${new Date().getFullYear()} ${general?.websiteName || "Arza"}. All rights reserved.`}
+        {footer?.copyrightText || (general?.websiteName ? `© ${new Date().getFullYear()} ${general.websiteName}. All rights reserved.` : `© ${new Date().getFullYear()}. All rights reserved.`)}
       </div>
     </footer>
   );

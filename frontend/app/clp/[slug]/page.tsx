@@ -1650,7 +1650,7 @@ export default function CustomLandingPageRoute({
 
       {/* 4. Footer */}
       <footer className="py-6 px-4 border-t border-border bg-card text-center text-xs text-muted-foreground space-y-1">
-        <p>© {new Date().getFullYear()} {settings?.general?.websiteName || "ALZEENA"}. All Rights Reserved.</p>
+        <p>{settings?.footer?.copyrightText || (settings?.general?.websiteName ? `© ${new Date().getFullYear()} ${settings.general.websiteName}. All Rights Reserved.` : `© ${new Date().getFullYear()}. All Rights Reserved.`)}</p>
         <p>সারা বাংলাদেশে নিরাপদ ক্যাশ অন ডেলিভারি সেবা।</p>
       </footer>
 
