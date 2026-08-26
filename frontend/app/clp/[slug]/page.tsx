@@ -815,11 +815,11 @@ export default function CustomLandingPageRoute({
         const countdownBg = countdownSec?.settings?.backgroundColor as string;
         return (
           <div
-            className="sticky top-0 z-50 w-full bg-[#dc2626] text-white py-1.5 md:py-2 px-4 shadow-lg overflow-hidden transition-colors"
+            className="sticky top-0 z-50 w-full bg-[#dc2626] text-white py-2 md:py-2.5 px-4 shadow-lg overflow-hidden transition-colors"
             style={countdownBg ? { backgroundColor: countdownBg } : undefined}
           >
-            <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-center gap-2 md:gap-3">
-              <span className="whitespace-pre-line text-xs md:text-sm font-bold">
+            <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-center gap-2.5 md:gap-4 text-center">
+              <span className="whitespace-pre-line text-sm sm:text-base md:text-lg font-black tracking-wide text-white drop-shadow-xs">
                 {timerTitle}
               </span>
               <div className="flex justify-center gap-1.5 md:gap-2">
