@@ -27,11 +27,11 @@ export default async function HomePage() {
 
   const ICON_MAP = { Truck, RotateCcw, ShieldCheck, BadgePercent };
 
-  // Bundle / Combo products appear first in Deals of the Week, followed by discounted products
-  const dealProducts = products
-    .filter((p) => (p.isActive !== false) && (p.isBundle || (p.compareAt && p.compareAt > p.price)))
-    .sort((a, b) => (b.isBundle ? 1 : 0) - (a.isBundle ? 1 : 0));
+  // Active products & All products
   const activeProducts = products.filter((p) => p.isActive !== false && !p.isBundle);
+  const allProducts = products
+    .filter((p) => p.isActive !== false)
+    .sort((a, b) => (b.isBundle ? 1 : 0) - (a.isBundle ? 1 : 0));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
@@ -116,19 +116,19 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Deals of the Week */}
+      {/* New Arrivals with 1-row Auto-sliding & Header Controls */}
+      <HomePageArrivals products={activeProducts} />
+
+      {/* All Products */}
       <section className="mt-14">
         <div className="flex items-end justify-between">
-          <h2 className="section-title border-l-4 border-primary">Deals of the Week</h2>
-          <Link href="/offers" className="text-sm font-semibold text-primary hover:underline">
+          <h2 className="section-title border-l-4 border-primary">All Products</h2>
+          <Link href="/search" className="text-sm font-semibold text-primary hover:underline">
             View all
           </Link>
         </div>
-        <HomePageDeals products={dealProducts} />
+        <HomePageDeals products={allProducts} />
       </section>
-
-      {/* New Arrivals with 1-row Auto-sliding & Header Controls */}
-      <HomePageArrivals products={activeProducts} />
     </div>
   );
 }
