@@ -251,27 +251,54 @@ function AccountContent() {
           {displayOrders.length === 0 && (
             <p className="text-sm text-muted-foreground">You haven't placed an order yet.</p>
           )}
-          {displayOrders.map((o) => (
-            <div key={o.id} className="rounded-xl border border-border bg-card p-5 shadow-card">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-mono text-xs text-muted-foreground">{o.id}</span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${statusStyles[o.status]}`}
-                >
-                  {o.status}
-                </span>
-                <span className="text-xs text-muted-foreground">{o.date}</span>
-                <span className="ml-auto font-bold">{formatBDT(o.total)}</span>
+          {displayOrders.map((o) => {
+            const deliveryAmt = o.delivery !== undefined ? o.delivery : 0;
+            const subTotalAmt = o.total - deliveryAmt;
+            return (
+              <div key={o.id} className="rounded-xl border border-border bg-card p-5 shadow-card space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="font-mono text-xs text-muted-foreground font-bold">#{o.id}</span>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold capitalize ${statusStyles[o.status]}`}
+                  >
+                    {o.status}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{o.date}</span>
+                  
+                  {/* Delivery section on the right side with delivery amount */}
+                  <div className="ml-auto flex items-center gap-4">
+                    <div className="text-right">
+                      <span className="text-[11px] text-muted-foreground block font-medium">ডেলিভারি চার্জ</span>
+                      <span className="text-xs font-bold text-foreground">
+                        {deliveryAmt === 0 ? "ফ্রি (Free)" : formatBDT(deliveryAmt)}
+                      </span>
+                    </div>
+                    <div className="text-right pl-3 border-l border-border">
+                      <span className="text-[11px] text-muted-foreground block font-medium">সর্বমোট (Total)</span>
+                      <span className="text-sm font-extrabold text-price">{formatBDT(o.total)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pt-2 border-t border-border/60 text-xs">
+                  <ul className="space-y-1 text-muted-foreground flex-1">
+                    {o.items.map((it, i) => (
+                      <li key={`${it.slug}-${i}`} className="font-medium">
+                        <span className="text-foreground font-semibold">{it.name}</span> · সাইজ: {it.size} · {it.qty}টি {it.price ? `× ${formatBDT(it.price)}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {o.address && (
+                    <div className="text-xs text-muted-foreground sm:text-right max-w-xs">
+                      <span className="font-bold text-foreground block">ডেলিভারি ঠিকানা:</span>
+                      <span>{o.address}{o.city ? `, ${o.city}` : ""}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
-                {o.items.map((it, i) => (
-                  <li key={`${it.slug}-${i}`}>
-                    {it.name} · size {it.size} · ×{it.qty}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+            );
+          })}
         </TabsContent>
 
         <TabsContent value="wishlist" className="mt-5">

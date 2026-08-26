@@ -360,7 +360,8 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
                   <TableHead>Date</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead className="text-right">ডেলিভারি (Delivery)</TableHead>
+                  <TableHead className="text-right">Revenue (Total)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -368,36 +369,39 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
                 {customerOrders.map(order => (
                   <TableRow key={order.id} className="group">
                     <TableCell className="font-medium text-foreground">
-                      {order.id}
+                      #{order.id}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {order.date}
                     </TableCell>
                     <TableCell>
                       {(order as { isPreOrder?: boolean }).isPreOrder ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                          <span className="size-1.5 rounded-full bg-blue-500"></span>
-                          Pre-Order
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                          <span className="size-1.5 rounded-full bg-emerald-500"></span>
-                          Web-App
-                        </span>
-                      )}
+                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                           <span className="size-1.5 rounded-full bg-blue-500"></span>
+                           Pre-Order
+                         </span>
+                       ) : (
+                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                           <span className="size-1.5 rounded-full bg-emerald-500"></span>
+                           Web-App
+                         </span>
+                       )}
                     </TableCell>
                     <TableCell>
                       <span className="capitalize text-sm font-medium text-foreground bg-muted px-2.5 py-1 rounded-md border border-border">
                         {order.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell className="text-right font-medium text-foreground">
+                      {order.delivery === 0 ? "Free" : formatBDT(order.delivery || 0)}
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-price">
                       {formatBDT(order.total)}
                     </TableCell>
                     <TableCell className="text-right">
                       <button
                         onClick={() => setActiveInvoiceOrder(order)}
-                        className="px-2 py-1 shrink-0 rounded-sm bg-cyan-50 border border-cyan-100 text-cyan-600 hover:bg-cyan-600 hover:text-white transition-all inline-flex items-center justify-center text-xs font-bold"
+                        className="px-2.5 py-1 shrink-0 rounded-sm bg-cyan-50 border border-cyan-100 text-cyan-700 hover:bg-cyan-600 hover:text-white transition-all inline-flex items-center justify-center text-xs font-bold"
                       >
                         PDF
                       </button>
