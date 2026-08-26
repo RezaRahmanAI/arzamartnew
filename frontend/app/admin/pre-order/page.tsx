@@ -171,6 +171,7 @@ export default function AdminPreOrderPage() {
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState("Internal");
 
+  // Load existing pre-order for editing if ?edit=ORD-xxx query is present, or reset if no edit ID
   useEffect(() => {
     if (editOrderId && orders && orders.length > 0) {
       const existing = orders.find((o) => o.id === editOrderId || o.id === `ORD-${editOrderId}`);
@@ -201,6 +202,9 @@ export default function AdminPreOrderPage() {
           setNote(targetNote);
           // If order has a customer note from checkout/CLP, set dropdown to Customer Note
           setNoteType("Customer");
+        } else {
+          setNote("");
+          setNoteType("Internal");
         }
         if (existing.delivery !== undefined) setDeliveryCharge(existing.delivery);
         if (existing.paid !== undefined) setPaid(existing.paid);
@@ -238,6 +242,20 @@ export default function AdminPreOrderPage() {
         }
         toast.info(`Editing Pre-Order #${existing.id}`);
       }
+    } else if (!editOrderId) {
+      // Clean form reset when navigating to fresh Pre-Order (no edit query param)
+      setLines([]);
+      setCustomer("");
+      setPhone("");
+      setAddress("");
+      setCity("Dhaka");
+      setArea("Uttara");
+      setDeliveryCharge(70);
+      setDiscount(0);
+      setPaid(0);
+      setNote("");
+      setNoteType("Internal");
+      setExistingStatus("pending");
     }
   }, [editOrderId, orders, products]);
   
