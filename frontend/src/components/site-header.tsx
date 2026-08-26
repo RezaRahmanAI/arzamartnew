@@ -161,7 +161,7 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 relative">
         <Link href="/" className="shrink-0">
           <span className="font-display text-2xl font-extrabold tracking-tight text-foreground">
             {brandName.toUpperCase()}
@@ -169,7 +169,7 @@ export function SiteHeader() {
           <span className="ml-1 text-primary">.</span>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
+        <nav className="hidden items-center justify-center gap-6 text-sm font-medium md:flex flex-1 max-w-fit mx-auto">
           {(() => {
             const customNav = settings?.navigation?.headerMenu?.filter((item) => item.active);
             if (customNav && customNav.length > 0) {
@@ -178,7 +178,7 @@ export function SiteHeader() {
                   key={item.id}
                   href={item.url}
                   target={item.target || "_self"}
-                  className="text-muted-foreground transition-colors hover:text-primary"
+                  className="text-muted-foreground transition-colors hover:text-primary font-semibold"
                 >
                   {item.label}
                 </Link>
@@ -188,7 +188,7 @@ export function SiteHeader() {
               <Link
                 key={c.slug}
                 href={`/category/${c.slug}`}
-                className="text-muted-foreground transition-colors hover:text-primary"
+                className="text-muted-foreground transition-colors hover:text-primary font-semibold"
               >
                 {c.name}
               </Link>
@@ -196,7 +196,7 @@ export function SiteHeader() {
           })()}
         </nav>
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <Link
             href="/offers"
             className="hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-primary transition-colors hover:bg-secondary sm:flex animate-in fade-in duration-300"
