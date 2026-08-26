@@ -31,20 +31,24 @@ export function ProductCard({ product }: { product: Product }) {
   const isWishlisted = mounted ? isInWishlist(product.slug) : false;
 
   const unitPrice = getSizePrice(product, size);
+  const mrpVal = product.mrp || product.compareAt || 0;
 
-  const discountAmt = (product.mrp || product.compareAt || 0) - product.price;
+  // Calculate default display price (e.g. from the first/smallest size)
+  const defaultSizePrice =
+    product.sizes && product.sizes.length > 0
+      ? getSizePrice(product, product.sizes[0])
+      : product.sizePrices && Object.keys(product.sizePrices).length > 0
+      ? product.sizePrices[Object.keys(product.sizePrices)[0]]
+      : product.price;
+
+  // Savings calculation on product card: compare MRP with size price
+  const cardSavings = mrpVal > defaultSizePrice ? mrpVal - defaultSizePrice : 0;
+
+  // Savings calculation inside select options modal for the selected size
+  const modalSavings = mrpVal > unitPrice ? mrpVal - unitPrice : 0;
 
   const getPriceDisplay = () => {
-    if (product.sizes && product.sizes.length > 0) {
-      const smallestSize = product.sizes[0];
-      const smallestSizePrice = getSizePrice(product, smallestSize);
-      return formatBDT(smallestSizePrice);
-    }
-    if (product.sizePrices && Object.keys(product.sizePrices).length > 0) {
-      const firstKey = Object.keys(product.sizePrices)[0];
-      return formatBDT(product.sizePrices[firstKey]);
-    }
-    return formatBDT(product.price);
+    return formatBDT(defaultSizePrice);
   };
 
   const handleOpenDialog = (e: React.MouseEvent) => {
@@ -90,9 +94,9 @@ export function ProductCard({ product }: { product: Product }) {
               {product.badge}
             </span>
           )}
-          {discountAmt > 0 && (
+          {cardSavings > 0 && (
             <span className="absolute right-3 top-3 rounded-full bg-destructive px-2.5 py-1 text-[11px] font-bold text-destructive-foreground shadow-sm">
-              ৳{discountAmt} ছাড়
+              ৳{cardSavings} সাশ্রয়
             </span>
           )}
 
@@ -122,9 +126,9 @@ export function ProductCard({ product }: { product: Product }) {
           <div className="mt-auto pt-3">
             <div className="flex items-baseline gap-2 mb-3">
               <span className="text-base font-bold text-price">{getPriceDisplay()}</span>
-              {(product.mrp || product.compareAt) && (
+              {mrpVal > defaultSizePrice && (
                 <span className="text-xs text-muted-foreground line-through">
-                  {formatBDT(product.mrp || product.compareAt || 0)}
+                  {formatBDT(mrpVal)}
                 </span>
               )}
             </div>
@@ -156,7 +160,19 @@ export function ProductCard({ product }: { product: Product }) {
             </div>
             <div className="flex flex-col justify-center">
               <h4 className="text-sm font-semibold text-foreground leading-snug">{product.name}</h4>
-              <p className="mt-1 text-lg font-bold text-price">{formatBDT(unitPrice)}</p>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-lg font-bold text-price">{formatBDT(unitPrice)}</span>
+                {mrpVal > unitPrice && (
+                  <span className="text-xs text-muted-foreground line-through">
+                    {formatBDT(mrpVal)}
+                  </span>
+                )}
+                {modalSavings > 0 && (
+                  <span className="text-[11px] font-bold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
+                    ৳{modalSavings} সাশ্রয়
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
