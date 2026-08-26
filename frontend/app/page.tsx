@@ -127,16 +127,8 @@ export default async function HomePage() {
         <HomePageDeals products={dealProducts} />
       </section>
 
-      {/* New Arrivals */}
-      <section className="mt-14">
-        <div className="flex items-end justify-between">
-          <h2 className="section-title border-l-4 border-primary">New Arrivals</h2>
-          <Link href="/new-arrivals" className="text-sm font-semibold text-primary hover:underline">
-            View all
-          </Link>
-        </div>
-        <HomePageArrivals products={activeProducts} />
-      </section>
+      {/* New Arrivals with 1-row Auto-sliding & Header Controls */}
+      <HomePageArrivals products={activeProducts} />
     </div>
   );
 }
