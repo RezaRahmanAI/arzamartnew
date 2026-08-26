@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
-import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
+import {
+  BANGLADESH_DIVISIONS,
+  getDistrictsForDivision,
+} from "@/lib/location-data";
 import {
   Lock,
   Mail,
@@ -39,19 +42,23 @@ export default function CustomerLoginPage() {
   const [address, setAddress] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [showRegPass, setShowRegPass] = useState(false);
-  const [city, setCity] = useState("Dhaka");
-  const [area, setArea] = useState(() => getAreasForCity("Dhaka")[0] || "");
+  const [division, setDivision] = useState(BANGLADESH_DIVISIONS[0] || "Dhaka (ঢাকা)");
+  const [district, setDistrict] = useState(() => getDistrictsForDivision("Dhaka (ঢাকা)")[0] || "Dhaka");
 
   if (user && user.role === "customer") {
     router.push("/account");
   }
 
-  const availableAreas = getAreasForCity(city);
+  const availableDistricts = getDistrictsForDivision(division);
 
-  const handleCityChange = (nextCity: string) => {
-    setCity(nextCity);
-    const areas = getAreasForCity(nextCity);
-    setArea(areas[0] || "");
+  const handleDivisionChange = (nextDivision: string) => {
+    setDivision(nextDivision);
+    const districts = getDistrictsForDivision(nextDivision);
+    setDistrict(districts[0] || "");
+  };
+
+  const handleDistrictChange = (nextDistrict: string) => {
+    setDistrict(nextDistrict);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -71,10 +78,10 @@ export default function CustomerLoginPage() {
       name: name.trim(),
       email: "",
       phone: phone.trim(),
+      address: address.trim() || `${district}, ${division}`,
       password: regPassword,
-      address: address.trim() || `${area}, ${city}`,
-      area,
-      district: city,
+      area: division,
+      district,
     });
     setIsSubmitting(false);
     if (success) {
@@ -82,36 +89,32 @@ export default function CustomerLoginPage() {
     }
   };
 
-  const switchMode = (next: AuthMode) => {
-    setMode(next);
-    setIsSubmitting(false);
-  };
-
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-xl p-8 space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-2">
+    <div className="mx-auto max-w-md px-4 py-12">
+      <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-card">
+        {/* Brand / Title Header */}
+        <div className="text-center space-y-2 mb-6">
+          <div className="inline-flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <ShoppingBag className="size-6" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {mode === "signin" ? "Customer Portal" : "Create an Account"}
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+            {mode === "signin" ? "Sign in to your account" : "Create your customer account"}
           </h1>
           <p className="text-xs text-muted-foreground">
             {mode === "signin"
-              ? "Order without logging in, or verify your account below."
-              : "Join for fast checkout and reward points."}
+              ? "Access your past orders, delivery details and wishlist."
+              : "Register to save addresses and track all orders instantly."}
           </p>
         </div>
 
-        {/* Sign In / Sign Up toggle */}
-        <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+        {/* Tab Switcher */}
+        <div className="grid grid-cols-2 gap-1 rounded-xl bg-secondary p-1 mb-6">
           <button
             type="button"
-            onClick={() => switchMode("signin")}
-            className={`rounded-lg py-2 text-sm font-bold transition-colors ${
+            onClick={() => setMode("signin")}
+            className={`rounded-lg py-2 text-xs font-bold transition-all ${
               mode === "signin"
-                ? "bg-card text-foreground shadow-sm"
+                ? "bg-background text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -119,10 +122,10 @@ export default function CustomerLoginPage() {
           </button>
           <button
             type="button"
-            onClick={() => switchMode("signup")}
-            className={`rounded-lg py-2 text-sm font-bold transition-colors ${
+            onClick={() => setMode("signup")}
+            className={`rounded-lg py-2 text-xs font-bold transition-all ${
               mode === "signup"
-                ? "bg-card text-foreground shadow-sm"
+                ? "bg-background text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -130,51 +133,51 @@ export default function CustomerLoginPage() {
           </button>
         </div>
 
+        {/* Form */}
         {mode === "signin" ? (
           <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="identifier" className="text-xs font-semibold">Email or Mobile Number</Label>
+              <Label htmlFor="si-identifier" className="text-xs font-semibold">Mobile Number or Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                <Phone className="absolute left-3 top-3 size-4 text-muted-foreground" />
                 <Input
-                  id="identifier"
+                  id="si-identifier"
                   type="text"
-                  placeholder="+8801700000000 or email"
+                  placeholder="01XXXXXXXXX or email@example.com"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  className="pl-9 text-sm"
                   required
+                  className="pl-9 text-sm"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-xs font-semibold">Password</Label>
+              <Label htmlFor="si-password" className="text-xs font-semibold">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 size-4 text-muted-foreground" />
                 <Input
-                  id="password"
+                  id="si-password"
                   type={showPass ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9 pr-10 text-sm"
                   required
+                  className="pl-9 pr-9 text-sm"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPass((v) => !v)}
+                  onClick={() => setShowPass(!showPass)}
                   className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                  aria-label={showPass ? "Hide password" : "Show password"}
                 >
                   {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-11 text-sm font-bold gap-2" disabled={isSubmitting}>
-              Sign In
-              <ArrowRight className="size-4" />
+            <Button type="submit" className="w-full font-bold text-sm" disabled={isSubmitting}>
+              {isSubmitting ? "Signing in..." : "Sign In"}
+              <ArrowRight className="ml-2 size-4" />
             </Button>
           </form>
         ) : (
@@ -185,27 +188,28 @@ export default function CustomerLoginPage() {
                 <User className="absolute left-3 top-3 size-4 text-muted-foreground" />
                 <Input
                   id="su-name"
-                  placeholder="Nusrat Jahan"
+                  placeholder="Your full name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="pl-9 text-sm"
                   required
+                  className="pl-9 text-sm"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="su-phone" className="text-xs font-semibold">Phone Number</Label>
+              <Label htmlFor="su-phone" className="text-xs font-semibold">Mobile Number</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-3 size-4 text-muted-foreground" />
                 <Input
                   id="su-phone"
                   type="tel"
-                  placeholder="+880 1700-000000"
+                  placeholder="01XXXXXXXXX"
+                  pattern="01[0-9]{9}"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="pl-9 text-sm"
                   required
+                  className="pl-9 text-sm"
                 />
               </div>
             </div>
@@ -226,29 +230,29 @@ export default function CustomerLoginPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="su-city" className="text-xs font-semibold">City</Label>
+                <Label htmlFor="su-division" className="text-xs font-semibold">Division (বিভাগ)</Label>
                 <select
-                  id="su-city"
-                  value={city}
-                  onChange={(e) => handleCityChange(e.target.value)}
+                  id="su-division"
+                  value={division}
+                  onChange={(e) => handleDivisionChange(e.target.value)}
                   className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
                 >
-                  {DEFAULT_CITIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {BANGLADESH_DIVISIONS.map((d) => (
+                    <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="su-area" className="text-xs font-semibold">Area (Thana / Upazila)</Label>
+                <Label htmlFor="su-district" className="text-xs font-semibold">District (জেলা)</Label>
                 <select
-                  id="su-area"
-                  value={area}
-                  onChange={(e) => setArea(e.target.value)}
+                  id="su-district"
+                  value={district}
+                  onChange={(e) => handleDistrictChange(e.target.value)}
                   className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
                 >
-                  {availableAreas.map((a) => (
-                    <option key={a} value={a}>{a}</option>
+                  {availableDistricts.map((d) => (
+                    <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
               </div>

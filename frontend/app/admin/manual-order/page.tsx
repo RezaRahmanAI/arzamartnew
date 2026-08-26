@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus, Search, Trash2, RotateCcw, ShoppingBag, X, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
@@ -26,7 +26,12 @@ import { getSizePrice, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { CustomerSearchInput } from "@/components/admin/customer-search-input";
 import { useSettings } from "@/context/settings-context";
-import { CITY_AREAS_MAP as INITIAL_CITY_AREAS_MAP, DEFAULT_CITIES, DEFAULT_AREAS } from "@/lib/location-data";
+import {
+  BANGLADESH_DIVISIONS,
+  getDistrictsForDivision,
+  findDivisionForDistrict,
+  BANGLADESH_DIVISIONS_DISTRICTS,
+} from "@/lib/location-data";
 import { getImageUrl, handleImageError } from "@/lib/utils";
 
 import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
@@ -163,11 +168,9 @@ export default function AdminManualOrder() {
   const [customer, setCustomer] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  // Dynamic Locations (City = District/City, Area = Thana/Upazila)
-  const [cities, setCities] = useState<string[]>(DEFAULT_CITIES);
-  const [cityAreasMap, setCityAreasMap] = useState<Record<string, string[]>>(INITIAL_CITY_AREAS_MAP);
-  const [city, setCity] = useState("Dhaka");
-  const [area, setArea] = useState("Uttara");
+  // Dynamic Locations: Division (বিভাগ) -> District (জেলা)
+  const [division, setDivision] = useState(BANGLADESH_DIVISIONS[0] || "Dhaka (ঢাকা)");
+  const [district, setDistrict] = useState("Dhaka");
   const [sourcePage, setSourcePage] = useState("Facebook Page");
   const [socialSource, setSocialSource] = useState(socialPageMapBySource["Facebook Page"][0] || "");
   const [deliveryCharge, setDeliveryCharge] = useState(70);
@@ -185,7 +188,7 @@ export default function AdminManualOrder() {
       if (existing) {
         let targetAddress = existing.address || "";
         let targetCity = existing.city || "Dhaka";
-        let targetArea = existing.area || "Uttara";
+        let targetArea = existing.area || "Dhaka (ঢাকা)";
         let targetNote = existing.note || "";
 
         if (targetAddress.startsWith("{") && targetAddress.endsWith("}")) {
@@ -203,8 +206,10 @@ export default function AdminManualOrder() {
         setCustomer(existing.customer || "");
         setPhone(existing.phone || "");
         setAddress(targetAddress);
-        setCity(targetCity);
-        setArea(targetArea);
+        setDistrict(targetCity);
+        const derivedDiv = BANGLADESH_DIVISIONS.includes(targetArea) ? targetArea : findDivisionForDistrict(targetCity);
+        setDivision(derivedDiv);
+
         if (targetNote) {
           setNote(targetNote);
           // If order has a customer note from checkout/CLP, set dropdown to Customer Note
@@ -255,8 +260,8 @@ export default function AdminManualOrder() {
       setCustomer("");
       setPhone("");
       setAddress("");
-      setCity("Dhaka");
-      setArea("Uttara");
+      setDivision("Dhaka (ঢাকা)");
+      setDistrict("Dhaka");
       setDeliveryCharge(70);
       setDiscount(0);
       setPaid(0);
@@ -276,61 +281,28 @@ export default function AdminManualOrder() {
   // Dynamic options list for Social Page dropdown based on selected Source Channel
   const currentSocialPageOptions = socialPageMapBySource[sourcePage] || [];
 
-  // Fetch live BD Divisions -> Districts & Real Thanas/Upazilas from public API
-  useEffect(() => {
-    async function loadAllBDLocationsFromAPI() {
-      try {
-        const divList = ["dhaka", "chattogram", "rajshahi", "khulna", "barishal", "sylhet", "rangpur", "mymensingh"];
-        const newCityAreas: Record<string, string[]> = {};
-        const newCitiesSet = new Set<string>(DEFAULT_CITIES);
+  // Districts available under currently selected division
+  const availableDistricts = useMemo(() => getDistrictsForDivision(division), [division]);
 
-        const responses = await Promise.allSettled(
-          divList.map((div) => fetch(`https://bdapis.com/api/v1.2/division/${div}`).then((r) => r.json()))
-        );
+  // Division change handler
+  const handleDivisionChange = (newDivision: string) => {
+    setDivision(newDivision);
+    const districtList = getDistrictsForDivision(newDivision);
+    const defaultDist = districtList[0] || "Dhaka";
+    setDistrict(defaultDist);
+    handleDistrictChargeUpdate(defaultDist);
+  };
 
-        responses.forEach((res) => {
-          if (res.status === "fulfilled" && res.value?.data && Array.isArray(res.value.data)) {
-            res.value.data.forEach((distItem: { district: string; upazilla?: string[] }) => {
-              const cityName = distItem.district;
-              newCitiesSet.add(cityName);
+  // District change handler
+  const handleDistrictChange = (newDistrict: string) => {
+    setDistrict(newDistrict);
+    handleDistrictChargeUpdate(newDistrict);
+  };
 
-              if (distItem.upazilla && Array.isArray(distItem.upazilla)) {
-                const existing = INITIAL_CITY_AREAS_MAP[cityName] || [];
-                const merged = Array.from(new Set([...existing, ...distItem.upazilla]));
-                newCityAreas[cityName] = merged;
-              }
-            });
-          }
-        });
-
-        if (newCitiesSet.size > 0) {
-          setCities(Array.from(newCitiesSet));
-          setCityAreasMap((prev) => ({
-            ...prev,
-            ...newCityAreas,
-          }));
-        }
-      } catch (err) {
-        console.warn("Using location fallback data:", err);
-      }
-    }
-
-    loadAllBDLocationsFromAPI();
-  }, []);
-
-  // Current real areas (thanas/upazilas) list based on selected city
-  const availableAreas = cityAreasMap[city] || INITIAL_CITY_AREAS_MAP[city] || DEFAULT_AREAS;
-
-  // City change handler
-  const handleCityChange = (newCity: string) => {
-    setCity(newCity);
-    const areasList = cityAreasMap[newCity] || INITIAL_CITY_AREAS_MAP[newCity] || DEFAULT_AREAS;
-    setArea(areasList[0] || "Main Town / Sadar");
-
-    // Auto-update delivery charge preset based on selected city
-    if (newCity === "Dhaka") {
+  const handleDistrictChargeUpdate = (newDistrict: string) => {
+    if (newDistrict.toLowerCase() === "dhaka") {
       setDeliveryCharge(70);
-    } else if (["Gazipur", "Narayanganj", "Savar", "Keraniganj", "Manikganj", "Munshiganj"].includes(newCity)) {
+    } else if (["Gazipur", "Narayanganj", "Savar", "Keraniganj", "Manikganj", "Munshiganj"].includes(newDistrict)) {
       setDeliveryCharge(100);
     } else {
       setDeliveryCharge(130);
@@ -518,9 +490,9 @@ export default function AdminManualOrder() {
       id: editOrderId || generateNextOrderId(),
       customer: customer.trim(),
       phone: phone.trim(),
-      address: address.trim() ? address.trim() : `${area}, ${city}`,
-      city,
-      area,
+      address: address.trim() ? address.trim() : `${district}, ${division}`,
+      city: district,
+      area: division,
       note: actualNote,
       payment: paid >= total ? "Paid" : paid > 0 ? "Partial Paid" : "Cash on delivery",
       items: orderItems,
@@ -774,11 +746,11 @@ export default function AdminManualOrder() {
                     onSelect={(c) => {
                       if (!customer.trim()) setCustomer(c.fullName || "");
                       if (!address.trim()) setAddress(c.address || "");
-                      if (!city.trim() && c.district) setCity(c.district);
-                      if (!area.trim() && c.area) setArea(c.area);
-                      setDeliveryCharge(
-                        c.district && c.district.toLowerCase() === "dhaka" ? 70 : 130
-                      );
+                      if (c.district) {
+                        setDistrict(c.district);
+                        setDivision(findDivisionForDistrict(c.district));
+                        handleDistrictChargeUpdate(c.district);
+                      }
                     }}
                     placeholder="Phone number"
                   />
@@ -834,24 +806,24 @@ export default function AdminManualOrder() {
                 </div>
               </div>
 
-              {/* Searchable City & Area (Thana/Upazila) Dropdowns */}
+              {/* Searchable Division & District Dropdowns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Select City</Label>
+                  <Label className="text-xs font-semibold">Select Division (বিভাগ)</Label>
                   <SearchableSelect
-                    options={cities}
-                    value={city}
-                    onChange={handleCityChange}
-                    placeholder="Search & select city..."
+                    options={BANGLADESH_DIVISIONS}
+                    value={division}
+                    onChange={handleDivisionChange}
+                    placeholder="Search & select division..."
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Select Area (Thana / Upazila)</Label>
+                  <Label className="text-xs font-semibold">Select District (জেলা)</Label>
                   <SearchableSelect
-                    options={availableAreas}
-                    value={area}
-                    onChange={setArea}
-                    placeholder="Search & select area..."
+                    options={availableDistricts}
+                    value={district}
+                    onChange={handleDistrictChange}
+                    placeholder="Search & select district..."
                   />
                 </div>
               </div>

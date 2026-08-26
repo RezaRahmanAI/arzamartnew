@@ -12,7 +12,11 @@ import { useCustomers } from "@/lib/customers-store";
 import { useAuth } from "@/context/auth-context";
 import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
 
-import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
+import {
+  BANGLADESH_DIVISIONS,
+  getDistrictsForDivision,
+  findDivisionForDistrict,
+} from "@/lib/location-data";
 
 export default function CheckoutPage() {
   const { detailedLines, subtotal, clear } = useCart();
@@ -23,8 +27,8 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [placing, setPlacing] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
-  const [selectedCity, setSelectedCity] = useState("Dhaka");
-  const [selectedArea, setSelectedArea] = useState(() => getAreasForCity("Dhaka")[0] || "");
+  const [selectedDivision, setSelectedDivision] = useState(BANGLADESH_DIVISIONS[0] || "Dhaka (ঢাকা)");
+  const [selectedDistrict, setSelectedDistrict] = useState(() => getDistrictsForDivision("Dhaka (ঢাকা)")[0] || "Dhaka");
   const formRef = useRef<HTMLFormElement>(null);
 
   // Persist customer details so returning from cart/products keeps everything typed
@@ -44,10 +48,11 @@ export default function CheckoutPage() {
       setPhone((saved?.phone as string) || master?.mobileNumber || "");
       setAddress((saved?.address as string) || master?.address || "");
       setNote((saved?.note as string) || master?.defaultNote || "");
-      const city = (saved?.city as string) || master?.district || "Dhaka";
-      setSelectedCity(city);
-      const areas = getAreasForCity(city);
-      setSelectedArea(areas[0] || saved?.area || "");
+
+      const dist = (saved?.district as string) || (saved?.city as string) || master?.district || "Dhaka";
+      const div = (saved?.division as string) || findDivisionForDistrict(dist);
+      setSelectedDivision(div);
+      setSelectedDistrict(dist);
     } catch {
       /* ignore */
     }
@@ -58,21 +63,25 @@ export default function CheckoutPage() {
       try {
         window.localStorage.setItem(
           CHECKOUT_PROFILE_KEY,
-          JSON.stringify({ name, phone, address, note, city: selectedCity, area: selectedArea })
+          JSON.stringify({ name, phone, address, note, division: selectedDivision, district: selectedDistrict, city: selectedDistrict })
         );
       } catch {
         /* ignore */
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [name, phone, address, note, selectedCity, selectedArea]);
+  }, [name, phone, address, note, selectedDivision, selectedDistrict]);
 
-  const availableAreas = getAreasForCity(selectedCity);
+  const availableDistricts = getDistrictsForDivision(selectedDivision);
 
-  const handleCityChange = (city: string) => {
-    setSelectedCity(city);
-    const areas = getAreasForCity(city);
-    setSelectedArea(areas[0] || "");
+  const handleDivisionChange = (division: string) => {
+    setSelectedDivision(division);
+    const districts = getDistrictsForDivision(division);
+    setSelectedDistrict(districts[0] || "");
+  };
+
+  const handleDistrictChange = (district: string) => {
+    setSelectedDistrict(district);
   };
 
   // Delivery logic from centralized settings
@@ -105,8 +114,8 @@ export default function CheckoutPage() {
         customer: customerName || "Incomplete Customer",
         phone: customerPhone,
         address: customerAddress,
-        city: selectedCity,
-        area: selectedArea,
+        city: selectedDistrict,
+        area: selectedDivision,
         note: note.trim(),
         payment: "Cash on delivery",
         items: detailedLines.map((l) => ({
@@ -124,7 +133,7 @@ export default function CheckoutPage() {
       };
       saveIncomplete(order);
     },
-    [detailedLines, name, phone, address, selectedCity, selectedArea, note, draftId, generateNextIncompleteOrderId, subtotal, delivery, saveIncomplete]
+    [detailedLines, name, phone, address, selectedDistrict, selectedDivision, note, draftId, generateNextIncompleteOrderId, subtotal, delivery, saveIncomplete]
   );
 
   useEffect(() => {
@@ -136,7 +145,7 @@ export default function CheckoutPage() {
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [detailedLines, name, phone, address, selectedCity, selectedArea, note, saveIncompleteDraft]);
+  }, [detailedLines, name, phone, address, selectedDistrict, selectedDivision, note, saveIncompleteDraft]);
 
   if (detailedLines.length === 0) {
     return (
@@ -166,7 +175,7 @@ export default function CheckoutPage() {
     const customerMaster = findOrCreateByPhone(phone, {
       fullName: name,
       address,
-      district: selectedCity,
+      district: selectedDistrict,
     });
 
     // Auto-login the customer so their order is linked to their profile
@@ -180,8 +189,8 @@ export default function CheckoutPage() {
       customer: name,
       phone,
       address,
-      city: selectedCity,
-      area: selectedArea,
+      city: selectedDistrict,
+      area: selectedDivision,
       note: String(formData.get("note") ?? ""),
       payment: String(formData.get("payment") ?? "Cash on delivery"),
       items: detailedLines.map((l) => ({
@@ -264,29 +273,29 @@ export default function CheckoutPage() {
             </label>
 
             <label className="text-sm">
-              <span className="font-semibold text-foreground">Select City</span>
+              <span className="font-semibold text-foreground">Select Division (বিভাগ)</span>
               <select
-                name="city"
-                value={selectedCity}
-                onChange={(e) => handleCityChange(e.target.value)}
+                name="division"
+                value={selectedDivision}
+                onChange={(e) => handleDivisionChange(e.target.value)}
                 className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               >
-                {DEFAULT_CITIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                {BANGLADESH_DIVISIONS.map((d) => (
+                  <option key={d} value={d}>{d}</option>
                 ))}
               </select>
             </label>
 
             <label className="text-sm">
-              <span className="font-semibold text-foreground">Select Area (Thana / Upazila)</span>
+              <span className="font-semibold text-foreground">Select District (জেলা)</span>
               <select
-                name="area"
-                value={selectedArea}
-                onChange={(e) => setSelectedArea(e.target.value)}
+                name="district"
+                value={selectedDistrict}
+                onChange={(e) => handleDistrictChange(e.target.value)}
                 className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               >
-                {availableAreas.map((a) => (
-                  <option key={a} value={a}>{a}</option>
+                {availableDistricts.map((d) => (
+                  <option key={d} value={d}>{d}</option>
                 ))}
               </select>
             </label>

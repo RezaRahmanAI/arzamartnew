@@ -36,7 +36,10 @@ import { getImageUrl, handleImageError } from "@/lib/utils";
 import { CustomSectionRenderer } from "@/components/admin/custom-section-renderer";
 import { settingsService } from "@/lib/api/services/settings.service";
 import { ordersService } from "@/lib/api/services/orders.service";
-import { DEFAULT_CITIES, getAreasForCity } from "@/lib/location-data";
+import {
+  BANGLADESH_DIVISIONS,
+  getDistrictsForDivision,
+} from "@/lib/location-data";
 import { SystemSettings } from "@/types/settings";
 import { type Order } from "@/lib/orders";
 
@@ -99,8 +102,8 @@ export default function CustomLandingPageRoute({
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
-  const [selectedCity, setSelectedCity] = useState("Dhaka");
-  const [selectedArea, setSelectedArea] = useState("");
+  const [selectedDivision, setSelectedDivision] = useState(BANGLADESH_DIVISIONS[0] || "Dhaka (ঢাকা)");
+  const [selectedDistrict, setSelectedDistrict] = useState(() => getDistrictsForDivision("Dhaka (ঢাকা)")[0] || "Dhaka");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -548,12 +551,19 @@ export default function CustomLandingPageRoute({
     );
   }, [settings]);
 
-  const availableAreas = useMemo(() => getAreasForCity(selectedCity), [selectedCity]);
+  const availableDistricts = useMemo(
+    () => getDistrictsForDivision(selectedDivision),
+    [selectedDivision]
+  );
 
-  const handleCityChange = (city: string) => {
-    setSelectedCity(city);
-    const areas = getAreasForCity(city);
-    setSelectedArea(areas[0] || "");
+  const handleDivisionChange = (division: string) => {
+    setSelectedDivision(division);
+    const districts = getDistrictsForDivision(division);
+    setSelectedDistrict(districts[0] || "");
+  };
+
+  const handleDistrictChange = (district: string) => {
+    setSelectedDistrict(district);
   };
 
   const deliveryCharge = useMemo(() => {
@@ -564,8 +574,8 @@ export default function CustomLandingPageRoute({
       return 0; // Free delivery threshold reached
     }
 
-    return selectedCity === "Dhaka" ? insideDhakaFee : outsideDhakaFee;
-  }, [selectedCity, insideDhakaFee, outsideDhakaFee, selectedProductList, data?.config?.freeShippingThresholdQuantity]);
+    return selectedDistrict.toLowerCase() === "dhaka" ? insideDhakaFee : outsideDhakaFee;
+  }, [selectedDistrict, insideDhakaFee, outsideDhakaFee, selectedProductList, data?.config?.freeShippingThresholdQuantity]);
 
   const subtotal = useMemo(() => {
     return selectedProductList.reduce((sum, item) => {
@@ -600,8 +610,8 @@ export default function CustomLandingPageRoute({
       customer: name || "Incomplete Customer",
       phone: phone || "",
       address: address || "",
-      city: selectedCity,
-      area: selectedArea,
+      city: selectedDistrict,
+      area: selectedDivision,
       note: notes.trim(),
       payment: "Cash on Delivery",
       status: "pending",
@@ -625,8 +635,8 @@ export default function CustomLandingPageRoute({
     customerPhone,
     customerAddress,
     draftId,
-    selectedCity,
-    selectedArea,
+    selectedDivision,
+    selectedDistrict,
     notes,
     grandTotal,
     deliveryCharge,
@@ -673,8 +683,8 @@ export default function CustomLandingPageRoute({
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         shippingAddress: customerAddress.trim(),
-        city: selectedCity,
-        area: selectedArea,
+        city: selectedDistrict,
+        area: selectedDivision,
         deliveryCharge: deliveryCharge,
         subtotal: subtotal,
         totalAmount: grandTotal,
@@ -709,8 +719,8 @@ export default function CustomLandingPageRoute({
           customer: customerName.trim(),
           phone: customerPhone.trim(),
           address: customerAddress.trim(),
-          city: selectedCity,
-          area: selectedArea,
+          city: selectedDistrict,
+          area: selectedDivision,
           note: notes.trim(),
           payment: "Cash on Delivery",
           status: "pending",
@@ -1431,29 +1441,29 @@ export default function CustomLandingPageRoute({
                             </div>
                           </div>
 
-                          {/* City & Area Selection */}
+                          {/* Division & District Selection */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                              <label className="text-xs font-bold text-foreground">শহর / জেলা *</label>
+                              <label className="text-xs font-bold text-foreground">বিভাগ সিলেক্ট করুন *</label>
                               <select
-                                value={selectedCity}
-                                onChange={(e) => handleCityChange(e.target.value)}
+                                value={selectedDivision}
+                                onChange={(e) => handleDivisionChange(e.target.value)}
                                 className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                               >
-                                {DEFAULT_CITIES.map((c) => (
-                                  <option key={c} value={c}>{c}</option>
+                                {BANGLADESH_DIVISIONS.map((d) => (
+                                  <option key={d} value={d}>{d}</option>
                                 ))}
                               </select>
                             </div>
                             <div className="space-y-1.5">
-                              <label className="text-xs font-bold text-foreground">থানা / উপজেলা *</label>
+                              <label className="text-xs font-bold text-foreground">জেলা সিলেক্ট করুন *</label>
                               <select
-                                value={selectedArea}
-                                onChange={(e) => setSelectedArea(e.target.value)}
+                                value={selectedDistrict}
+                                onChange={(e) => handleDistrictChange(e.target.value)}
                                 className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                               >
-                                {availableAreas.map((a) => (
-                                  <option key={a} value={a}>{a}</option>
+                                {availableDistricts.map((d) => (
+                                  <option key={d} value={d}>{d}</option>
                                 ))}
                               </select>
                             </div>

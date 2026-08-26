@@ -1,89 +1,60 @@
-// Comprehensive Real Bangladesh Locations Data (City/District -> Real Thanas/Upazilas)
-export const CITY_AREAS_MAP: Record<string, string[]> = {
-  Dhaka: [
-    "Uttara", "Gulshan", "Banani", "Dhanmondi", "Mirpur", "Mohammadpur", "Badda",
-    "Rampura", "Khilgaon", "Motijheel", "Jatrabari", "Bashundhara", "Baridhara",
-    "Tejgaon", "Farmgate", "Malibagh", "Mogbazar", "Elephant Road", "New Market",
-    "Old Dhaka", "Lalbagh", "Keraniganj", "Savar", "Dhamrai", "Cantonment", "Kafrul",
-    "Shahbagh", "Kamrangirchar", "Demra", "Kadamtali", "Hazaribagh", "Adabor",
-    "Niketan", "Nikunja", "Dohar", "Nawabganj"
+// Comprehensive Bangladesh Locations: 8 Divisions (বিভাগ) -> 64 Districts (জেলা)
+export const BANGLADESH_DIVISIONS_DISTRICTS: Record<string, string[]> = {
+  "Dhaka (ঢাকা)": [
+    "Dhaka", "Gazipur", "Narayanganj", "Tangail", "Narsingdi", "Faridpur",
+    "Gopalganj", "Kishoreganj", "Madaripur", "Manikganj", "Munshiganj", "Rajbari", "Shariatpur"
   ],
-  Chattogram: [
-    "Agrabad", "GEC Circle", "Nasirabad", "Halishahar", "Chawkbazar", "Khulshi",
-    "Panchlaish", "Pahartali", "Bayazid", "Kotwali", "Patenga", "Chandgaon",
-    "Double Mooring", "EPZ", "Bandar", "Hathazari", "Sitakunda", "Anwara",
-    "Banshkhali", "Boalkhali", "Chandanaish", "Fatikchhari", "Lohagara", "Mirsharai",
-    "Patiya", "Rangunia", "Raozan", "Sandwip", "Satkania"
+  "Chattogram (চট্টগ্রাম)": [
+    "Chattogram", "Cox's Bazar", "Cumilla", "Feni", "Brahmanbaria", "Chandpur",
+    "Noakhali", "Lakshmipur", "Bandarban", "Khagrachhari", "Rangamati"
   ],
-  Sylhet: [
-    "Zindabazar", "Chauhatta", "Ambarkhana", "Upa-Shahar", "Tilagarh", "Shibganj",
-    "Subidbazar", "Bandarbazar", "Kadamtali", "South Surma", "Balaganj", "Beanibazar",
-    "Bishwanath", "Companiganj", "Fenchuganj", "Golapganj", "Gowainghat", "Jaintiapur",
-    "Kanaighat", "Sylhet Sadar", "Zakiganj"
+  "Rajshahi (রাজশাহী)": [
+    "Rajshahi", "Bogura", "Pabna", "Sirajganj", "Naogaon", "Natore", "Joypurhat", "Chapainawabganj"
   ],
-  Gazipur: [
-    "Tongi", "Chowrasta", "Board Bazar", "Gazipur Sadar", "Kaliakair", "Kaliganj",
-    "Kapasia", "Sreepur", "Konabari"
+  "Khulna (খুলনা)": [
+    "Khulna", "Jashore", "Kushtia", "Satkhira", "Bagerhat", "Chuadanga", "Jhenaidah",
+    "Magura", "Meherpur", "Narail"
   ],
-  Narayanganj: [
-    "Chashara", "Narayanganj Sadar", "Araihazar", "Bandar", "Rupganj", "Sonargaon",
-    "Fatullah", "Siddhirganj", "Kanchpur"
+  "Barishal (বরিশাল)": [
+    "Barishal", "Barguna", "Bhola", "Jhalokati", "Patuakhali", "Pirojpur"
   ],
-  Comilla: [
-    "Kandirpar", "Comilla Sadar", "Barura", "Brahmanpara", "Burichang", "Chandina",
-    "Chauddagram", "Daudkandi", "Debidwar", "Homna", "Laksam", "Muradnagar", "Nangalkot",
-    "Titas"
+  "Sylhet (সিলেট)": [
+    "Sylhet", "Moulvibazar", "Habiganj", "Sunamganj"
   ],
-  Khulna: [
-    "Khulna Sadar", "Daulatpur", "Khalishpur", "Khan Jahan Ali", "Sonadanga", "Batiaghata",
-    "Dacope", "Dumuria", "Koyra", "Paikgachha", "Phultala", "Rupsha", "Terokhada"
+  "Rangpur (রংপুর)": [
+    "Rangpur", "Dinajpur", "Gaibandha", "Kurigram", "Lalmonirhat", "Nilphamari", "Panchagarh", "Thakurgaon"
   ],
-  Rajshahi: [
-    "Rajshahi Sadar", "Boalia", "Rajpara", "Shah Makhdum", "Motihar", "Bagha", "Bagmara",
-    "Charghat", "Durgapur", "Godagari", "Mohanpur", "Paba", "Puthia", "Tanore"
-  ],
-  Barishal: [
-    "Barishal Sadar", "Agailjhara", "Babuganj", "Bakerganj", "Banaripara", "Gaurnadi",
-    "Hizla", "Mehendigenj", "Muladi", "Wazirpur"
-  ],
-  Rangpur: [
-    "Rangpur Sadar", "Badarganj", "Gangachhara", "Kaunia", "Mithapukur", "Pirgachha",
-    "Pirganj", "Taraganj"
-  ],
-  Mymensingh: [
-    "Mymensingh Sadar", "Bhaluka", "Trishal", "Gafargaon", "Muktagachha", "Fulbaria",
-    "Gouripur", "Iswarganj", "Haluaghat", "Dhobaura", "Nandail", "Phulpur", "TaraKanda"
-  ],
-  Bogra: [
-    "Bogra Sadar", "Adamdighi", "Dhunat", "Dhupchanchia", "Gabtali", "Kahaloo", "Nandigram",
-    "Sariakandi", "Shajahanpur", "Sherpur", "Shibganj", "Sonatala"
-  ],
-  Feni: [
-    "Feni Sadar", "Chhagalnaiya", "Daganbhuiyan", "Parshuram", "Fulgazi", "Sonavazi"
-  ],
-  "Cox's Bazar": [
-    "Cox's Bazar Sadar", "Chakaria", "Kutubdia", "Maheshkhali", "Ramu", "Teknaf", "Ukhia", "Pekua"
+  "Mymensingh (ময়মনসিংহ)": [
+    "Mymensingh", "Jamalpur", "Netrokona", "Sherpur"
   ],
 };
 
-export const DEFAULT_CITIES = [
-  "Dhaka", "Chattogram", "Sylhet", "Gazipur", "Narayanganj", "Comilla", "Khulna",
-  "Rajshahi", "Barishal", "Rangpur", "Mymensingh", "Bogra", "Feni", "Cox's Bazar",
-  "Noakhali", "Tangail", "Brahmanbaria", "Narsingdi", "Jamalpur", "Dinajpur",
-  "Jessore", "Pabna", "Kushtia", "Faridpur", "Bagerhat", "Bandarban", "Barguna",
-  "Bhola", "Chandpur", "Chapainawabganj", "Chuadanga", "Joypurhat", "Gaibandha",
-  "Gopalganj", "Habiganj", "Jhalokati", "Jhenaidah", "Kurigram", "Lakshmipur",
-  "Lalmonirhat", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar",
-  "Munshiganj", "Naogaon", "Narail", "Natore", "Netrokona", "Nilphamari",
-  "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Shariatpur", "Sherpur",
-  "Sirajganj", "Sunamganj", "Satkhira", "Thakurgaon"
-];
+export const BANGLADESH_DIVISIONS = Object.keys(BANGLADESH_DIVISIONS_DISTRICTS);
 
+export const ALL_BANGLADESH_DISTRICTS = Object.values(BANGLADESH_DIVISIONS_DISTRICTS).flat();
+
+export const DEFAULT_CITIES = ALL_BANGLADESH_DISTRICTS;
 export const DEFAULT_AREAS = [
   "Main Town / Sadar", "Bus Stand Area", "Market Area", "Station Road", "College Road"
 ];
 
-export function getAreasForCity(city: string): string[] {
-  if (!city) return DEFAULT_AREAS;
-  return CITY_AREAS_MAP[city] || DEFAULT_AREAS;
+export function getDistrictsForDivision(division: string): string[] {
+  if (!division) return BANGLADESH_DIVISIONS_DISTRICTS["Dhaka (ঢাকা)"] || [];
+  return BANGLADESH_DIVISIONS_DISTRICTS[division] || BANGLADESH_DIVISIONS_DISTRICTS["Dhaka (ঢাকা)"] || [];
 }
+
+export function findDivisionForDistrict(district: string): string {
+  if (!district) return "Dhaka (ঢাকা)";
+  for (const [division, districts] of Object.entries(BANGLADESH_DIVISIONS_DISTRICTS)) {
+    if (districts.some((d) => d.toLowerCase() === district.toLowerCase())) {
+      return division;
+    }
+  }
+  return "Dhaka (ঢাকা)";
+}
+
+// Backward compatibility helper
+export function getAreasForCity(city: string): string[] {
+  return getDistrictsForDivision(city);
+}
+

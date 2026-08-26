@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Minus, Plus, Search, Trash2, RotateCcw, ShoppingBag, X, Check, ChevronsUpDown, Calendar, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -26,7 +26,11 @@ import { getSizePrice, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { CustomerSearchInput } from "@/components/admin/customer-search-input";
 import { useSettings } from "@/context/settings-context";
-import { CITY_AREAS_MAP as INITIAL_CITY_AREAS_MAP, DEFAULT_CITIES, DEFAULT_AREAS } from "@/lib/location-data";
+import {
+  BANGLADESH_DIVISIONS,
+  getDistrictsForDivision,
+  findDivisionForDistrict,
+} from "@/lib/location-data";
 import { getImageUrl, handleImageError } from "@/lib/utils";
 
 import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
@@ -159,10 +163,8 @@ export default function AdminPreOrderPage() {
   const [customer, setCustomer] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [cities, setCities] = useState<string[]>(DEFAULT_CITIES);
-  const [cityAreasMap, setCityAreasMap] = useState<Record<string, string[]>>(INITIAL_CITY_AREAS_MAP);
-  const [city, setCity] = useState("Dhaka");
-  const [area, setArea] = useState("Uttara");
+  const [division, setDivision] = useState(BANGLADESH_DIVISIONS[0] || "Dhaka (ঢাকা)");
+  const [district, setDistrict] = useState("Dhaka");
   const [sourcePage, setSourcePage] = useState("Facebook Page");
   const [socialSource, setSocialSource] = useState(socialPageMapBySource["Facebook Page"]?.[0] || "");
   const [deliveryCharge, setDeliveryCharge] = useState(70);
@@ -178,7 +180,7 @@ export default function AdminPreOrderPage() {
       if (existing) {
         let targetAddress = existing.address || "";
         let targetCity = existing.city || "Dhaka";
-        let targetArea = existing.area || "Uttara";
+        let targetArea = existing.area || "Dhaka (ঢাকা)";
         let targetNote = existing.note || "";
 
         if (targetAddress.startsWith("{") && targetAddress.endsWith("}")) {
@@ -196,8 +198,10 @@ export default function AdminPreOrderPage() {
         setCustomer(existing.customer || "");
         setPhone(existing.phone || "");
         setAddress(targetAddress);
-        setCity(targetCity);
-        setArea(targetArea);
+        setDistrict(targetCity);
+        const derivedDiv = BANGLADESH_DIVISIONS.includes(targetArea) ? targetArea : findDivisionForDistrict(targetCity);
+        setDivision(derivedDiv);
+
         if (targetNote) {
           setNote(targetNote);
           // If order has a customer note from checkout/CLP, set dropdown to Customer Note
@@ -240,7 +244,7 @@ export default function AdminPreOrderPage() {
             })
           );
         }
-        toast.info(`Editing Pre-Order #${existing.id}`);
+        toast.info(`Editing Pre-order #${existing.id}`);
       }
     } else if (!editOrderId) {
       // Clean form reset when navigating to fresh Pre-Order (no edit query param)
@@ -248,8 +252,8 @@ export default function AdminPreOrderPage() {
       setCustomer("");
       setPhone("");
       setAddress("");
-      setCity("Dhaka");
-      setArea("Uttara");
+      setDivision("Dhaka (ঢাকা)");
+      setDistrict("Dhaka");
       setDeliveryCharge(70);
       setDiscount(0);
       setPaid(0);
@@ -285,57 +289,25 @@ export default function AdminPreOrderPage() {
 
   const currentSocialPageOptions = socialPageMapBySource[sourcePage] || [];
 
-  useEffect(() => {
-    async function loadAllBDLocationsFromAPI() {
-      try {
-        const divList = ["dhaka", "chattogram", "rajshahi", "khulna", "barishal", "sylhet", "rangpur", "mymensingh"];
-        const newCityAreas: Record<string, string[]> = {};
-        const newCitiesSet = new Set<string>(DEFAULT_CITIES);
+  const availableDistricts = useMemo(() => getDistrictsForDivision(division), [division]);
 
-        const responses = await Promise.allSettled(
-          divList.map((div) => fetch(`https://bdapis.com/api/v1.2/division/${div}`).then((r) => r.json()))
-        );
+  const handleDivisionChange = (newDivision: string) => {
+    setDivision(newDivision);
+    const districtList = getDistrictsForDivision(newDivision);
+    const defaultDist = districtList[0] || "Dhaka";
+    setDistrict(defaultDist);
+    handleDistrictChargeUpdate(defaultDist);
+  };
 
-        responses.forEach((res) => {
-          if (res.status === "fulfilled" && res.value?.data && Array.isArray(res.value.data)) {
-            res.value.data.forEach((distItem: { district: string; upazilla?: string[] }) => {
-              const cityName = distItem.district;
-              newCitiesSet.add(cityName);
+  const handleDistrictChange = (newDistrict: string) => {
+    setDistrict(newDistrict);
+    handleDistrictChargeUpdate(newDistrict);
+  };
 
-              if (distItem.upazilla && Array.isArray(distItem.upazilla)) {
-                const existing = INITIAL_CITY_AREAS_MAP[cityName] || [];
-                const merged = Array.from(new Set([...existing, ...distItem.upazilla]));
-                newCityAreas[cityName] = merged;
-              }
-            });
-          }
-        });
-
-        if (newCitiesSet.size > 0) {
-          setCities(Array.from(newCitiesSet));
-          setCityAreasMap((prev) => ({
-            ...prev,
-            ...newCityAreas,
-          }));
-        }
-      } catch (err) {
-        console.warn("Using location fallback data:", err);
-      }
-    }
-
-    loadAllBDLocationsFromAPI();
-  }, []);
-
-  const availableAreas = cityAreasMap[city] || INITIAL_CITY_AREAS_MAP[city] || DEFAULT_AREAS;
-
-  const handleCityChange = (newCity: string) => {
-    setCity(newCity);
-    const areasList = cityAreasMap[newCity] || INITIAL_CITY_AREAS_MAP[newCity] || DEFAULT_AREAS;
-    setArea(areasList[0] || "Main Town / Sadar");
-
-    if (newCity === "Dhaka") {
+  const handleDistrictChargeUpdate = (newDistrict: string) => {
+    if (newDistrict.toLowerCase() === "dhaka") {
       setDeliveryCharge(70);
-    } else if (["Gazipur", "Narayanganj", "Savar", "Keraniganj", "Manikganj", "Munshiganj"].includes(newCity)) {
+    } else if (["Gazipur", "Narayanganj", "Savar", "Keraniganj", "Manikganj", "Munshiganj"].includes(newDistrict)) {
       setDeliveryCharge(100);
     } else {
       setDeliveryCharge(130);
@@ -478,9 +450,9 @@ export default function AdminPreOrderPage() {
       id: editOrderId || generateNextOrderId(),
       customer: customer.trim(),
       phone: phone.trim(),
-      address: address.trim() ? address.trim() : `${area}, ${city}`,
-      city,
-      area,
+      address: address.trim() ? address.trim() : `${district}, ${division}`,
+      city: district,
+      area: division,
       note: actualNote,
       payment: paid >= total ? "Paid" : paid > 0 ? "Advance Paid" : "Pending Advance",
       items: orderItems,
@@ -737,11 +709,11 @@ export default function AdminPreOrderPage() {
                     onSelect={(c) => {
                       if (!customer.trim()) setCustomer(c.fullName || "");
                       if (!address.trim()) setAddress(c.address || "");
-                      if (!city.trim() && c.district) setCity(c.district);
-                      if (!area.trim() && c.area) setArea(c.area);
-                      setDeliveryCharge(
-                        c.district && c.district.toLowerCase() === "dhaka" ? 70 : 130
-                      );
+                      if (c.district) {
+                        setDistrict(c.district);
+                        setDivision(findDivisionForDistrict(c.district));
+                        handleDistrictChargeUpdate(c.district);
+                      }
                     }}
                     placeholder="Customer phone"
                   />
@@ -811,24 +783,24 @@ export default function AdminPreOrderPage() {
                 </div>
               </div>
 
-              {/* City & Area Selection */}
+              {/* Division & District Selection */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">City / District</Label>
+                  <Label className="text-xs font-semibold">Select Division (বিভাগ)</Label>
                   <SearchableSelect
-                    options={cities}
-                    value={city}
-                    onChange={handleCityChange}
-                    placeholder="Select City..."
+                    options={BANGLADESH_DIVISIONS}
+                    value={division}
+                    onChange={handleDivisionChange}
+                    placeholder="Select Division..."
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Thana / Area</Label>
+                  <Label className="text-xs font-semibold">Select District (জেলা)</Label>
                   <SearchableSelect
-                    options={availableAreas}
-                    value={area}
-                    onChange={setArea}
-                    placeholder="Select Area..."
+                    options={availableDistricts}
+                    value={district}
+                    onChange={handleDistrictChange}
+                    placeholder="Select District..."
                   />
                 </div>
               </div>
