@@ -634,7 +634,9 @@ export default function AdminOrders() {
               <TableHead>Name</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-center">Revenue</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Paid</TableHead>
+              <TableHead className="text-right">Due</TableHead>
               <TableHead>Social Media</TableHead>
               <TableHead>Page Name</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -643,6 +645,9 @@ export default function AdminOrders() {
           <TableBody>
             {paginatedOrders.map((o) => {
               const sourceInfo = getOrderSourceDetails(o);
+              const totalAmount = Number(o.total) || 0;
+              const paidAmount = Number(o.paid) || 0;
+              const dueAmount = Math.max(0, totalAmount - paidAmount);
               return (
                 <TableRow key={o.id} className="group">
                   <TableCell>
@@ -683,7 +688,11 @@ export default function AdminOrders() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
-                  <TableCell className="text-center font-semibold text-sm tracking-tight">{formatBDT(o.total)}</TableCell>
+                  <TableCell className="text-right font-bold text-xs tracking-tight">{formatBDT(totalAmount)}</TableCell>
+                  <TableCell className="text-right font-semibold text-xs text-emerald-600 dark:text-emerald-400">{formatBDT(paidAmount)}</TableCell>
+                  <TableCell className={`text-right font-bold text-xs ${dueAmount > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+                    {formatBDT(dueAmount)}
+                  </TableCell>
                   <TableCell>
                     {sourceInfo.isWebsite ? (
                       <div className="flex items-center gap-1.5 text-xs text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-2 py-1 rounded-md font-medium w-fit">
