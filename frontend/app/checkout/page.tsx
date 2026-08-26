@@ -13,9 +13,9 @@ import { useAuth } from "@/context/auth-context";
 import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
 
 import {
-  BANGLADESH_DIVISIONS,
-  getDistrictsForDivision,
-  findDivisionForDistrict,
+  detectDeliveryZone,
+  DELIVERY_ZONES,
+  type DeliveryZone,
 } from "@/lib/location-data";
 
 export default function CheckoutPage() {
@@ -27,8 +27,8 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [placing, setPlacing] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
-  const [selectedDivision, setSelectedDivision] = useState(BANGLADESH_DIVISIONS[0] || "Dhaka (ঢাকা)");
-  const [selectedDistrict, setSelectedDistrict] = useState(() => getDistrictsForDivision("Dhaka (ঢাকা)")[0] || "Dhaka");
+  const [selectedDeliveryZone, setSelectedDeliveryZone] = useState<DeliveryZone>("inside_dhaka");
+  const [userOverriddenZone, setUserOverriddenZone] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   // Persist customer details so returning from cart/products keeps everything typed
@@ -44,15 +44,19 @@ export default function CheckoutPage() {
       const saved = raw ? JSON.parse(raw) : null;
       const master = user?.phone ? findCustomerByPhone(user.phone) : null;
 
-      setName((saved?.name as string) || master?.fullName || "");
-      setPhone((saved?.phone as string) || master?.mobileNumber || "");
-      setAddress((saved?.address as string) || master?.address || "");
-      setNote((saved?.note as string) || master?.defaultNote || "");
+      const restoredName = (saved?.name as string) || master?.fullName || "";
+      const restoredPhone = (saved?.phone as string) || master?.mobileNumber || "";
+      const restoredAddress = (saved?.address as string) || master?.address || "";
+      const restoredNote = (saved?.note as string) || master?.defaultNote || "";
 
-      const dist = (saved?.district as string) || (saved?.city as string) || master?.district || "Dhaka";
-      const div = (saved?.division as string) || findDivisionForDistrict(dist);
-      setSelectedDivision(div);
-      setSelectedDistrict(dist);
+      setName(restoredName);
+      setPhone(restoredPhone);
+      setAddress(restoredAddress);
+      setNote(restoredNote);
+
+      if (restoredAddress) {
+        setSelectedDeliveryZone(detectDeliveryZone(restoredAddress));
+      }
     } catch {
       /* ignore */
     }
@@ -63,36 +67,32 @@ export default function CheckoutPage() {
       try {
         window.localStorage.setItem(
           CHECKOUT_PROFILE_KEY,
-          JSON.stringify({ name, phone, address, note, division: selectedDivision, district: selectedDistrict, city: selectedDistrict })
+          JSON.stringify({ name, phone, address, note, deliveryZone: selectedDeliveryZone })
         );
       } catch {
         /* ignore */
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [name, phone, address, note, selectedDivision, selectedDistrict]);
+  }, [name, phone, address, note, selectedDeliveryZone]);
 
-  const availableDistricts = getDistrictsForDivision(selectedDivision);
-
-  const handleDivisionChange = (division: string) => {
-    setSelectedDivision(division);
-    const districts = getDistrictsForDivision(division);
-    setSelectedDistrict(districts[0] || "");
+  const handleAddressChange = (addr: string) => {
+    setAddress(addr);
+    if (!userOverriddenZone) {
+      const detected = detectDeliveryZone(addr);
+      setSelectedDeliveryZone(detected);
+    }
   };
 
-  const handleDistrictChange = (district: string) => {
-    setSelectedDistrict(district);
-  };
-
-  // Delivery logic from centralized settings
+  // Delivery logic from centralized settings & zones
   const freeShippingThreshold = settings?.shipping?.freeShippingThreshold ?? 5000;
   const enableFreeShipping = settings?.shipping?.enableFreeShipping ?? true;
-  const defaultCharge = settings?.shipping?.rules?.[0]?.charge ?? 70;
+  const zoneCharge = DELIVERY_ZONES[selectedDeliveryZone]?.charge ?? 70;
   const delivery = subtotal === 0
     ? 0
     : (enableFreeShipping && subtotal >= freeShippingThreshold)
       ? 0
-      : defaultCharge;
+      : zoneCharge;
 
   const enableCOD = settings?.orders?.enableCOD ?? true;
   const enableOnlinePayment = settings?.orders?.enableOnlinePayment ?? true;
@@ -109,13 +109,15 @@ export default function CheckoutPage() {
       const id = draftId ?? generateNextIncompleteOrderId();
       if (!draftId) setDraftId(id);
 
+      const zoneLabel = DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে";
+
       const order: Order = {
         id,
         customer: customerName || "Incomplete Customer",
         phone: customerPhone,
         address: customerAddress,
-        city: selectedDistrict,
-        area: selectedDivision,
+        city: zoneLabel,
+        area: zoneLabel,
         note: note.trim(),
         payment: "Cash on delivery",
         items: detailedLines.map((l) => ({
@@ -133,7 +135,7 @@ export default function CheckoutPage() {
       };
       saveIncomplete(order);
     },
-    [detailedLines, name, phone, address, selectedDistrict, selectedDivision, note, draftId, generateNextIncompleteOrderId, subtotal, delivery, saveIncomplete]
+    [detailedLines, name, phone, address, selectedDeliveryZone, note, draftId, generateNextIncompleteOrderId, subtotal, delivery, saveIncomplete]
   );
 
   useEffect(() => {
@@ -145,7 +147,7 @@ export default function CheckoutPage() {
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [detailedLines, name, phone, address, selectedDistrict, selectedDivision, note, saveIncompleteDraft]);
+  }, [detailedLines, name, phone, address, selectedDeliveryZone, note, saveIncompleteDraft]);
 
   if (detailedLines.length === 0) {
     return (
@@ -171,11 +173,11 @@ export default function CheckoutPage() {
     const phone = String(formData.get("phone") ?? "");
     const address = String(formData.get("address") ?? "");
 
-    // Master Customer Record Architecture: find or create Customer Master
+    const zoneLabel = DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে";
     const customerMaster = findOrCreateByPhone(phone, {
       fullName: name,
       address,
-      district: selectedDistrict,
+      district: zoneLabel,
     });
 
     // Auto-login the customer so their order is linked to their profile
@@ -189,8 +191,8 @@ export default function CheckoutPage() {
       customer: name,
       phone,
       address,
-      city: selectedDistrict,
-      area: selectedDivision,
+      city: zoneLabel,
+      area: zoneLabel,
       note: String(formData.get("note") ?? ""),
       payment: String(formData.get("payment") ?? "Cash on delivery"),
       items: detailedLines.map((l) => ({
@@ -267,38 +269,102 @@ export default function CheckoutPage() {
                 rows={3}
                 placeholder="House, road, area details"
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                onChange={(e) => handleAddressChange(e.target.value)}
                 className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </label>
 
-            <label className="text-sm">
-              <span className="font-semibold text-foreground">Select Division (বিভাগ)</span>
-              <select
-                name="division"
-                value={selectedDivision}
-                onChange={(e) => handleDivisionChange(e.target.value)}
-                className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
-                {BANGLADESH_DIVISIONS.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </label>
+            {/* Delivery Method Selection Cards (Matching User Exact Design) */}
+            <div className="sm:col-span-2 space-y-2 pt-1">
+              <label className="text-base font-bold text-foreground block">
+                ডেলিভারি
+              </label>
+              <div className="space-y-2.5">
+                {/* 1. Outside Dhaka - 150 Tk */}
+                <label
+                  onClick={() => {
+                    setUserOverriddenZone(true);
+                    setSelectedDeliveryZone("outside_dhaka");
+                  }}
+                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all cursor-pointer select-none ${
+                    selectedDeliveryZone === "outside_dhaka"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
+                      : "border-border bg-background hover:border-border/80"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="delivery_zone"
+                    value="outside_dhaka"
+                    checked={selectedDeliveryZone === "outside_dhaka"}
+                    onChange={() => {
+                      setUserOverriddenZone(true);
+                      setSelectedDeliveryZone("outside_dhaka");
+                    }}
+                    className="size-4.5 accent-primary cursor-pointer"
+                  />
+                  <span className="text-sm sm:text-base font-extrabold text-foreground flex-1">
+                    ঢাকার বাইরে — ১৫০ ৳
+                  </span>
+                </label>
 
-            <label className="text-sm">
-              <span className="font-semibold text-foreground">Select District (জেলা)</span>
-              <select
-                name="district"
-                value={selectedDistrict}
-                onChange={(e) => handleDistrictChange(e.target.value)}
-                className="mt-1.5 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
-                {availableDistricts.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </label>
+                {/* 2. Dhaka Sub-Area - 120 Tk */}
+                <label
+                  onClick={() => {
+                    setUserOverriddenZone(true);
+                    setSelectedDeliveryZone("dhaka_sub_area");
+                  }}
+                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all cursor-pointer select-none ${
+                    selectedDeliveryZone === "dhaka_sub_area"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
+                      : "border-border bg-background hover:border-border/80"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="delivery_zone"
+                    value="dhaka_sub_area"
+                    checked={selectedDeliveryZone === "dhaka_sub_area"}
+                    onChange={() => {
+                      setUserOverriddenZone(true);
+                      setSelectedDeliveryZone("dhaka_sub_area");
+                    }}
+                    className="size-4.5 accent-primary cursor-pointer"
+                  />
+                  <span className="text-sm sm:text-base font-extrabold text-foreground flex-1">
+                    ঢাকার সাব-এরিয়া — ১২০ ৳
+                  </span>
+                </label>
+
+                {/* 3. Inside Dhaka - 70 Tk */}
+                <label
+                  onClick={() => {
+                    setUserOverriddenZone(true);
+                    setSelectedDeliveryZone("inside_dhaka");
+                  }}
+                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all cursor-pointer select-none ${
+                    selectedDeliveryZone === "inside_dhaka"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
+                      : "border-border bg-background hover:border-border/80"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="delivery_zone"
+                    value="inside_dhaka"
+                    checked={selectedDeliveryZone === "inside_dhaka"}
+                    onChange={() => {
+                      setUserOverriddenZone(true);
+                      setSelectedDeliveryZone("inside_dhaka");
+                    }}
+                    className="size-4.5 accent-primary cursor-pointer"
+                  />
+                  <span className="text-sm sm:text-base font-extrabold text-foreground flex-1">
+                    ঢাকার ভিতরে — ৭০ ৳
+                  </span>
+                </label>
+              </div>
+            </div>
 
             <Field label="Note (optional)" name="note" placeholder="Anything we should know?" value={note} onChange={(e) => setNote(e.target.value)} />
           </div>

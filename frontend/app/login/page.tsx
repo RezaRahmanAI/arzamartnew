@@ -3,10 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
-import {
-  BANGLADESH_DIVISIONS,
-  getDistrictsForDivision,
-} from "@/lib/location-data";
+import { detectDeliveryZone, DELIVERY_ZONES } from "@/lib/location-data";
 import {
   Lock,
   Mail,
@@ -42,24 +39,10 @@ export default function CustomerLoginPage() {
   const [address, setAddress] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [showRegPass, setShowRegPass] = useState(false);
-  const [division, setDivision] = useState(BANGLADESH_DIVISIONS[0] || "Dhaka (ঢাকা)");
-  const [district, setDistrict] = useState(() => getDistrictsForDivision("Dhaka (ঢাকা)")[0] || "Dhaka");
 
   if (user && user.role === "customer") {
     router.push("/account");
   }
-
-  const availableDistricts = getDistrictsForDivision(division);
-
-  const handleDivisionChange = (nextDivision: string) => {
-    setDivision(nextDivision);
-    const districts = getDistrictsForDivision(nextDivision);
-    setDistrict(districts[0] || "");
-  };
-
-  const handleDistrictChange = (nextDistrict: string) => {
-    setDistrict(nextDistrict);
-  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,14 +57,16 @@ export default function CustomerLoginPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const zone = detectDeliveryZone(address);
+    const zoneLabel = DELIVERY_ZONES[zone]?.label || "ঢাকার ভিতরে";
     const success = await registerCustomer({
       name: name.trim(),
       email: "",
       phone: phone.trim(),
-      address: address.trim() || `${district}, ${division}`,
+      address: address.trim(),
       password: regPassword,
-      area: division,
-      district,
+      area: zoneLabel,
+      district: zoneLabel,
     });
     setIsSubmitting(false);
     if (success) {
@@ -225,36 +210,6 @@ export default function CustomerLoginPage() {
                   onChange={(e) => setAddress(e.target.value)}
                   className="pl-9 text-sm"
                 />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="su-division" className="text-xs font-semibold">Division (বিভাগ)</Label>
-                <select
-                  id="su-division"
-                  value={division}
-                  onChange={(e) => handleDivisionChange(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {BANGLADESH_DIVISIONS.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="su-district" className="text-xs font-semibold">District (জেলা)</Label>
-                <select
-                  id="su-district"
-                  value={district}
-                  onChange={(e) => handleDistrictChange(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {availableDistricts.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
               </div>
             </div>
 

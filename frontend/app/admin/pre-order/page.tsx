@@ -27,6 +27,7 @@ import { useProducts } from "@/lib/products-store";
 import { CustomerSearchInput } from "@/components/admin/customer-search-input";
 import { useSettings } from "@/context/settings-context";
 import {
+  detectDeliveryZone,
   BANGLADESH_DIVISIONS,
   getDistrictsForDivision,
   findDivisionForDistrict,
@@ -736,7 +737,14 @@ export default function AdminPreOrderPage() {
                 <Textarea
                   id="po-address"
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAddress(val);
+                    const zone = detectDeliveryZone(val);
+                    if (zone === "inside_dhaka") setDeliveryCharge(70);
+                    else if (zone === "dhaka_sub_area") setDeliveryCharge(120);
+                    else setDeliveryCharge(150);
+                  }}
                   placeholder="House, road, landmark address"
                   rows={2}
                   className="text-xs"
@@ -783,26 +791,18 @@ export default function AdminPreOrderPage() {
                 </div>
               </div>
 
-              {/* Division & District Selection */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Select Division (বিভাগ)</Label>
-                  <SearchableSelect
-                    options={BANGLADESH_DIVISIONS}
-                    value={division}
-                    onChange={handleDivisionChange}
-                    placeholder="Select Division..."
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Select District (জেলা)</Label>
-                  <SearchableSelect
-                    options={availableDistricts}
-                    value={district}
-                    onChange={handleDistrictChange}
-                    placeholder="Select District..."
-                  />
-                </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Delivery Charge Preset</Label>
+                <select
+                  value={deliveryCharge}
+                  onChange={(e) => setDeliveryCharge(Number(e.target.value))}
+                  className="h-9 w-full rounded border border-border bg-background px-2 text-xs font-semibold"
+                >
+                  <option value={70}>ঢাকার ভিতরে — ৳৭০</option>
+                  <option value={120}>ঢাকার সাব-এরিয়া — ৳১২০</option>
+                  <option value={150}>ঢাকার বাইরে — ৳১৫০</option>
+                  <option value={0}>ফ্রি ডেলিভারি — ৳০</option>
+                </select>
               </div>
 
               <div className="space-y-1 pt-1">
