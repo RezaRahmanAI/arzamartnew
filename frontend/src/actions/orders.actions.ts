@@ -341,48 +341,65 @@ export async function updateOrderStatusAction(
         data: { orderStatus: statusInt },
       });
 
-      // Stock deduction on transition to confirmed (6) or shipped (3)
-      if ((statusInt === 6 || statusInt === 3) && previousStatus !== 6 && previousStatus !== 3) {
+      // Stock management based on deducted vs un-deducted status groups
+      // Deducted statuses: Confirmed (6), Processing (2), Packed (7), Shipped (3), Delivered (4)
+      // Non-deducted statuses: Pending (1), Cancelled (5), Hold (8), Preorder (9), Return (10), Refund (12), Return-Process (13)
+      const DEDUCTED_STATUS_INTS = [6, 2, 7, 3, 4];
+      const isNewDeducted = DEDUCTED_STATUS_INTS.includes(statusInt);
+      const isPrevDeducted = DEDUCTED_STATUS_INTS.includes(previousStatus);
+
+      // Case A: Transitioned from non-deducted (e.g. Pending) to Deducted (e.g. Confirmed) -> Deduct Stock
+      if (isNewDeducted && !isPrevDeducted) {
         for (const item of order.items) {
           if (item.product && item.product.variants.length > 0) {
-            // Check size pattern in product name
-            const sizeMatch = item.productName.match(/\(([^)]+)\)$/);
-            const sizeName = sizeMatch ? sizeMatch[1] : null;
-            if (sizeName) {
-              const variant = item.product.variants.find((v) => v.name.includes(sizeName));
-              if (variant) {
-                await tx.productVariant.update({
-                  where: { id: variant.id },
-                  data: {
-                    stockQuantity: {
-                      decrement: Math.min(variant.stockQuantity, item.quantity),
-                    },
+            // Find variant by size in productName like "T-Shirt (M)" or item.variantId
+            let variant = item.variantId ? item.product.variants.find((v) => v.id === item.variantId) : null;
+            if (!variant) {
+              const sizeMatch = item.productName.match(/\(([^)]+)\)$/);
+              const sizeName = sizeMatch ? sizeMatch[1].trim().toLowerCase() : "";
+              variant = item.product.variants.find((v) =>
+                v.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === sizeName ||
+                v.name.toLowerCase().includes(sizeName)
+              );
+            }
+
+            if (variant) {
+              await tx.productVariant.update({
+                where: { id: variant.id },
+                data: {
+                  stockQuantity: {
+                    decrement: Math.min(variant.stockQuantity, item.quantity),
                   },
-                });
-              }
+                },
+              });
             }
           }
         }
       }
 
-      // Restock on cancel (5) or return (10)
-      if ((statusInt === 5 || statusInt === 10) && previousStatus !== 5 && previousStatus !== 10) {
+      // Case B: Transitioned from Deducted (e.g. Confirmed) back to Non-deducted (e.g. Pending, Cancelled, Return) -> Restock
+      if (!isNewDeducted && isPrevDeducted) {
         for (const item of order.items) {
           if (item.product && item.product.variants.length > 0) {
-            const sizeMatch = item.productName.match(/\(([^)]+)\)$/);
-            const sizeName = sizeMatch ? sizeMatch[1] : null;
-            if (sizeName) {
-              const variant = item.product.variants.find((v) => v.name.includes(sizeName));
-              if (variant) {
-                await tx.productVariant.update({
-                  where: { id: variant.id },
-                  data: {
-                    stockQuantity: {
-                      increment: item.quantity,
-                    },
+            let variant = item.variantId ? item.product.variants.find((v) => v.id === item.variantId) : null;
+            if (!variant) {
+              const sizeMatch = item.productName.match(/\(([^)]+)\)$/);
+              const sizeName = sizeMatch ? sizeMatch[1].trim().toLowerCase() : "";
+              variant = item.product.variants.find((v) =>
+                v.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === sizeName ||
+                v.name.toLowerCase().includes(sizeName)
+              );
+            }
+
+            if (variant) {
+              await tx.productVariant.update({
+                where: { id: variant.id },
+                data: {
+                  stockQuantity: {
+                    increment: item.quantity,
                   },
-                });
-              }
+                },
+              });
             }
           }
         }
