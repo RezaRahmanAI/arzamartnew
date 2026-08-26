@@ -553,60 +553,67 @@ export default function CustomLandingPageRoute({
   };
 
   // Incomplete order tracking on CLP page
-  useEffect(() => {
+  const saveIncompleteDraft = useCallback((nameVal?: string, phoneVal?: string, addrVal?: string) => {
     if (selectedProductList.length === 0) return;
-    const name = customerName.trim();
-    const phone = customerPhone.trim();
-    const address = customerAddress.trim();
+    const name = (nameVal !== undefined ? nameVal : customerName).trim();
+    const phone = (phoneVal !== undefined ? phoneVal : customerPhone).trim();
+    const address = (addrVal !== undefined ? addrVal : customerAddress).trim();
 
-    // Only record incomplete order if customer entered phone or name
     if (!name && !phone) return;
 
     const currentDraftId = draftId ?? `INC-${Math.floor(10000 + Math.random() * 90000)}`;
     if (!draftId) setDraftId(currentDraftId);
 
-    const timer = setTimeout(() => {
-      const incompleteOrder: Order = {
-        id: currentDraftId,
-        customer: name || "Incomplete",
-        phone: phone || "",
-        address: address || "",
-        city: selectedCity,
-        area: selectedArea,
-        note: notes.trim(),
-        payment: "Cash on Delivery",
-        status: "pending",
-        date: new Date().toISOString().slice(0, 10),
-        total: grandTotal,
-        delivery: deliveryCharge,
-        source: "checkout",
-        items: selectedProductList.map((item) => ({
-          name: item.product.name,
-          slug: item.product.slug || item.product.id,
-          size: item.selectedSize || "Standard",
-          qty: item.quantity,
-          price: getItemPrice(item.product, item.selectedSize),
-        })),
-      };
+    const incompleteOrder: Order = {
+      id: currentDraftId,
+      customer: name || "Incomplete Customer",
+      phone: phone || "",
+      address: address || "",
+      city: selectedCity,
+      area: selectedArea,
+      note: notes.trim(),
+      payment: "Cash on Delivery",
+      status: "pending",
+      date: new Date().toISOString().slice(0, 10),
+      total: grandTotal,
+      delivery: deliveryCharge,
+      source: "checkout",
+      items: selectedProductList.map((item) => ({
+        name: item.product.name,
+        slug: item.product.slug || item.product.id,
+        size: item.selectedSize || "Standard",
+        qty: item.quantity,
+        price: getItemPrice(item.product, item.selectedSize),
+      })),
+    };
 
-      ordersService.saveIncomplete(incompleteOrder);
-    }, 1500);
-
-    return () => clearTimeout(timer);
+    ordersService.saveIncomplete(incompleteOrder);
   }, [
+    selectedProductList,
     customerName,
     customerPhone,
     customerAddress,
+    draftId,
     selectedCity,
     selectedArea,
     notes,
-    selectedProductList,
-    subtotal,
     grandTotal,
     deliveryCharge,
-    draftId,
     getItemPrice,
   ]);
+
+  useEffect(() => {
+    if (selectedProductList.length === 0) return;
+    const name = customerName.trim();
+    const phone = customerPhone.trim();
+    if (!name && !phone) return;
+
+    const timer = setTimeout(() => {
+      saveIncompleteDraft();
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [customerName, customerPhone, customerAddress, selectedProductList, saveIncompleteDraft]);
 
   // Submit Direct Order
   const handlePlaceOrder = async (e: React.FormEvent) => {
@@ -1371,6 +1378,7 @@ export default function CustomLandingPageRoute({
                                 required
                                 value={customerName}
                                 onChange={(e) => setCustomerName(e.target.value)}
+                                onBlur={(e) => saveIncompleteDraft(e.target.value, undefined)}
                                 placeholder="যেমন: মোঃ করিম"
                                 className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                               />
@@ -1385,6 +1393,7 @@ export default function CustomLandingPageRoute({
                                 required
                                 value={customerPhone}
                                 onChange={(e) => setCustomerPhone(e.target.value)}
+                                onBlur={(e) => saveIncompleteDraft(undefined, e.target.value)}
                                 placeholder="01XXXXXXXXX"
                                 className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                               />

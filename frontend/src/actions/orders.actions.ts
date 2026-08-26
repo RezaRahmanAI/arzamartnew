@@ -404,10 +404,8 @@ export async function updateOrderStatusAction(
 
 export async function saveIncompleteOrderAction(order: Order): Promise<{ success: boolean }> {
   try {
-    const phone = (order.phone || "").trim();
-    if (!phone) return { success: false };
-
-    const orderId = order.id || `INC-${Date.now()}`;
+    const orderId = (order.id || `INC-${Date.now()}`).trim();
+    const phone = (order.phone || "").trim() || orderId;
     const orderJson = JSON.stringify(order);
 
     const existing = await prisma.incompleteOrder.findFirst({
