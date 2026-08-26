@@ -43,6 +43,20 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(wishlistSlugs));
+      // Auto-sync customer active wishlist for admin visibility
+      const authRaw = window.localStorage.getItem("arza-auth-user");
+      if (authRaw) {
+        const authUser = JSON.parse(authRaw);
+        if (authUser?.phone) {
+          const userWishlistKey = `customer_wishlist_${authUser.phone}`;
+          window.localStorage.setItem(userWishlistKey, JSON.stringify(wishlistSlugs));
+
+          // Also sync to customer profile server action non-blockingly
+          import("@/actions/customers.actions").then(({ syncCustomerActivityAction }) => {
+            syncCustomerActivityAction(authUser.phone, { wishlist: wishlistSlugs }).catch(() => {});
+          });
+        }
+      }
     } catch {
       /* ignore quota errors */
     }

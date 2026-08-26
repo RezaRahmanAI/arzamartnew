@@ -48,6 +48,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+      // Auto-sync customer active cart for admin visibility
+      const authRaw = window.localStorage.getItem("arza-auth-user");
+      if (authRaw) {
+        const authUser = JSON.parse(authRaw);
+        if (authUser?.phone) {
+          const userCartKey = `customer_cart_${authUser.phone}`;
+          window.localStorage.setItem(userCartKey, JSON.stringify(lines));
+          
+          // Also sync to customer profile server action non-blockingly
+          import("@/actions/customers.actions").then(({ syncCustomerActivityAction }) => {
+            syncCustomerActivityAction(authUser.phone, { cart: lines }).catch(() => {});
+          });
+        }
+      }
     } catch {
       /* ignore quota errors */
     }

@@ -29,10 +29,35 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
   const { orders } = useOrders();
   const { findCustomerByPhone } = useCustomers();
   const [apiCustomers, setApiCustomers] = useState<ApiCustomer[]>([]);
+  const [customerActivity, setCustomerActivity] = useState<{
+    cart: Array<{ slug: string; name?: string; size: string; qty: number; price?: number }>;
+    wishlist: string[];
+  }>({ cart: [], wishlist: [] });
 
   useEffect(() => {
     customersService.getAll().then(setApiCustomers);
-  }, []);
+
+    // Load customer activity (cart / wishlist)
+    import("@/actions/customers.actions").then(({ getCustomerActivityAction }) => {
+      getCustomerActivityAction(phone).then((act) => {
+        if (act && (act.cart?.length > 0 || act.wishlist?.length > 0)) {
+          setCustomerActivity(act);
+        } else {
+          // Fallback to local storage
+          try {
+            const localCart = window.localStorage.getItem(`customer_cart_${phone}`);
+            const localWishlist = window.localStorage.getItem(`customer_wishlist_${phone}`);
+            setCustomerActivity({
+              cart: localCart ? JSON.parse(localCart) : [],
+              wishlist: localWishlist ? JSON.parse(localWishlist) : [],
+            });
+          } catch {
+            /* ignore */
+          }
+        }
+      });
+    });
+  }, [phone]);
 
   // Find customer record from backend API or local master store
   const customerInfo = useMemo(() => {
@@ -254,6 +279,63 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
               <p className="font-bold text-foreground">Verified Secure Entity</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Customer Active Cart & Wishlist Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Active Cart Items */}
+        <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between pb-3 mb-4 border-b border-border">
+            <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
+              🛒 Active Cart ({customerActivity.cart.length})
+            </h3>
+            <span className="text-xs text-muted-foreground">Realtime in-cart items</span>
+          </div>
+
+          {customerActivity.cart.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Cart is currently empty.</p>
+          ) : (
+            <div className="space-y-3">
+              {customerActivity.cart.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border text-sm">
+                  <div className="font-medium text-foreground">
+                    <span>{item.name || item.slug}</span>
+                    <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary">
+                      Size: {item.size}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-foreground">Qty: {item.qty}</span>
+                    {item.price ? <span className="ml-2 text-xs text-muted-foreground">({formatBDT(item.price * item.qty)})</span> : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Saved Wishlist Items */}
+        <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between pb-3 mb-4 border-b border-border">
+            <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
+              ❤️ Saved Wishlist ({customerActivity.wishlist.length})
+            </h3>
+            <span className="text-xs text-muted-foreground">Interested / bookmarked items</span>
+          </div>
+
+          {customerActivity.wishlist.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Wishlist is currently empty.</p>
+          ) : (
+            <div className="space-y-2">
+              {customerActivity.wishlist.map((slug, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border text-sm">
+                  <span className="font-medium text-foreground capitalize">{slug.replace(/-/g, " ")}</span>
+                  <span className="text-xs text-muted-foreground font-mono">slug: {slug}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

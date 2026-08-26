@@ -227,3 +227,76 @@ export async function loginCustomerAction(
     return { ok: false, message: "Server connection failed.", isNetworkError: true };
   }
 }
+
+export async function syncCustomerActivityAction(
+  phone: string,
+  activity: { cart?: unknown[]; wishlist?: string[] }
+): Promise<{ success: boolean }> {
+  try {
+    const cleanPhone = phone.trim();
+    if (!cleanPhone) return { success: false };
+
+    const customer = await prisma.customer.findUnique({
+      where: { phone: cleanPhone },
+    });
+
+    if (!customer) return { success: false };
+
+    let currentMeta: Record<string, unknown> = {};
+    if (customer.defaultNote) {
+      try {
+        currentMeta = JSON.parse(customer.defaultNote);
+      } catch {
+        currentMeta = { note: customer.defaultNote };
+      }
+    }
+
+    if (activity.cart !== undefined) {
+      currentMeta.cart = activity.cart;
+    }
+    if (activity.wishlist !== undefined) {
+      currentMeta.wishlist = activity.wishlist;
+    }
+    currentMeta.updatedAt = new Date().toISOString();
+
+    await prisma.customer.update({
+      where: { id: customer.id },
+      data: {
+        defaultNote: JSON.stringify(currentMeta),
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("syncCustomerActivityAction error:", error);
+    return { success: false };
+  }
+}
+
+export async function getCustomerActivityAction(
+  phone: string
+): Promise<{ cart: Array<{ slug: string; size: string; qty: number }>; wishlist: string[] }> {
+  try {
+    const cleanPhone = phone.trim();
+    const customer = await prisma.customer.findUnique({
+      where: { phone: cleanPhone },
+    });
+
+    if (!customer || !customer.defaultNote) {
+      return { cart: [], wishlist: [] };
+    }
+
+    try {
+      const meta = JSON.parse(customer.defaultNote);
+      return {
+        cart: Array.isArray(meta.cart) ? meta.cart : [],
+        wishlist: Array.isArray(meta.wishlist) ? meta.wishlist : [],
+      };
+    } catch {
+      return { cart: [], wishlist: [] };
+    }
+  } catch (error) {
+    console.error("getCustomerActivityAction error:", error);
+    return { cart: [], wishlist: [] };
+  }
+}

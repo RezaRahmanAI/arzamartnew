@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/cart";
 import { formatBDT, getSizePrice } from "@/lib/shop-data";
@@ -88,28 +88,27 @@ export default function CheckoutPage() {
   const enableCOD = settings?.orders?.enableCOD ?? true;
   const enableOnlinePayment = settings?.orders?.enableOnlinePayment ?? true;
 
-  useEffect(() => {
-    if (detailedLines.length === 0) return;
-    const id = draftId ?? generateNextIncompleteOrderId();
-    if (!draftId) setDraftId(id);
+  const saveIncompleteDraft = useCallback(
+    (nameVal?: string, phoneVal?: string, addrVal?: string) => {
+      if (detailedLines.length === 0) return;
+      const customerName = (nameVal !== undefined ? nameVal : name).trim();
+      const customerPhone = (phoneVal !== undefined ? phoneVal : phone).trim();
+      const customerAddress = (addrVal !== undefined ? addrVal : address).trim();
 
-    const interval = setInterval(() => {
-      const form = formRef.current;
-      if (!form) return;
-      const data = new FormData(form);
-      const name = String(data.get("name") ?? "").trim();
-      const phone = String(data.get("phone") ?? "").trim();
-      if (!name && !phone) return;
+      if (!customerName && !customerPhone) return;
+
+      const id = draftId ?? generateNextIncompleteOrderId();
+      if (!draftId) setDraftId(id);
 
       const order: Order = {
         id,
-        customer: name || "Incomplete",
-        phone,
-        address: String(data.get("address") ?? "").trim(),
+        customer: customerName || "Incomplete Customer",
+        phone: customerPhone,
+        address: customerAddress,
         city: selectedCity,
         area: selectedArea,
-        note: String(data.get("note") ?? "").trim(),
-        payment: String(data.get("payment") ?? "Cash on delivery"),
+        note: note.trim(),
+        payment: "Cash on delivery",
         items: detailedLines.map((l) => ({
           slug: l.slug,
           name: l.product.name,
@@ -124,10 +123,20 @@ export default function CheckoutPage() {
         source: "checkout",
       };
       saveIncomplete(order);
-    }, 5000);
+    },
+    [detailedLines, name, phone, address, selectedCity, selectedArea, note, draftId, generateNextIncompleteOrderId, subtotal, delivery, saveIncomplete]
+  );
 
-    return () => clearInterval(interval);
-  }, [detailedLines, draftId, subtotal, delivery, saveIncomplete, selectedCity, selectedArea, generateNextIncompleteOrderId]);
+  useEffect(() => {
+    if (detailedLines.length === 0) return;
+    if (!name.trim() && !phone.trim()) return;
+
+    const timer = setTimeout(() => {
+      saveIncompleteDraft();
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [detailedLines, name, phone, address, selectedCity, selectedArea, note, saveIncompleteDraft]);
 
   if (detailedLines.length === 0) {
     return (
@@ -221,7 +230,15 @@ export default function CheckoutPage() {
         <div className="rounded-xl border border-border bg-card p-5 shadow-card">
           <h2 className="font-display text-lg font-bold text-foreground">Delivery details</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Field label="Full name" name="name" placeholder="Your name" required value={name} onChange={(e) => setName(e.target.value)} />
+            <Field
+              label="Full name"
+              name="name"
+              placeholder="Your name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={(e) => saveIncompleteDraft(e.target.value, undefined)}
+            />
             <Field
               label="Mobile number"
               name="phone"
@@ -231,6 +248,7 @@ export default function CheckoutPage() {
               required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              onBlur={(e) => saveIncompleteDraft(undefined, e.target.value)}
             />
             <label className="text-sm sm:col-span-2">
               <span className="font-semibold text-foreground">Address</span>
