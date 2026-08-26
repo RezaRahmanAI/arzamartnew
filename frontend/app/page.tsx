@@ -129,7 +129,12 @@ export default async function HomePage() {
 
       {/* New Arrivals */}
       <section className="mt-14">
-        <h2 className="section-title border-l-4 border-primary">New Arrivals</h2>
+        <div className="flex items-end justify-between">
+          <h2 className="section-title border-l-4 border-primary">New Arrivals</h2>
+          <Link href="/new-arrivals" className="text-sm font-semibold text-primary hover:underline">
+            View all
+          </Link>
+        </div>
         <HomePageArrivals products={activeProducts} />
       </section>
     </div>
