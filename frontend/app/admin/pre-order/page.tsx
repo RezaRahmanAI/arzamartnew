@@ -171,20 +171,36 @@ export default function AdminPreOrderPage() {
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState("Internal");
 
-  // Load existing pre-order for editing if ?edit=ORD-xxx query is present
   useEffect(() => {
     if (editOrderId && orders && orders.length > 0) {
       const existing = orders.find((o) => o.id === editOrderId || o.id === `ORD-${editOrderId}`);
       if (existing) {
+        let targetAddress = existing.address || "";
+        let targetCity = existing.city || "Dhaka";
+        let targetArea = existing.area || "Uttara";
+        let targetNote = existing.note || "";
+
+        if (targetAddress.startsWith("{") && targetAddress.endsWith("}")) {
+          try {
+            const parsed = JSON.parse(targetAddress);
+            if (parsed.address) targetAddress = parsed.address;
+            if (parsed.city) targetCity = parsed.city;
+            if (parsed.area) targetArea = parsed.area;
+            if (parsed.note) targetNote = parsed.note;
+          } catch {
+            /* ignore */
+          }
+        }
+
         setCustomer(existing.customer || "");
         setPhone(existing.phone || "");
-        setAddress(existing.address || "");
-        if (existing.city) setCity(existing.city);
-        if (existing.area) setArea(existing.area);
+        setAddress(targetAddress);
+        setCity(targetCity);
+        setArea(targetArea);
+        if (targetNote) setNote(targetNote);
         if (existing.delivery !== undefined) setDeliveryCharge(existing.delivery);
         if (existing.paid !== undefined) setPaid(existing.paid);
         if (existing.discount !== undefined) setDiscount(existing.discount);
-        if (existing.note) setNote(existing.note);
         if (existing.status) setExistingStatus(existing.status);
         if (existing.items && existing.items.length > 0) {
           setLines(

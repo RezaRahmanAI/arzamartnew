@@ -39,10 +39,34 @@ export function mapPrismaOrder(o: {
   const customerDistrict = o.customer?.district || "Dhaka";
   const customerArea = o.customer?.area || undefined;
 
+  let cleanAddress = o.shippingAddressJson || o.customer?.defaultAddress || "";
+  let extractedCity = customerDistrict;
+  let extractedArea = customerArea;
   let note = "";
-  const noteMatch = o.shippingAddressJson.match(/\(Note:\s*([^)]+)\)/i);
-  if (noteMatch && noteMatch[1]) {
-    note = noteMatch[1].trim();
+  let paymentMethod = o.paymentStatus === 2 ? "Paid (bKash/Online)" : "Cash on Delivery";
+
+  if (o.shippingAddressJson) {
+    const trimmed = o.shippingAddressJson.trim();
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed.address) cleanAddress = parsed.address;
+        if (parsed.city) extractedCity = parsed.city;
+        if (parsed.area) extractedArea = parsed.area;
+        if (parsed.note) note = parsed.note;
+        if (parsed.paymentMethod) paymentMethod = parsed.paymentMethod;
+      } catch {
+        // Not valid JSON, proceed with legacy regex parsing
+      }
+    }
+
+    if (!note) {
+      const noteMatch = o.shippingAddressJson.match(/\(Note:\s*([^)]+)\)/i);
+      if (noteMatch && noteMatch[1]) {
+        note = noteMatch[1].trim();
+      }
+      cleanAddress = cleanAddress.replace(/\s*\(Note:[^)]+\)/i, "").trim();
+    }
   }
 
   const items = (o.items || []).map((i) => {
@@ -70,11 +94,11 @@ export function mapPrismaOrder(o: {
     customerId: o.customerId,
     customer: customerName,
     phone: customerPhone,
-    address: o.shippingAddressJson.replace(/\s*\(Note:[^)]+\)/i, "").trim() || o.customer?.defaultAddress || "",
-    city: customerDistrict,
-    area: customerArea,
+    address: cleanAddress,
+    city: extractedCity,
+    area: extractedArea,
     note,
-    payment: o.paymentStatus === 2 ? "Paid (bKash/Online)" : "Cash on Delivery",
+    payment: paymentMethod,
     items,
     total: Number(o.totalAmount) || 0,
     delivery: Number(o.shippingFee) || 0,
