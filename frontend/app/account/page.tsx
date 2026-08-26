@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, MapPin, Package, Sparkles, Wallet, Trash2, ShoppingBag, LogOut, CheckCircle2, KeyRound, Save, User, Phone, FileText, Lock } from "lucide-react";
+import { Heart, MapPin, Package, Sparkles, Wallet, Trash2, ShoppingBag, LogOut, CheckCircle2, KeyRound, Save, User, Phone, FileText, Lock, ShieldCheck } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
@@ -199,15 +199,36 @@ function AccountContent() {
             account.
           </p>
         </div>
-        {user && (
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card text-xs font-bold text-muted-foreground hover:text-destructive hover:border-destructive transition-colors cursor-pointer shadow-sm"
-          >
-            <LogOut className="size-3.5" /> Sign Out
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {user && (user.role === "admin" || user.role === "staff") && (
+            <Button variant="outline" size="sm" className="border-amber-500/40 text-amber-600 dark:text-amber-400 gap-1.5 h-9" asChild>
+              <Link href="/admin">
+                <ShieldCheck className="size-4 text-amber-500" /> Go to Admin Panel
+              </Link>
+            </Button>
+          )}
+          {user && (
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card text-xs font-bold text-muted-foreground hover:text-destructive hover:border-destructive transition-colors cursor-pointer shadow-sm h-9"
+            >
+              <LogOut className="size-3.5" /> Sign Out
+            </button>
+          )}
+        </div>
       </div>
+
+      {user && (user.role === "admin" || user.role === "staff") && (
+        <div className="mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 font-medium">
+            <ShieldCheck className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>You are currently logged in with a <strong>Staff/Admin ({user.staffRole || user.role})</strong> account.</span>
+          </div>
+          <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white h-7 text-xs" asChild>
+            <Link href="/admin">Open Admin Dashboard</Link>
+          </Button>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (

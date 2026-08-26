@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Menu, Search, ShoppingCart, Tag, User, X, Heart } from "lucide-react";
+import { Menu, Search, ShoppingCart, Tag, User, X, Heart, ShieldCheck } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { products as initialProducts } from "@/lib/shop-data";
 import { useCart } from "@/lib/cart";
@@ -269,23 +269,48 @@ export function SiteHeader() {
               </span>
             )}
           </Link>
-          <Link
-            href={mounted && user ? "/account" : "/login"}
-            aria-label="Account"
-            className="rounded-md p-1.5 text-foreground transition-colors hover:bg-secondary flex items-center gap-1.5"
-            title={mounted && user ? `Account (${user.name})` : "Login / Register"}
-          >
-            {mounted && user ? (
-              <div className="flex items-center gap-1.5">
-                <div className="size-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20">
-                  {user.name[0]?.toUpperCase()}
+          {mounted && user ? (
+            user.role === "admin" || user.role === "staff" ? (
+              <Link
+                href="/admin"
+                aria-label="Admin Portal"
+                className="rounded-md p-1.5 text-foreground transition-colors hover:bg-secondary flex items-center gap-1.5"
+                title={`Admin Portal (${user.name} - ${user.staffRole || "Staff"})`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <div className="size-7 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xs border border-amber-500/30">
+                    <ShieldCheck className="size-3.5" />
+                  </div>
+                  <span className="hidden md:inline text-xs font-bold text-amber-600 dark:text-amber-400 truncate max-w-[80px]">
+                    Admin
+                  </span>
                 </div>
-                <span className="hidden md:inline text-xs font-bold truncate max-w-[80px]">{user.name.split(" ")[0]}</span>
-              </div>
+              </Link>
             ) : (
+              <Link
+                href="/account"
+                aria-label="Customer Account"
+                className="rounded-md p-1.5 text-foreground transition-colors hover:bg-secondary flex items-center gap-1.5"
+                title={`Account (${user.name})`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <div className="size-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20">
+                    {user.name[0]?.toUpperCase()}
+                  </div>
+                  <span className="hidden md:inline text-xs font-bold truncate max-w-[80px]">{user.name.split(" ")[0]}</span>
+                </div>
+              </Link>
+            )
+          ) : (
+            <Link
+              href="/login"
+              aria-label="Login"
+              className="rounded-md p-1.5 text-foreground transition-colors hover:bg-secondary flex items-center gap-1.5"
+              title="Login / Register"
+            >
               <User className="size-5" />
-            )}
-          </Link>
+            </Link>
+          )}
           <button
             type="button"
             aria-label="Open menu"
