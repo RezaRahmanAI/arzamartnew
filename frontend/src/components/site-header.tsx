@@ -27,7 +27,12 @@ export function SiteHeader() {
   const [query, setQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const scrolledSearchRef = useRef<HTMLFormElement>(null);
   const bottomSearchRef = useRef<HTMLDivElement>(null);
@@ -245,7 +250,7 @@ export function SiteHeader() {
             className="relative rounded-md p-2 text-foreground transition-colors hover:bg-secondary hidden sm:inline-flex"
           >
             <ShoppingCart className="size-5" />
-            {count > 0 && (
+            {mounted && count > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
                 {count}
               </span>
@@ -258,19 +263,19 @@ export function SiteHeader() {
             title="Wishlist"
           >
             <Heart className="size-5" />
-            {wishlistSlugs.length > 0 && (
+            {mounted && wishlistSlugs.length > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[11px] font-bold text-white">
                 {wishlistSlugs.length}
               </span>
             )}
           </Link>
           <Link
-            href={user ? "/account" : "/login"}
+            href={mounted && user ? "/account" : "/login"}
             aria-label="Account"
             className="rounded-md p-1.5 text-foreground transition-colors hover:bg-secondary flex items-center gap-1.5"
-            title={user ? `Account (${user.name})` : "Login / Register"}
+            title={mounted && user ? `Account (${user.name})` : "Login / Register"}
           >
-            {user ? (
+            {mounted && user ? (
               <div className="flex items-center gap-1.5">
                 <div className="size-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20">
                   {user.name[0]?.toUpperCase()}

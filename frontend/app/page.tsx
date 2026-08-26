@@ -16,7 +16,7 @@ export default async function HomePage() {
 
   const perks = [
     ...(enableFreeShipping
-      ? [{ icon: "Truck" as const, title: "Free delivery", text: `On orders over ${freeShippingThreshold.toLocaleString()} ${currencySymbol}` }]
+      ? [{ icon: "Truck" as const, title: "Free delivery", text: `On orders over ${freeShippingThreshold.toLocaleString("en-US")} ${currencySymbol}` }]
       : [{ icon: "Truck" as const, title: "Fast delivery", text: "Nationwide shipping available" }]),
     { icon: "RotateCcw" as const, title: "7-day exchange", text: "Wrong size? No problem" },
     ...(enableCOD

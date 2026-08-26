@@ -6,10 +6,17 @@ import { usePathname } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { useSettings } from "@/context/settings-context";
 
+import { useState, useEffect } from "react";
+
 export function FloatingActions() {
   const pathname = usePathname();
   const { count } = useCart();
   const { settings } = useSettings();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/clp")) {
     return null;
@@ -36,7 +43,7 @@ export function FloatingActions() {
         className="fixed bottom-5 right-4 z-40 flex items-center gap-2 rounded-full gradient-sale px-4 py-3 text-sm font-bold text-primary-foreground shadow-float transition-transform hover:scale-105"
       >
         <ShoppingCart className="size-5" />
-        {count > 0 ? `${count} Item${count > 1 ? "s" : ""}` : "Cart"}
+        {mounted && count > 0 ? `${count} Item${count > 1 ? "s" : ""}` : "Cart"}
       </Link>
     </>
   );

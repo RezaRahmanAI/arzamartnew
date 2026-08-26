@@ -7,7 +7,7 @@ import { getImageUrl, FALLBACK_IMAGE } from "@/lib/utils";
 
 import { toast } from "sonner";
 import { ShoppingBag, Minus, Plus, Heart } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,10 +19,16 @@ import {
 export function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
-  const isWishlisted = isInWishlist(product.slug);
+  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [size, setSize] = useState(product.sizes?.[0] || "M");
   const [qty, setQty] = useState(1);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isWishlisted = mounted ? isInWishlist(product.slug) : false;
 
   const unitPrice = getSizePrice(product, size);
 
