@@ -328,27 +328,15 @@ export default function ProductPage() {
             </div>
             {size && (
               <p className="mt-2 text-xs font-medium">
-                {getSizeStock(product, size) > 5 ? (
-                  <span className="text-emerald-600 font-semibold inline-flex items-center gap-1">
-                    <span className="size-2 rounded-full bg-emerald-500" />
-                    In Stock ({getSizeStock(product, size)} items left)
-                  </span>
-                ) : getSizeStock(product, size) > 0 ? (
-                  <span className="text-amber-600 font-semibold inline-flex items-center gap-1">
-                    <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
-                    Low Stock! Only {getSizeStock(product, size)} left in size {size}
-                  </span>
-                ) : product.acceptPreOrder ? (
-                  // Stock 0 + acceptPreOrder = true: Normal customer experience, do NOT show out of stock or pre-order badge
+                {getSizeStock(product, size) > 0 || product.acceptPreOrder ? (
                   <span className="text-emerald-600 font-semibold inline-flex items-center gap-1">
                     <span className="size-2 rounded-full bg-emerald-500" />
                     In Stock
                   </span>
                 ) : (
-                  // Stock 0 + acceptPreOrder = false: Show Out of Stock
                   <span className="text-red-600 font-bold inline-flex items-center gap-1">
                     <span className="size-2 rounded-full bg-red-500" />
-                    Out of Stock in size {size}
+                    Out of Stock
                   </span>
                 )}
               </p>
