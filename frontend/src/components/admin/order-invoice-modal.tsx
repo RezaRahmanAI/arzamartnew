@@ -34,6 +34,9 @@ function BarcodePlaceholder({ value }: { value: string }) {
 
 import { getSavedNotesStore } from "@/components/admin/order-notes-modal";
 
+import { useProducts } from "@/lib/products-store";
+import { getImageUrl } from "@/lib/utils";
+
 export function OrderInvoiceModal({
   order,
   isOpen,
@@ -44,6 +47,7 @@ export function OrderInvoiceModal({
   onClose: () => void;
 }) {
   const { settings } = useSettings();
+  const { products } = useProducts();
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -61,7 +65,17 @@ export function OrderInvoiceModal({
     .map((n) => n.text);
 
   if (customerDeliveryNotesList.length === 0 && order.note) {
-    const parts = order.note.split(" | ").filter((p) => !p.toLowerCase().includes("internal"));
+    const parts = order.note.split(" | ").filter((p) => {
+      const lower = p.toLowerCase();
+      return (
+        !lower.includes("internal") &&
+        !lower.startsWith("source:") &&
+        !lower.startsWith("social:") &&
+        !lower.startsWith("area:") &&
+        !lower.startsWith("expected dispatch:") &&
+        p !== "[PRE-ORDER]"
+      );
+    });
     if (parts.length > 0) {
       customerDeliveryNotesList.push(...parts);
     }
@@ -73,10 +87,30 @@ export function OrderInvoiceModal({
     window.print();
   };
 
-  // Use proper settings fields from settings.ts
-  const websiteName = settings?.general?.websiteName || "";
-  const contactPhone = settings?.contact?.supportPhone || settings?.contact?.whatsAppNumber || "";
+  // Build website name and contact phone with robust fallbacks
+  const websiteName = settings?.general?.websiteName || "ArzaMart";
+  const contactPhone =
+    settings?.contact?.supportPhone ||
+    settings?.contact?.whatsAppNumber ||
+    settings?.contact?.salesPhone ||
+    "+880 1800 000000";
   const deliveryPartner = "Standard Courier";
+
+  // Construct full customer address
+  const fullCustomerAddress = [
+    order.address && order.address !== order.city ? order.address : "",
+    order.area && order.address && !order.address.toLowerCase().includes(order.area.toLowerCase()) ? order.area : "",
+    order.city || "",
+  ]
+    .filter(Boolean)
+    .join(", ") || order.address || order.city || "Dhaka";
+
+  // Determine if this order was placed from a specific social page (hide for website direct orders)
+  const hasSpecificPage =
+    !!order.sourcePageName &&
+    order.sourcePageName.toLowerCase() !== "website" &&
+    order.sourcePageName.toLowerCase() !== "-" &&
+    order.sourcePageName.trim() !== "";
   
   const totalQty = order.items.reduce((sum, item) => sum + item.qty, 0);
   const subTotal = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -133,8 +167,8 @@ export function OrderInvoiceModal({
             <div className="flex justify-between items-start mb-3">
               {/* Top Left Info & Barcode */}
               <div>
-                <div className="text-[13px] text-black leading-snug">Phone: {contactPhone}</div>
-                <div className="text-[13px] text-black leading-snug">Web: https://{websiteName.toLowerCase().replace(/\s+/g, '')}.com/</div>
+                <div className="text-[13px] text-black leading-snug font-medium">Phone: {contactPhone}</div>
+                <div className="text-[13px] text-black leading-snug font-medium">Web: https://{websiteName.toLowerCase().replace(/\s+/g, '')}.com/</div>
                 <div className="mt-1.5">
                   <BarcodePlaceholder value={order.id} />
                   <div className="text-[15px] font-extrabold text-black mt-0.5">{order.id}</div>
@@ -148,7 +182,7 @@ export function OrderInvoiceModal({
                   <div><strong className="font-bold">Order ID:</strong> {order.id}</div>
                   <div><strong className="font-bold">Order Date:</strong> {order.date}</div>
                   <div><strong className="font-bold">Name:</strong> {order.customer}</div>
-                  <div><strong className="font-bold">Address:</strong> {order.city}</div>
+                  <div><strong className="font-bold">Address:</strong> {fullCustomerAddress}</div>
                   <div><strong className="font-bold">Phone:</strong> {order.phone}</div>
                   {customerNoteDisplay && (
                     <div className="mt-1 pt-1 border-t border-black/40 text-[12px] text-rose-800 font-semibold leading-tight">
@@ -173,21 +207,37 @@ export function OrderInvoiceModal({
                 </tr>
               </thead>
               <tbody className="text-black">
-                {order.items.map((item, idx) => (
-                  <tr key={idx} className="border-b border-[#555]">
-                    <td className="border border-[#555] p-1 text-center align-middle">
-                      <div className="w-[38px] h-[38px] bg-gray-100 flex items-center justify-center mx-auto rounded-sm border border-gray-200 text-gray-400">
-                        <ImageIcon className="size-4" />
-                      </div>
-                    </td>
-                    <td className="border border-[#555] px-2 py-1.5 align-middle font-medium">{item.name}</td>
-                    <td className="border border-[#555] px-2 py-1.5 text-center align-middle">{item.size || 'N/A'}</td>
-                    <td className="border border-[#555] px-2 py-1.5 text-left align-middle">{item.price}</td>
-                    <td className="border border-[#555] px-2 py-1.5 text-left align-middle">0</td>
-                    <td className="border border-[#555] px-2 py-1.5 text-center align-middle font-semibold">{item.qty}</td>
-                    <td className="border border-[#555] px-2 py-1.5 text-left align-middle font-semibold">{item.price * item.qty}</td>
-                  </tr>
-                ))}
+                {order.items.map((item, idx) => {
+                  const matchedProd = products.find(
+                    (p) => p.slug === item.slug || p.name.toLowerCase() === item.name.toLowerCase()
+                  );
+                  const prodImage = matchedProd?.images?.[0] || matchedProd?.image;
+
+                  return (
+                    <tr key={idx} className="border-b border-[#555]">
+                      <td className="border border-[#555] p-1 text-center align-middle">
+                        <div className="w-[38px] h-[38px] bg-gray-50 flex items-center justify-center mx-auto rounded-sm border border-gray-200 overflow-hidden text-gray-400">
+                          {prodImage ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={getImageUrl(prodImage, "thumb")}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <ImageIcon className="size-4" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="border border-[#555] px-2 py-1.5 align-middle font-medium">{item.name}</td>
+                      <td className="border border-[#555] px-2 py-1.5 text-center align-middle">{item.size || 'N/A'}</td>
+                      <td className="border border-[#555] px-2 py-1.5 text-left align-middle">{item.price}</td>
+                      <td className="border border-[#555] px-2 py-1.5 text-left align-middle">0</td>
+                      <td className="border border-[#555] px-2 py-1.5 text-center align-middle font-semibold">{item.qty}</td>
+                      <td className="border border-[#555] px-2 py-1.5 text-left align-middle font-semibold">{item.price * item.qty}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
@@ -200,7 +250,9 @@ export function OrderInvoiceModal({
                   <div className="text-[15px] font-extrabold text-black mt-0.5">{order.id}</div>
                 </div>
                 <div className="text-[13px] text-black leading-relaxed">Delivery Partner: {deliveryPartner}</div>
-                <div className="text-[13px] text-black leading-relaxed">Page Name : {order.sourcePageName || websiteName}</div>
+                {hasSpecificPage && (
+                  <div className="text-[13px] text-black leading-relaxed">Page Name : {order.sourcePageName}</div>
+                )}
                 <div className="text-[13px] text-black leading-relaxed">
                   Print : {currentDate ? format(currentDate, "dd/MM/yyyy, HH:mm:ss") : ""}
                 </div>
