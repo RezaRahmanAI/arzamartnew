@@ -1754,15 +1754,10 @@ export default function CustomLandingPageRoute({
 
                     {/* Stock Status */}
                     <div className="text-xs">
-                      {modalStock > 5 ? (
+                      {modalStock > 0 || selectedProductForDetails.isPreOrder ? (
                         <span className="text-emerald-600 dark:text-emerald-400 font-semibold inline-flex items-center gap-1.5">
                           <span className="size-2 rounded-full bg-emerald-500" />
-                          ইন স্টক ({modalStock}টি পণ্য এভেইলেবল)
-                        </span>
-                      ) : modalStock > 0 ? (
-                        <span className="text-amber-600 dark:text-amber-400 font-semibold inline-flex items-center gap-1.5">
-                          <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
-                          লিমিটেড স্টক (মাত্র {modalStock}টি বাকি আছে)
+                          ইন স্টক
                         </span>
                       ) : (
                         <span className="text-rose-600 font-bold inline-flex items-center gap-1.5">
