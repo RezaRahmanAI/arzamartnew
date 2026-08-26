@@ -70,12 +70,12 @@ export function OrderNotesModal({
       if (savedForOrder.length === 0 && order.note && order.note.trim()) {
         const parts = order.note.split(" | ");
         const initialNotes: NoteRecord[] = parts.map((part, idx) => {
-          const isCustomer = part.toLowerCase().includes("customer") || part.toLowerCase().includes("delivery");
+          const isInternal = part.toLowerCase().startsWith("internal note:");
           return {
             id: `init-${idx}`,
-            text: part.trim(),
-            noteType: isCustomer ? "Customer / Delivery Note" : "Internal Note",
-            author: "Order Placement",
+            text: part.replace(/^(internal note|customer note|customer \/ delivery note):\s*/i, "").trim(),
+            noteType: isInternal ? "Internal Note" : "Customer / Delivery Note",
+            author: isInternal ? "Staff / Admin" : "Customer",
             timestamp: order.date || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
           };
         });
@@ -87,18 +87,18 @@ export function OrderNotesModal({
 
       const normalized: NoteRecord[] = savedForOrder.map((item: string | NoteRecord, idx: number) => {
         if (typeof item === "string") {
-          const isCustomer = item.toLowerCase().includes("customer") || item.toLowerCase().includes("delivery");
+          const isInternal = item.toLowerCase().startsWith("internal note:");
           return {
             id: `note-${idx}`,
-            text: item,
-            noteType: isCustomer ? "Customer / Delivery Note" : "Internal Note",
-            author: "System Admin",
+            text: item.replace(/^(internal note|customer note|customer \/ delivery note):\s*/i, "").trim(),
+            noteType: isInternal ? "Internal Note" : "Customer / Delivery Note",
+            author: isInternal ? "Staff / Admin" : "Customer",
             timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
           };
         }
         return {
           ...item,
-          noteType: item.noteType || (item.text?.toLowerCase().includes("customer") || item.text?.toLowerCase().includes("delivery") ? "Customer / Delivery Note" : "Internal Note"),
+          noteType: item.noteType || (item.text?.toLowerCase().startsWith("internal note:") ? "Internal Note" : "Customer / Delivery Note"),
         };
       });
 
