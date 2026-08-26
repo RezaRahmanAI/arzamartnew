@@ -76,7 +76,7 @@ export function HeroSlider({ initialSlides }: HeroSliderProps) {
               </p>
               <Link
                 href={slide.href}
-                className="mt-2 w-fit rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-transform hover:scale-105"
+                className="mt-2 w-fit rounded-[var(--radius)] bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-transform hover:scale-105"
               >
                 Shop Now
               </Link>

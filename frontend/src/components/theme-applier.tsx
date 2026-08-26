@@ -5,21 +5,20 @@ import { useSettings } from "@/context/settings-context";
 export function ThemeApplier() {
   const { settings, isLoading } = useSettings();
 
-  if (isLoading) return null;
+  if (isLoading || !settings?.branding) return null;
 
-  const { primaryColor, secondaryColor, accentColor, borderRadius } = settings.branding;
+  const { primaryColor, secondaryColor, accentColor, borderRadius, buttonColor } = settings.branding;
+  const radius = borderRadius || "0.75rem";
 
   return (
-    <style dangerouslySetInnerHTML={{
+    <style id="dynamic-theme-styles" dangerouslySetInnerHTML={{
       __html: `
         :root {
-          --primary: ${primaryColor};
-          --secondary: ${secondaryColor};
-          --accent: ${accentColor};
-          --radius: ${borderRadius};
-          
-          /* In case any Tailwind component directly uses buttonColor */
-          --button: ${settings.branding.buttonColor || primaryColor};
+          ${primaryColor ? `--primary: ${primaryColor};` : ""}
+          ${secondaryColor ? `--secondary: ${secondaryColor};` : ""}
+          ${accentColor ? `--accent: ${accentColor};` : ""}
+          --radius: ${radius};
+          --button: ${buttonColor || primaryColor || "var(--primary)"};
         }
       `
     }} />

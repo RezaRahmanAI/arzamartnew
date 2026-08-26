@@ -33,14 +33,14 @@ export function FloatingActions() {
         href={waUrl}
         target="_blank"
         rel="noreferrer"
-        className="fixed bottom-5 left-4 z-40 flex items-center gap-2 rounded-full bg-success px-4 py-3 text-sm font-bold text-ink-foreground shadow-float transition-transform hover:scale-105"
+        className="fixed bottom-5 left-4 z-40 flex items-center gap-2 rounded-[var(--radius)] bg-success px-4 py-3 text-sm font-bold text-ink-foreground shadow-float transition-transform hover:scale-105"
       >
         <MessageCircle className="size-5" />
         WhatsApp
       </a>
       <Link
         href="/cart"
-        className="fixed bottom-5 right-4 z-40 flex items-center gap-2 rounded-full gradient-sale px-4 py-3 text-sm font-bold text-primary-foreground shadow-float transition-transform hover:scale-105"
+        className="fixed bottom-5 right-4 z-40 flex items-center gap-2 rounded-[var(--radius)] gradient-sale px-4 py-3 text-sm font-bold text-primary-foreground shadow-float transition-transform hover:scale-105"
       >
         <ShoppingCart className="size-5" />
         {mounted && count > 0 ? `${count} Item${count > 1 ? "s" : ""}` : "Cart"}
