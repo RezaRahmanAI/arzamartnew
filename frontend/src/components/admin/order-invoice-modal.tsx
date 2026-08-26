@@ -105,12 +105,30 @@ export function OrderInvoiceModal({
     .filter(Boolean)
     .join(", ") || order.address || order.city || "Dhaka";
 
-  // Determine if this order was placed from a specific social page (hide for website direct orders)
-  const hasSpecificPage =
-    !!order.sourcePageName &&
-    order.sourcePageName.toLowerCase() !== "website" &&
-    order.sourcePageName.toLowerCase() !== "-" &&
-    order.sourcePageName.trim() !== "";
+  // Extract order source and page name matching the orders table exactly
+  let socialMedia = order.socialMediaSourceName || "";
+  let pageName = order.sourcePageName || "";
+
+  if (!socialMedia || !pageName) {
+    const fullText = `${order.note || ""} ${order.address || ""}`;
+    const sourceMatch = fullText.match(/Source:\s*([^|\n,]+)/i);
+    const socialMatch = fullText.match(/Social:\s*([^|\n,]+)/i);
+
+    if (socialMatch && socialMatch[1]) {
+      socialMedia = socialMatch[1].trim();
+    }
+    if (sourceMatch && sourceMatch[1]) {
+      pageName = sourceMatch[1].trim();
+    }
+  }
+
+  // Display specific page name or social channel name if present
+  const displayPageName =
+    pageName && pageName.toLowerCase() !== "website" && pageName !== "-"
+      ? pageName
+      : socialMedia && socialMedia.toLowerCase() !== "website" && socialMedia !== "-"
+      ? socialMedia
+      : "";
   
   const totalQty = order.items.reduce((sum, item) => sum + item.qty, 0);
   const subTotal = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -250,8 +268,8 @@ export function OrderInvoiceModal({
                   <div className="text-[15px] font-extrabold text-black mt-0.5">{order.id}</div>
                 </div>
                 <div className="text-[13px] text-black leading-relaxed">Delivery Partner: {deliveryPartner}</div>
-                {hasSpecificPage && (
-                  <div className="text-[13px] text-black leading-relaxed">Page Name : {order.sourcePageName}</div>
+                {displayPageName && (
+                  <div className="text-[13px] text-black leading-relaxed">Page Name : {displayPageName}</div>
                 )}
                 <div className="text-[13px] text-black leading-relaxed">
                   Print : {currentDate ? format(currentDate, "dd/MM/yyyy, HH:mm:ss") : ""}
