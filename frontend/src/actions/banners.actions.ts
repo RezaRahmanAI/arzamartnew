@@ -4,6 +4,16 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { HeroSlide } from "@/lib/data/banners";
 import { Prisma } from "@prisma/client";
+import { getBanners } from "@/lib/data/banners";
+
+export async function getBannersAction(position?: string): Promise<HeroSlide[]> {
+  try {
+    return await getBanners(position);
+  } catch (error) {
+    console.error("getBannersAction error:", error);
+    return [];
+  }
+}
 
 export async function createBannerAction(data: {
   title?: string;
@@ -61,10 +71,12 @@ export async function updateBannerAction(
     displayOrder?: number;
     isActive?: boolean;
   }
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; banner?: HeroSlide; error?: string }> {
   try {
-    const bannerId = typeof id === "string" ? parseInt(id, 10) : id;
-    if (isNaN(bannerId)) return { success: false, error: "Invalid banner ID" };
+    const numId = typeof id === "string" ? parseInt(id, 10) : id;
+    if (isNaN(numId)) {
+      return { success: false, error: "Invalid banner ID" };
+    }
 
     const updateData: Prisma.BannerUpdateInput = {};
     if (data.title !== undefined) updateData.title = data.title;
@@ -75,14 +87,28 @@ export async function updateBannerAction(
     if (data.displayOrder !== undefined) updateData.displayOrder = data.displayOrder;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
-    await prisma.banner.update({
-      where: { id: bannerId },
+    const row = await prisma.banner.update({
+      where: { id: numId },
       data: updateData,
     });
 
     revalidatePath("/");
     revalidatePath("/admin/banners");
-    return { success: true };
+
+    return {
+      success: true,
+      banner: {
+        id: String(row.id),
+        title: row.title,
+        subtitle: row.subtitle,
+        image: row.imageUrl,
+        href: row.targetUrl,
+        position: row.position,
+        displayOrder: row.displayOrder,
+        isActive: row.isActive,
+        eyebrow: "Exclusive Drop",
+      },
+    };
   } catch (error: unknown) {
     console.error("updateBannerAction failed:", error);
     return { success: false, error: error instanceof Error ? error.message : "Failed to update banner." };
@@ -91,15 +117,18 @@ export async function updateBannerAction(
 
 export async function deleteBannerAction(id: string | number): Promise<{ success: boolean; error?: string }> {
   try {
-    const bannerId = typeof id === "string" ? parseInt(id, 10) : id;
-    if (isNaN(bannerId)) return { success: false, error: "Invalid banner ID" };
+    const numId = typeof id === "string" ? parseInt(id, 10) : id;
+    if (isNaN(numId)) {
+      return { success: false, error: "Invalid banner ID" };
+    }
 
     await prisma.banner.delete({
-      where: { id: bannerId },
+      where: { id: numId },
     });
 
     revalidatePath("/");
     revalidatePath("/admin/banners");
+
     return { success: true };
   } catch (error: unknown) {
     console.error("deleteBannerAction failed:", error);

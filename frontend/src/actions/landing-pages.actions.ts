@@ -4,6 +4,78 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { CustomLandingPageConfig } from "@/lib/api/services/custom-landing-page.service";
 import { Prisma } from "@prisma/client";
+import { getLandingPageBySlug, getAllLandingPages } from "@/lib/data/landing-pages";
+
+export async function getLandingPageBySlugAction(slug: string) {
+  try {
+    return await getLandingPageBySlug(slug);
+  } catch (error) {
+    console.error("getLandingPageBySlugAction error:", error);
+    return null;
+  }
+}
+
+export async function getAllLandingPagesAction() {
+  try {
+    return await getAllLandingPages();
+  } catch (error) {
+    console.error("getAllLandingPagesAction error:", error);
+    return [];
+  }
+}
+
+export async function getLandingPageConfigAction(productId: string): Promise<CustomLandingPageConfig | null> {
+  try {
+    const row = await prisma.customLandingPageConfig.findUnique({
+      where: { productId },
+    });
+    if (!row) return null;
+
+    let sizePrices: Record<string, number> | undefined = undefined;
+    if (row.sizePricesJson) {
+      try {
+        sizePrices = JSON.parse(row.sizePricesJson);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return {
+      id: row.id,
+      productId: row.productId,
+      relativeTimerTotalMinutes: row.relativeTimerTotalMinutes,
+      isTimerVisible: row.isTimerVisible,
+      headerTitle: row.headerTitle || undefined,
+      isProductDetailsVisible: row.isProductDetailsVisible,
+      productDetailsTitle: row.productDetailsTitle || undefined,
+      isFabricVisible: row.isFabricVisible,
+      isDesignVisible: row.isDesignVisible,
+      isTrustBannerVisible: row.isTrustBannerVisible,
+      trustBannerText: row.trustBannerText || undefined,
+      trustBannerDescription: row.trustBannerDescription || undefined,
+      isFeaturedOrderVisible: row.isFeaturedOrderVisible,
+      featuredProductName: row.featuredProductName || undefined,
+      promoPrice: row.promoPrice !== null ? Number(row.promoPrice) : undefined,
+      originalPrice: row.originalPrice !== null ? Number(row.originalPrice) : undefined,
+      sizePrices,
+      sizePricesJson: row.sizePricesJson || undefined,
+      promoText: row.promoText || undefined,
+      freeShippingThresholdQuantity: row.freeShippingThresholdQuantity,
+      isMarqueeVisible: row.isMarqueeVisible,
+      marqueeText: row.marqueeText || undefined,
+      customHeroImageUrl: row.customHeroImageUrl || undefined,
+      customHeroDescription: row.customHeroDescription || undefined,
+      customHeroBgColor: row.customHeroBgColor || undefined,
+      customHeroTextColor: row.customHeroTextColor || undefined,
+      sectionsJson: row.sectionsJson || undefined,
+      createdAtUtc: row.createdAtUtc.toISOString(),
+      updatedAtUtc: row.updatedAtUtc?.toISOString(),
+    };
+  } catch (error) {
+    console.error("getLandingPageConfigAction error:", error);
+    return null;
+  }
+}
 
 export async function saveLandingPageConfigAction(
   config: Partial<CustomLandingPageConfig>
@@ -85,11 +157,6 @@ export async function saveLandingPageConfigAction(
       });
     }
 
-    const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (product?.slug) {
-      revalidatePath(`/clp/${product.slug}`);
-      revalidatePath(`/landing/${product.slug}`);
-    }
     revalidatePath("/admin/landing-pages");
     revalidatePath("/admin/landing-page-design");
 
@@ -98,7 +165,6 @@ export async function saveLandingPageConfigAction(
       config: {
         id: row.id,
         productId: row.productId,
-        productSlug: product?.slug,
         relativeTimerTotalMinutes: row.relativeTimerTotalMinutes,
         isTimerVisible: row.isTimerVisible,
         headerTitle: row.headerTitle || undefined,
@@ -111,8 +177,9 @@ export async function saveLandingPageConfigAction(
         trustBannerDescription: row.trustBannerDescription || undefined,
         isFeaturedOrderVisible: row.isFeaturedOrderVisible,
         featuredProductName: row.featuredProductName || undefined,
-        promoPrice: row.promoPrice ? Number(row.promoPrice) : undefined,
-        originalPrice: row.originalPrice ? Number(row.originalPrice) : undefined,
+        promoPrice: row.promoPrice !== null ? Number(row.promoPrice) : undefined,
+        originalPrice: row.originalPrice !== null ? Number(row.originalPrice) : undefined,
+        sizePrices: config.sizePrices,
         sizePricesJson: row.sizePricesJson || undefined,
         promoText: row.promoText || undefined,
         freeShippingThresholdQuantity: row.freeShippingThresholdQuantity,
@@ -127,7 +194,7 @@ export async function saveLandingPageConfigAction(
     };
   } catch (error: unknown) {
     console.error("saveLandingPageConfigAction failed:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Failed to save landing page config." };
+    return { success: false, error: error instanceof Error ? error.message : "Failed to save config." };
   }
 }
 
@@ -136,17 +203,10 @@ export async function deleteLandingPageConfigAction(productId: string): Promise<
     await prisma.customLandingPageConfig.deleteMany({
       where: { productId },
     });
-
-    const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (product?.slug) {
-      revalidatePath(`/clp/${product.slug}`);
-      revalidatePath(`/landing/${product.slug}`);
-    }
     revalidatePath("/admin/landing-pages");
-
     return { success: true };
   } catch (error: unknown) {
     console.error("deleteLandingPageConfigAction failed:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Failed to delete landing page config." };
+    return { success: false, error: error instanceof Error ? error.message : "Failed to delete config." };
   }
 }

@@ -3,6 +3,40 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { ApiCustomerProfile, ApiProfileUpdate } from "@/lib/api/services/customers.service";
+import { getAllCustomers, getCustomerByPhone } from "@/lib/data/customers";
+import crypto from "crypto";
+
+export interface CustomerAuthCustomer {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  district?: string;
+  defaultAddress?: string | null;
+  hasPassword?: boolean;
+}
+
+function hashPassword(pass: string): string {
+  return crypto.createHash("sha256").update(pass).digest("hex");
+}
+
+export async function getCustomersAction(): Promise<ApiCustomerProfile[]> {
+  try {
+    return await getAllCustomers();
+  } catch (error) {
+    console.error("getCustomersAction error:", error);
+    return [];
+  }
+}
+
+export async function getCustomerByPhoneAction(phone: string): Promise<ApiCustomerProfile | null> {
+  try {
+    return await getCustomerByPhone(phone);
+  } catch (error) {
+    console.error("getCustomerByPhoneAction error:", error);
+    return null;
+  }
+}
 
 export async function createCustomerAction(params: {
   fullName: string;
@@ -61,14 +95,12 @@ export async function updateCustomerProfileAction(
         email: data.email,
         phone: data.phone,
         defaultAddress: data.defaultAddress,
-        area: data.area,
         district: data.district,
-        postalCode: data.postalCode,
-        defaultNote: data.defaultNote,
       },
     });
 
     revalidatePath("/admin/customers");
+    revalidatePath("/account");
 
     return {
       success: true,
@@ -77,18 +109,12 @@ export async function updateCustomerProfileAction(
         fullName: updated.fullName,
         email: updated.email,
         phone: updated.phone,
-        googleId: updated.googleId,
-        googleEmail: updated.googleEmail,
-        profileImage: updated.profileImage,
-        defaultAddress: updated.defaultAddress,
-        area: updated.area,
-        district: updated.district,
-        postalCode: updated.postalCode,
-        defaultNote: updated.defaultNote,
+        defaultAddress: updated.defaultAddress || undefined,
+        district: updated.district || undefined,
+        totalOrders: 0,
+        totalSpent: 0,
         isGuest: updated.isGuest,
-        hasPassword: !!updated.passwordHash,
-        lastLoginAtUtc: updated.lastLoginAtUtc ? updated.lastLoginAtUtc.toISOString() : null,
-        createdAtUtc: updated.createdAtUtc.toISOString(),
+        createdAt: updated.createdAtUtc.toISOString(),
       },
     };
   } catch (error: unknown) {
@@ -98,41 +124,98 @@ export async function updateCustomerProfileAction(
 }
 
 export async function setCustomerPasswordAction(
-  phone: string,
+  phoneOrId: string,
   newPassword: string
-): Promise<{ success: boolean; customer?: ApiCustomerProfile; error?: string }> {
+): Promise<{ ok: boolean; customer?: CustomerAuthCustomer; message?: string; isNetworkError?: boolean }> {
   try {
-    const cleanPhone = phone.trim();
-    const updated = await prisma.customer.update({
-      where: { phone: cleanPhone },
-      data: {
-        passwordHash: newPassword,
+    const clean = phoneOrId.trim();
+    const customer = await prisma.customer.findFirst({
+      where: {
+        OR: [{ phone: clean }, { id: clean }],
       },
     });
 
+    if (!customer) {
+      return { ok: false, message: "Customer account not found." };
+    }
+
+    const hashed = hashPassword(newPassword);
+    const updated = await prisma.customer.update({
+      where: { id: customer.id },
+      data: { passwordHash: hashed },
+    });
+
     return {
-      success: true,
+      ok: true,
       customer: {
         id: updated.id,
         fullName: updated.fullName,
-        email: updated.email,
         phone: updated.phone,
-        googleId: updated.googleId,
-        googleEmail: updated.googleEmail,
-        profileImage: updated.profileImage,
-        defaultAddress: updated.defaultAddress,
-        area: updated.area,
+        email: updated.email,
         district: updated.district,
-        postalCode: updated.postalCode,
-        defaultNote: updated.defaultNote,
-        isGuest: updated.isGuest,
+        defaultAddress: updated.defaultAddress,
         hasPassword: true,
-        lastLoginAtUtc: updated.lastLoginAtUtc ? updated.lastLoginAtUtc.toISOString() : null,
-        createdAtUtc: updated.createdAtUtc.toISOString(),
       },
     };
   } catch (error: unknown) {
-    console.error("setCustomerPasswordAction failed:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Failed to set password." };
+    console.error("setCustomerPasswordAction error:", error);
+    return { ok: false, message: error instanceof Error ? error.message : "Failed to set password." };
+  }
+}
+
+export async function loginCustomerAction(
+  emailOrPhone: string,
+  pass: string
+): Promise<{ ok: boolean; customer?: CustomerAuthCustomer; message?: string; isNetworkError?: boolean }> {
+  try {
+    const clean = emailOrPhone.trim();
+    const isEmail = clean.includes("@");
+
+    const customer = await prisma.customer.findFirst({
+      where: isEmail
+        ? { email: clean }
+        : { phone: clean },
+    });
+
+    if (!customer) {
+      return { ok: false, message: "No account found with this phone or email." };
+    }
+
+    if (!customer.passwordHash) {
+      // Customer has no password yet (guest or newly created by order)
+      return {
+        ok: true,
+        customer: {
+          id: customer.id,
+          fullName: customer.fullName,
+          phone: customer.phone,
+          email: customer.email,
+          district: customer.district,
+          defaultAddress: customer.defaultAddress,
+          hasPassword: false,
+        },
+      };
+    }
+
+    const hashed = hashPassword(pass);
+    if (customer.passwordHash !== hashed && customer.passwordHash !== pass) {
+      return { ok: false, message: "Incorrect password. Please try again." };
+    }
+
+    return {
+      ok: true,
+      customer: {
+        id: customer.id,
+        fullName: customer.fullName,
+        phone: customer.phone,
+        email: customer.email,
+        district: customer.district,
+        defaultAddress: customer.defaultAddress,
+        hasPassword: true,
+      },
+    };
+  } catch (error: unknown) {
+    console.error("loginCustomerAction error:", error);
+    return { ok: false, message: "Server connection failed.", isNetworkError: true };
   }
 }

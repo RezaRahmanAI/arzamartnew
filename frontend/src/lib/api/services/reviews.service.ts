@@ -1,6 +1,5 @@
 import type { Review } from "@/lib/reviews";
-import { getRecentReviews, getProductReviews } from "@/lib/data/reviews";
-import { submitReviewAction } from "@/actions/reviews.actions";
+import { getReviewsAction, submitReviewAction } from "@/actions/reviews.actions";
 
 const REVIEWS_KEY = "arza-reviews-v1";
 const initialMockReviews: Review[] = [];
@@ -27,7 +26,7 @@ class ReviewsService {
 
   public async getAll(): Promise<Review[]> {
     try {
-      const reviews = await getRecentReviews(50);
+      const reviews = await getReviewsAction();
       if (reviews.length > 0) {
         this.saveLocalReviews(reviews);
         return reviews;
@@ -40,8 +39,7 @@ class ReviewsService {
 
   public async getByProduct(slug: string): Promise<Review[]> {
     try {
-      const reviews = await getProductReviews(slug);
-      return reviews;
+      return await getReviewsAction(slug);
     } catch {
       return [];
     }

@@ -1,7 +1,7 @@
-import { getProducts, getProductBySlug } from "@/lib/data/products";
-import { getWebsiteSettings } from "@/lib/data/settings";
+import { getProductsAction, getProductBySlugAction } from "@/actions/products.actions";
+import { getCategoriesAction } from "@/actions/categories.actions";
+import { getSettingsAction } from "@/actions/settings.actions";
 import { createOrderAction } from "@/actions/orders.actions";
-import prisma from "@/lib/prisma";
 import type { Product } from "@/lib/shop-data";
 
 export interface ApiProduct {
@@ -57,7 +57,7 @@ export interface OrderSubmissionRequest {
 
 export async function fetchProducts(pageIndex = 1, pageSize = 20, search?: string, categoryId?: number): Promise<{ items: Product[]; totalCount: number }> {
   try {
-    const res = await getProducts({
+    const res = await getProductsAction({
       page: pageIndex,
       limit: pageSize,
       search,
@@ -72,7 +72,7 @@ export async function fetchProducts(pageIndex = 1, pageSize = 20, search?: strin
 
 export async function fetchProductBySlug(slug: string): Promise<Product | null> {
   try {
-    return await getProductBySlug(slug);
+    return await getProductBySlugAction(slug);
   } catch (err) {
     console.error("fetchProductBySlug error:", err);
     return null;
@@ -81,23 +81,13 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
 
 export async function fetchCategories(): Promise<ApiCategory[]> {
   try {
-    const raw = await prisma.category.findMany({
-      where: { isActive: true },
-      include: { subCategories: true },
-    });
-
-    return raw.map((c) => ({
-      id: c.id,
+    const categories = await getCategoriesAction();
+    return categories.map((c, index) => ({
+      id: index + 1,
       name: c.name,
       slug: c.slug,
-      imageUrl: c.imageUrl || undefined,
-      subCategories: c.subCategories.map((sub) => ({
-        id: sub.id,
-        name: sub.name,
-        slug: sub.slug,
-        imageUrl: sub.imageUrl || undefined,
-        subCategories: [],
-      })),
+      imageUrl: c.image,
+      subCategories: [],
     }));
   } catch (err) {
     console.error("fetchCategories error:", err);
@@ -107,7 +97,7 @@ export async function fetchCategories(): Promise<ApiCategory[]> {
 
 export async function fetchWebsiteSettings(): Promise<ApiSettings | null> {
   try {
-    const s = await getWebsiteSettings();
+    const s = await getSettingsAction();
     const fbUrl = s.socialMedia?.platforms?.find((p) => p.platform.toLowerCase().includes("facebook"))?.url || "";
     const instaUrl = s.socialMedia?.platforms?.find((p) => p.platform.toLowerCase().includes("instagram"))?.url || "";
 

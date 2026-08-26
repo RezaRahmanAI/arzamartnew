@@ -1,9 +1,23 @@
 import heroSummerImg from "@/assets/hero-summer.jpg";
 import heroTeesImg from "@/assets/hero-tees.jpg";
-import { getBanners, type HeroSlide } from "@/lib/data/banners";
-import { createBannerAction, updateBannerAction, deleteBannerAction } from "@/actions/banners.actions";
+import {
+  getBannersAction,
+  createBannerAction,
+  updateBannerAction,
+  deleteBannerAction,
+} from "@/actions/banners.actions";
 
-export type { HeroSlide };
+export interface HeroSlide {
+  id: string;
+  title: string;
+  subtitle: string;
+  image: string;
+  href: string;
+  position?: string;
+  displayOrder: number;
+  isActive: boolean;
+  eyebrow: string;
+}
 
 const heroSummer = typeof heroSummerImg === "string" ? heroSummerImg : heroSummerImg.src;
 const heroTees = typeof heroTeesImg === "string" ? heroTeesImg : heroTeesImg.src;
@@ -36,8 +50,8 @@ export const initialMockSlides: HeroSlide[] = [
 class BannersService {
   public async getAll(): Promise<HeroSlide[]> {
     try {
-      const banners = await getBanners();
-      if (banners.length > 0) return banners;
+      const banners = await getBannersAction();
+      if (banners && banners.length > 0) return banners;
       return initialMockSlides;
     } catch {
       return initialMockSlides;
@@ -62,21 +76,20 @@ class BannersService {
   }
 
   public async update(id: string, updated: Partial<HeroSlide>): Promise<HeroSlide> {
-    const res = await updateBannerAction(id, updated);
-    if (!res.success) {
+    const res = await updateBannerAction(id, {
+      title: updated.title,
+      subtitle: updated.subtitle,
+      image: updated.image,
+      href: updated.href,
+      position: updated.position,
+      displayOrder: updated.displayOrder,
+      isActive: updated.isActive,
+    });
+
+    if (!res.success || !res.banner) {
       throw new Error(res.error || "Failed to update banner");
     }
-    return {
-      id,
-      title: updated.title || "",
-      subtitle: updated.subtitle || "",
-      image: updated.image || "",
-      href: updated.href || "/",
-      position: updated.position || "slider",
-      displayOrder: updated.displayOrder ?? 1,
-      isActive: updated.isActive ?? true,
-      eyebrow: updated.eyebrow || "Featured",
-    };
+    return res.banner;
   }
 
   public async delete(id: string): Promise<void> {

@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { useCategories } from "@/lib/categories-store";
 import { type Category } from "@/lib/shop-data";
-import { ImageUploader, getImageUrl } from "@/components/image-uploader";
+import { ImageUploader, getImageUrl, FALLBACK_IMAGE } from "@/components/image-uploader";
 
 
 type FormState = {
@@ -87,7 +87,7 @@ export default function CategoriesPage() {
     const category: Category = {
       slug,
       name: form.name,
-      image: form.image || "/src/assets/t-shirt.jpg",
+      image: form.image || FALLBACK_IMAGE,
       blurb: form.blurb,
     };
 

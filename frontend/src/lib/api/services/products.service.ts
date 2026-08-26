@@ -1,11 +1,16 @@
 import type { Product } from "@/lib/shop-data";
-import { getProducts, getProductBySlug } from "@/lib/data/products";
-import { createProductAction, updateProductAction, deleteProductAction } from "@/actions/products.actions";
+import {
+  getProductsAction,
+  getProductBySlugAction,
+  createProductAction,
+  updateProductAction,
+  deleteProductAction,
+} from "@/actions/products.actions";
 
 class ProductsService {
   public async getAll(): Promise<Product[]> {
     try {
-      const result = await getProducts({ limit: 100 });
+      const result = await getProductsAction({ limit: 100 });
       return result.products;
     } catch (err) {
       console.error("Failed to fetch products:", err);
@@ -15,7 +20,7 @@ class ProductsService {
 
   public async getBySlug(slug: string): Promise<Product | undefined> {
     try {
-      const prod = await getProductBySlug(slug);
+      const prod = await getProductBySlugAction(slug);
       return prod ?? undefined;
     } catch {
       return undefined;

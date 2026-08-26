@@ -1,6 +1,7 @@
-import type { Category } from "@/lib/shop-data";
-import { getCategories, getCategoryBySlug } from "@/lib/data/categories";
+import { type Category, categories as staticCategories } from "@/lib/shop-data";
 import {
+  getCategoriesAction,
+  getCategoryBySlugAction,
   createCategoryAction,
   updateCategoryAction,
   deleteCategoryAction,
@@ -9,20 +10,19 @@ import {
 class CategoriesService {
   public async getAll(): Promise<Category[]> {
     try {
-      const categories = await getCategories();
-      return categories;
-    } catch (err) {
-      console.error("CategoriesService.getAll failed:", err);
-      return [];
+      const data = await getCategoriesAction();
+      return data && data.length > 0 ? data : staticCategories;
+    } catch {
+      return staticCategories;
     }
   }
 
   public async getBySlug(slug: string): Promise<Category | undefined> {
     try {
-      const cat = await getCategoryBySlug(slug);
-      return cat ?? undefined;
+      const cat = await getCategoryBySlugAction(slug);
+      return cat ?? staticCategories.find((c) => c.slug === slug);
     } catch {
-      return undefined;
+      return staticCategories.find((c) => c.slug === slug);
     }
   }
 
@@ -33,25 +33,18 @@ class CategoriesService {
       image: category.image,
       blurb: category.blurb,
     });
-
-    if (!res.success) {
+    if (!res.success || !res.category) {
       throw new Error(res.error || "Failed to create category");
     }
-    return res.category || category;
+    return res.category;
   }
 
   public async update(slug: string, updated: Category): Promise<Category> {
-    const res = await updateCategoryAction(slug, {
-      name: updated.name,
-      slug: updated.slug,
-      image: updated.image,
-      blurb: updated.blurb,
-    });
-
-    if (!res.success) {
+    const res = await updateCategoryAction(slug, updated);
+    if (!res.success || !res.category) {
       throw new Error(res.error || "Failed to update category");
     }
-    return res.category || updated;
+    return res.category;
   }
 
   public async delete(slug: string): Promise<void> {

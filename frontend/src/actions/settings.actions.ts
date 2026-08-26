@@ -3,6 +3,16 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { SystemSettings } from "@/types/settings";
+import { getWebsiteSettings } from "@/lib/data/settings";
+
+export async function getSettingsAction(): Promise<SystemSettings> {
+  try {
+    return await getWebsiteSettings();
+  } catch (error) {
+    console.error("getSettingsAction error:", error);
+    return (await import("@/types/settings")).DEFAULT_SYSTEM_SETTINGS;
+  }
+}
 
 export async function updateSettingsAction(newSettings: SystemSettings): Promise<{ success: boolean; error?: string }> {
   try {

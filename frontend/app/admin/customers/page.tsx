@@ -43,7 +43,7 @@ export default function AdminCustomers() {
             fullName: c.fullName,
             phone: c.phone,
             district: c.district || "Dhaka",
-            createdAtUtc: c.createdAtUtc,
+            createdAtUtc: c.createdAt || c.createdAtUtc,
           }))
         : localCustomers.map((c) => ({
             id: c.customerId,

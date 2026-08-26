@@ -1,6 +1,5 @@
 import { SystemSettings, DEFAULT_SYSTEM_SETTINGS } from "@/types/settings";
-import { getWebsiteSettings } from "@/lib/data/settings";
-import { updateSettingsAction } from "@/actions/settings.actions";
+import { getSettingsAction, updateSettingsAction } from "@/actions/settings.actions";
 
 export class SettingsService {
   private cachedSettings: SystemSettings | null = null;
@@ -12,7 +11,7 @@ export class SettingsService {
       return this.cachedSettings;
     }
     try {
-      const settings = await getWebsiteSettings();
+      const settings = await getSettingsAction();
       this.cachedSettings = settings;
       this.lastFetchTime = now;
       return settings;

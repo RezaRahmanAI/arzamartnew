@@ -1,6 +1,7 @@
 import { type Order, type OrderStatus } from "@/lib/orders";
-import { getAllOrders, getOrderById } from "@/lib/data/orders";
 import {
+  getOrdersAction,
+  getOrderByIdAction,
   createOrderAction,
   updateOrderStatusAction,
   saveIncompleteOrderAction,
@@ -78,8 +79,8 @@ class OrdersService {
 
   public async getAll(): Promise<{ orders: Order[]; incomplete: Order[] }> {
     try {
-      const dbResult = await getAllOrders();
-      if (dbResult.orders.length > 0 || dbResult.incomplete.length > 0) {
+      const dbResult = await getOrdersAction();
+      if (dbResult && (dbResult.orders?.length > 0 || dbResult.incomplete?.length > 0)) {
         this.saveLocalOrders(dbResult.orders);
         this.saveLocalIncomplete(dbResult.incomplete);
         return dbResult;
@@ -165,7 +166,7 @@ class OrdersService {
   public async getById(id: string): Promise<Order | null> {
     if (!id) return null;
     try {
-      const dbOrder = await getOrderById(id);
+      const dbOrder = await getOrderByIdAction(id);
       if (dbOrder) {
         return dbOrder;
       }

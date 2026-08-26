@@ -28,7 +28,7 @@ import { formatBDT } from "@/lib/dashboard-data";
 import { type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { useCategories } from "@/lib/categories-store";
-import { ImageUploader, getImageUrl, handleImageError } from "@/components/image-uploader";
+import { ImageUploader, getImageUrl, handleImageError, FALLBACK_IMAGE } from "@/components/image-uploader";
 import { apiClient } from "@/lib/api/client";
 
 
@@ -191,7 +191,7 @@ export default function AdminProducts() {
       price: basePrice,
       compareAt: Number(form.compareAt) > 0 ? Number(form.compareAt) : undefined,
       mrp: Number(form.compareAt) > 0 ? Number(form.compareAt) : undefined,
-      image: form.image || "/src/assets/cat-tshirt.jpg",
+      image: form.image || FALLBACK_IMAGE,
       sizes,
       description: form.description || "No description yet.",
       badge: form.badge || undefined,

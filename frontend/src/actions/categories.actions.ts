@@ -4,6 +4,25 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { Category } from "@/lib/shop-data";
 import { Prisma } from "@prisma/client";
+import { getCategories, getCategoryBySlug } from "@/lib/data/categories";
+
+export async function getCategoriesAction(): Promise<Category[]> {
+  try {
+    return await getCategories();
+  } catch (error) {
+    console.error("getCategoriesAction error:", error);
+    return [];
+  }
+}
+
+export async function getCategoryBySlugAction(slug: string): Promise<Category | null> {
+  try {
+    return await getCategoryBySlug(slug);
+  } catch (error) {
+    console.error("getCategoryBySlugAction error:", error);
+    return null;
+  }
+}
 
 export async function createCategoryAction(data: {
   name: string;
@@ -67,23 +86,19 @@ export async function createCategoryAction(data: {
 
 export async function updateCategoryAction(
   slug: string,
-  data: { name?: string; slug?: string; image?: string; blurb?: string }
+  data: Partial<Category>
 ): Promise<{ success: boolean; category?: Category; error?: string }> {
   try {
-    const cleanSlug = slug.trim().toLowerCase();
     const existing = await prisma.category.findFirst({
-      where: {
-        OR: [{ slug: cleanSlug }, { slug: cleanSlug.replace(/-/g, "") }],
-      },
+      where: { slug },
     });
 
     if (!existing) {
-      return { success: false, error: `Category '${slug}' not found.` };
+      return { success: false, error: "Category not found" };
     }
 
     const updateData: Prisma.CategoryUpdateInput = {};
-    if (data.name?.trim()) updateData.name = data.name.trim();
-    if (data.slug?.trim()) updateData.slug = data.slug.trim().toLowerCase();
+    if (data.name !== undefined) updateData.name = data.name;
     if (data.image !== undefined) updateData.imageUrl = data.image;
     if (data.blurb !== undefined) updateData.blurb = data.blurb;
 
@@ -93,8 +108,8 @@ export async function updateCategoryAction(
     });
 
     revalidatePath("/");
-    revalidatePath(`/category/${updated.slug}`);
     revalidatePath("/admin/categories");
+    revalidatePath(`/category/${slug}`);
 
     return {
       success: true,
@@ -113,35 +128,34 @@ export async function updateCategoryAction(
 
 export async function deleteCategoryAction(slug: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const cleanSlug = slug.trim().toLowerCase();
-    const category = await prisma.category.findFirst({
-      where: {
-        OR: [{ slug: cleanSlug }, { slug: cleanSlug.replace(/-/g, "") }],
-      },
+    const existing = await prisma.category.findFirst({
+      where: { slug },
     });
 
-    if (!category) {
-      return { success: false, error: `Category '${slug}' not found.` };
+    if (!existing) {
+      return { success: false, error: "Category not found" };
     }
 
-    // Check if category has products
+    // Check if products exist in category
     const productCount = await prisma.product.count({
-      where: { categoryId: category.id },
+      where: { categoryId: existing.id },
     });
 
     if (productCount > 0) {
+      // Soft-deactivate to avoid foreign key errors
       await prisma.category.update({
-        where: { id: category.id },
+        where: { id: existing.id },
         data: { isActive: false },
       });
     } else {
       await prisma.category.delete({
-        where: { id: category.id },
+        where: { id: existing.id },
       });
     }
 
     revalidatePath("/");
     revalidatePath("/admin/categories");
+
     return { success: true };
   } catch (error: unknown) {
     console.error("deleteCategoryAction failed:", error);

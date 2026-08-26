@@ -16,6 +16,11 @@ export function getImageUrl(
   }
   let clean = url.trim();
 
+  // Guard against invalid Vite/source paths stored in old records
+  if (clean.includes("/src/assets/") || clean.startsWith("src/assets/")) {
+    return FALLBACK_IMAGE;
+  }
+
   // Clean any old legacy API URLs stored in localStorage
   if (clean.includes("api.arzamart.com/_next/")) {
     clean = clean.replace(/https?:\/\/api\.arzamart\.com\/?/, "/");

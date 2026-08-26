@@ -2,12 +2,26 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getProductReviews, getRecentReviews } from "@/lib/data/reviews";
+import type { Review } from "@/lib/reviews";
 
 export interface SubmitReviewInput {
   productSlug: string;
   customerName: string;
   rating: number;
   comment: string;
+}
+
+export async function getReviewsAction(productSlug?: string): Promise<Review[]> {
+  try {
+    if (productSlug) {
+      return await getProductReviews(productSlug);
+    }
+    return await getRecentReviews();
+  } catch (error) {
+    console.error("getReviewsAction error:", error);
+    return [];
+  }
 }
 
 export async function submitReviewAction(input: SubmitReviewInput): Promise<{ success: boolean; error?: string }> {
@@ -65,8 +79,8 @@ export async function submitReviewAction(input: SubmitReviewInput): Promise<{ su
     await prisma.product.update({
       where: { id: product.id },
       data: {
-        averageRating: stats._avg.rating || input.rating,
-        reviewCount: stats._count.id,
+        averageRating: stats._avg.rating || 5.0,
+        reviewCount: stats._count.id || 1,
       },
     });
 

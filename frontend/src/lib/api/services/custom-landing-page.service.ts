@@ -1,8 +1,7 @@
 import {
-  getLandingPageBySlug,
-  getAllLandingPages,
-} from "@/lib/data/landing-pages";
-import {
+  getLandingPageBySlugAction,
+  getAllLandingPagesAction,
+  getLandingPageConfigAction,
   saveLandingPageConfigAction,
   deleteLandingPageConfigAction,
 } from "@/actions/landing-pages.actions";
@@ -62,12 +61,11 @@ export interface LandingPageProduct {
   shortDescription?: string;
   price: number;
   compareAtPrice?: number | null;
-  basePrice: number;
+  basePrice?: number;
   discountPrice?: number | null;
   imageUrl: string;
-  images: LandingPageProductImage[];
-  variants: LandingPageProductVariant[];
-  category?: { id: number; name: string; slug: string } | null;
+  images?: LandingPageProductImage[];
+  variants?: LandingPageProductVariant[];
 }
 
 export interface RelatedProductItem {
@@ -160,43 +158,45 @@ export const LAYOUT_TYPES: LayoutTypeConfig[] = [
   },
   {
     type: "C",
-    name: "টাইটেল + ছবির গ্রিড",
-    description: "গ্যালারি বা ফিচার শোকেস। ২-৪টি ছবির ইন্টারেক্টিভ গ্রিড।",
+    name: "ছবি গ্যালারি / গ্রিড",
+    description: "একাধিক পণ্যের ছবি প্রদর্শনের জন্য গ্রিড লেআউট।",
     icon: "LayoutGrid",
     defaultFields: [
-      { key: "title", label: "শিরোনাম", type: "text", enabled: true },
-      { key: "images", label: "ছবির URL লিস্ট", type: "images", enabled: true },
+      { key: "title", label: "গ্যালারি শিরোনাম", type: "text", enabled: true },
+      { key: "images", label: "ছবিসমূহ", type: "images", enabled: true },
+      { key: "caption", label: "ক্যাপশন", type: "text", enabled: false },
     ],
   },
   {
     type: "D",
-    name: "টাইটেল + ফিচার কার্ড",
-    description: "কেন আমাদের থেকে কিনবেন / বিশেষ ফিচার লিস্ট। আইকন ও টেক্সট কার্ড।",
-    icon: "LayoutDashboard",
+    name: "ফিচার লিস্ট (আইকন সহ)",
+    description: "পণ্যের বিশেষ সুবিধাসমূহ তালিকা আকারে দেখানোর জন্য।",
+    icon: "CheckSquare",
     defaultFields: [
-      { key: "title", label: "শিরোনাম", type: "text", enabled: true },
-      { key: "features", label: "ফিচার (প্রতিটি নতুন লাইনে)", type: "textarea", enabled: true },
+      { key: "title", label: "সেকশন শিরোনাম", type: "text", enabled: true },
+      { key: "features", label: "বৈশিষ্ট্যসমূহ (কমা দিয়ে আলাদা করুন)", type: "textarea", enabled: true },
+      { key: "image", label: "সাইড ছবি", type: "image", enabled: false },
     ],
   },
   {
     type: "E",
-    name: "টাইটেল + টেক্সট + ছবি + বাটন",
-    description: "ফুল CTA স্প্লিট সেকশন। টেক্সট ও ছবির সমন্বয়ে একটি সম্পূর্ণ কনভার্সন সেকশন।",
-    icon: "Image",
+    name: "স্পেশাল অফার / ব্যানার",
+    description: "জরুরি কল-টু-অ্যাকশন সহ বিশেষ ডিসকাউন্ট ব্যানার।",
+    icon: "Sparkles",
     defaultFields: [
-      { key: "title", label: "শিরোনাম", type: "text", enabled: true },
-      { key: "description", label: "বর্ণনা", type: "textarea", enabled: true },
-      { key: "image", label: "ছবির URL", type: "image", enabled: true },
-      { key: "button", label: "বাটন লেবেল", type: "button", enabled: true },
+      { key: "badge", label: "অফার ব্যাজ", type: "text", enabled: true },
+      { key: "title", label: "অফার শিরোনাম", type: "text", enabled: true },
+      { key: "discount_text", label: "ডিসকাউন্ট পরিমাণ", type: "text", enabled: true },
+      { key: "button", label: "অর্ডার বাটন টেক্সট", type: "button", enabled: true },
     ],
   },
 ];
 
-export function getLayoutConfig(type: string): LayoutTypeConfig | undefined {
-  return LAYOUT_TYPES.find((lt) => lt.type === type);
+export function getLayoutConfig(layoutType: string): LayoutTypeConfig | undefined {
+  return LAYOUT_TYPES.find((l) => l.type === layoutType);
 }
 
-export function getDefaultValue(type: CustomFieldType): CustomFieldValue {
+function getDefaultValue(type: CustomFieldType): CustomFieldValue {
   switch (type) {
     case "text":
       return "";
@@ -239,17 +239,16 @@ export const DEFAULT_LANDING_SECTIONS: LandingSection[] = [
 
 export const customLandingPageService = {
   async getBySlug(slug: string): Promise<LandingPageData | null> {
-    return getLandingPageBySlug(slug);
+    return getLandingPageBySlugAction(slug);
   },
 
   async getConfig(productId: string): Promise<CustomLandingPageConfig | null> {
     if (!productId) return null;
-    const page = await getLandingPageBySlug(productId);
-    return page?.config || null;
+    return getLandingPageConfigAction(productId);
   },
 
   async getAll(): Promise<LandingPageListItem[]> {
-    return getAllLandingPages();
+    return getAllLandingPagesAction();
   },
 
   async saveConfig(config: Partial<CustomLandingPageConfig>): Promise<CustomLandingPageConfig> {
