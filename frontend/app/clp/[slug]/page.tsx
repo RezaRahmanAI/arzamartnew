@@ -1182,7 +1182,7 @@ export default function CustomLandingPageRoute({
                                   e.stopPropagation();
                                   openProductDetails(p);
                                 }}
-                                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-muted/60 hover:bg-muted text-foreground border border-border text-xs font-bold transition-all cursor-pointer hover:border-primary/50"
+                                className="flex items-center gap-1 px-2.5 sm:px-3 h-8 sm:h-9 rounded-md bg-muted/60 hover:bg-muted text-foreground border border-border text-xs font-bold transition-all cursor-pointer hover:border-primary/50"
                               >
                                 <span>বিস্তারিত</span>
                                 <ChevronRight className="size-3.5 text-muted-foreground" />
