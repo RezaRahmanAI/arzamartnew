@@ -197,7 +197,11 @@ export default function AdminPreOrderPage() {
         setAddress(targetAddress);
         setCity(targetCity);
         setArea(targetArea);
-        if (targetNote) setNote(targetNote);
+        if (targetNote) {
+          setNote(targetNote);
+          // If order has a customer note from checkout/CLP, set dropdown to Customer Note
+          setNoteType("Customer");
+        }
         if (existing.delivery !== undefined) setDeliveryCharge(existing.delivery);
         if (existing.paid !== undefined) setPaid(existing.paid);
         if (existing.discount !== undefined) setDiscount(existing.discount);
