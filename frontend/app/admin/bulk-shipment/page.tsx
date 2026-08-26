@@ -131,18 +131,36 @@ export default function BulkShipmentPage() {
   }, [eligibleOrders]);
 
   // Toggle Single Order Selection
-  const toggleSelectOrder = (id: string) => {
+  const toggleSelectOrder = (order: EligibleOrderDto) => {
+    if (order.orderStatus === 1 || order.orderStatusLabel === "pending") {
+      toast.error(`Order #${order.orderNumber} Pending অবস্থায় আছে! কুরিয়ারে পাঠানোর আগে অর্ডারটি Confirm করুন।`);
+      return;
+    }
+
     setSelectedOrderIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(order.id) ? prev.filter((item) => item !== order.id) : [...prev, order.id]
     );
   };
 
-  // Toggle All Filtered Orders
+  // Toggle All Filtered Orders (excluding pending)
   const toggleSelectAll = () => {
-    if (selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0) {
-      setSelectedOrderIds([]);
+    const selectableOrders = filteredOrders.filter((o) => o.orderStatus !== 1 && o.orderStatusLabel !== "pending");
+    if (selectableOrders.length === 0) {
+      toast.warning("কোনো Confirm বা Processing অর্ডার নেই। Pending অর্ডার কুরিয়ারে অ্যাসাইন করা যাবে না।");
+      return;
+    }
+
+    const selectableIds = selectableOrders.map((o) => o.id);
+    const allSelected = selectableIds.every((id) => selectedOrderIds.includes(id));
+
+    if (allSelected) {
+      setSelectedOrderIds((prev) => prev.filter((id) => !selectableIds.includes(id)));
     } else {
-      setSelectedOrderIds(filteredOrders.map((o) => o.id));
+      setSelectedOrderIds((prev) => Array.from(new Set([...prev, ...selectableIds])));
+      const pendingCount = filteredOrders.length - selectableOrders.length;
+      if (pendingCount > 0) {
+        toast.info(`${selectableOrders.length}টি কনফার্মড অর্ডার সিলেক্ট করা হয়েছে (${pendingCount}টি Pending অর্ডার বাদ দেওয়া হয়েছে)`);
+      }
     }
   };
 
@@ -360,17 +378,21 @@ export default function BulkShipmentPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredOrders.map((o) => {
+                    const isPending = o.orderStatus === 1 || o.orderStatusLabel === "pending";
                     const isSelected = selectedOrderIds.includes(o.id);
                     return (
                       <TableRow
                         key={o.id}
-                        className={`group transition-colors ${isSelected ? "bg-primary/5" : ""}`}
+                        className={`group transition-colors ${
+                          isPending ? "opacity-60 bg-muted/20" : isSelected ? "bg-primary/5" : ""
+                        }`}
                       >
                         <TableCell className="text-center">
                           <Checkbox
                             checked={isSelected}
-                            onCheckedChange={() => toggleSelectOrder(o.id)}
+                            onCheckedChange={() => toggleSelectOrder(o)}
                             aria-label={`Select ${o.orderNumber}`}
+                            title={isPending ? "Pending order cannot be assigned to courier" : undefined}
                           />
                         </TableCell>
 

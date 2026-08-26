@@ -199,6 +199,12 @@ export async function createBulkShipmentBatchAction(data: {
 
     const activeShipmentStatuses = ["assigned", "ready_to_ship", "shipped", "in_transit"];
     for (const o of orders) {
+      if (o.orderStatus === 1) {
+        return {
+          success: false,
+          error: `Order #${o.orderNumber} is still in "Pending" status. Please confirm the order first before assigning to courier.`,
+        };
+      }
       if (o.orderStatus === 5) {
         return { success: false, error: `Order #${o.orderNumber} is cancelled and cannot be shipped` };
       }
