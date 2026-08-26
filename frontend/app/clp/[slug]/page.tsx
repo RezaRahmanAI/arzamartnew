@@ -535,15 +535,12 @@ export default function CustomLandingPageRoute({
 
   // Delivery zone state
   const [selectedDeliveryZone, setSelectedDeliveryZone] = useState<DeliveryZone>("inside_dhaka");
-  const [userOverriddenZone, setUserOverriddenZone] = useState(false);
 
   // Address change with auto-detect delivery zone
   const handleAddressChange = (addr: string) => {
     setCustomerAddress(addr);
-    if (!userOverriddenZone) {
-      const detectedZone = detectDeliveryZone(addr);
-      setSelectedDeliveryZone(detectedZone);
-    }
+    const detectedZone = detectDeliveryZone(addr);
+    setSelectedDeliveryZone(detectedZone);
   };
 
   const deliveryCharge = useMemo(() => {
@@ -1430,95 +1427,34 @@ export default function CustomLandingPageRoute({
                             />
                           </div>
 
-                          {/* Delivery Method Selection Cards (Matching User Exact Design) */}
-                          <div className="space-y-2 pt-1">
-                            <label className="text-base sm:text-lg font-black text-foreground block">
-                              ডেলিভারি
-                            </label>
-                            <div className="space-y-2.5">
-                              {/* 1. Outside Dhaka - 150 Tk */}
-                              <label
-                                onClick={() => {
-                                  setUserOverriddenZone(true);
-                                  setSelectedDeliveryZone("outside_dhaka");
-                                }}
-                                className={`flex items-center gap-3 p-3.5 sm:p-4 rounded-xl border-2 transition-all cursor-pointer select-none ${
-                                  selectedDeliveryZone === "outside_dhaka"
-                                    ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
-                                    : "border-border bg-background hover:border-border/80"
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="delivery_zone"
-                                  value="outside_dhaka"
-                                  checked={selectedDeliveryZone === "outside_dhaka"}
-                                  onChange={() => {
-                                    setUserOverriddenZone(true);
-                                    setSelectedDeliveryZone("outside_dhaka");
-                                  }}
-                                  className="size-4.5 accent-primary cursor-pointer"
-                                />
-                                <span className="text-sm sm:text-base font-extrabold text-foreground flex-1">
-                                  ঢাকার বাইরে — ১৫০ ৳
-                                </span>
+                          {/* Delivery Zone Card - Single auto calculated based on address */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                ডেলিভারি মেথড
                               </label>
+                              <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                                অটোমেটিক নির্ধারিত
+                              </span>
+                            </div>
 
-                              {/* 2. Dhaka Sub-Area - 120 Tk */}
-                              <label
-                                onClick={() => {
-                                  setUserOverriddenZone(true);
-                                  setSelectedDeliveryZone("dhaka_sub_area");
-                                }}
-                                className={`flex items-center gap-3 p-3.5 sm:p-4 rounded-xl border-2 transition-all cursor-pointer select-none ${
-                                  selectedDeliveryZone === "dhaka_sub_area"
-                                    ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
-                                    : "border-border bg-background hover:border-border/80"
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="delivery_zone"
-                                  value="dhaka_sub_area"
-                                  checked={selectedDeliveryZone === "dhaka_sub_area"}
-                                  onChange={() => {
-                                    setUserOverriddenZone(true);
-                                    setSelectedDeliveryZone("dhaka_sub_area");
-                                  }}
-                                  className="size-4.5 accent-primary cursor-pointer"
-                                />
-                                <span className="text-sm sm:text-base font-extrabold text-foreground flex-1">
-                                  ঢাকার সাব-এরিয়া — ১২০ ৳
-                                </span>
-                              </label>
-
-                              {/* 3. Inside Dhaka - 70 Tk */}
-                              <label
-                                onClick={() => {
-                                  setUserOverriddenZone(true);
-                                  setSelectedDeliveryZone("inside_dhaka");
-                                }}
-                                className={`flex items-center gap-3 p-3.5 sm:p-4 rounded-xl border-2 transition-all cursor-pointer select-none ${
-                                  selectedDeliveryZone === "inside_dhaka"
-                                    ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
-                                    : "border-border bg-background hover:border-border/80"
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="delivery_zone"
-                                  value="inside_dhaka"
-                                  checked={selectedDeliveryZone === "inside_dhaka"}
-                                  onChange={() => {
-                                    setUserOverriddenZone(true);
-                                    setSelectedDeliveryZone("inside_dhaka");
-                                  }}
-                                  className="size-4.5 accent-primary cursor-pointer"
-                                />
-                                <span className="text-sm sm:text-base font-extrabold text-foreground flex-1">
-                                  ঢাকার ভিতরে — ৭০ ৳
-                                </span>
-                              </label>
+                            <div className="p-3.5 sm:p-4 rounded-xl border-2 border-primary bg-primary/5 ring-1 ring-primary/40 shadow-xs flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="size-4.5 rounded-full bg-primary flex items-center justify-center text-white shrink-0">
+                                  <div className="size-2 bg-white rounded-full" />
+                                </div>
+                                <div>
+                                  <span className="text-sm sm:text-base font-extrabold text-foreground block">
+                                    {DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে"} — {deliveryCharge === 0 ? "ফ্রি" : `${deliveryCharge} ৳`}
+                                  </span>
+                                  <span className="text-[11px] sm:text-xs text-muted-foreground">
+                                    আপনার প্রদত্ত ঠিকানা অনুযায়ী চার্জ স্বয়ংক্রিয়ভাবে হিসাব করা হয়েছে
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="text-sm sm:text-base font-black text-primary shrink-0">
+                                {deliveryCharge === 0 ? "ফ্রি" : `৳${deliveryCharge}`}
+                              </span>
                             </div>
                           </div>
 
