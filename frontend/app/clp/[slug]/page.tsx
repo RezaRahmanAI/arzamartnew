@@ -1554,59 +1554,76 @@ export default function CustomLandingPageRoute({
                                 <p className="text-xs font-semibold text-muted-foreground">উপরের প্রোডাক্ট কার্ড থেকে সাইজ সিলেক্ট করে "যুক্ত করুন" বাটনে ক্লিক করুন</p>
                               </div>
                             ) : (
-                              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                              <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                                 {selectedProductList.map((item) => (
                                   <div
                                     key={item.key}
-                                    className="flex items-center justify-between gap-3 p-3 bg-background rounded-xl border border-border text-sm shadow-xs"
+                                    className="p-3 bg-background rounded-xl border border-border text-sm shadow-xs space-y-2.5"
                                   >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                      <img
-                                        src={getImageUrl(item.product.imageUrl || (item.product.images?.[0]?.imageUrl ?? ""), "thumb")}
-                                        alt={item.product.name}
-                                        width={44}
-                                        height={44}
-                                        loading="lazy"
-                                        decoding="async"
-                                        className="size-11 rounded-lg object-cover border border-border shrink-0"
-                                        onError={handleImageError}
-                                      />
-                                      <div className="min-w-0">
-                                        <p className="font-extrabold text-foreground truncate text-sm">{item.product.name}</p>
-                                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                    {/* Top Row: Thumbnail + Product Full Name + Price */}
+                                    <div className="flex items-start justify-between gap-2.5">
+                                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                                        <img
+                                          src={getImageUrl(item.product.imageUrl || (item.product.images?.[0]?.imageUrl ?? ""), "thumb")}
+                                          alt={item.product.name}
+                                          width={48}
+                                          height={48}
+                                          loading="lazy"
+                                          decoding="async"
+                                          className="size-12 rounded-lg object-cover border border-border shrink-0 bg-muted/20"
+                                          onError={handleImageError}
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="font-extrabold text-foreground text-xs sm:text-sm leading-snug line-clamp-2">
+                                            {item.product.name}
+                                          </p>
                                           {item.selectedSize && (
-                                            <span className="inline-block text-xs font-extrabold bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                            <span className="inline-block mt-1 text-[11px] font-extrabold bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-md">
                                               সাইজ: {item.selectedSize}
                                             </span>
                                           )}
                                         </div>
                                       </div>
+
+                                      <div className="text-right shrink-0">
+                                        <span className="font-black text-foreground text-sm sm:text-base">
+                                          ৳{(getItemPrice(item.product, item.selectedSize) * item.quantity).toLocaleString()}
+                                        </span>
+                                        {item.quantity > 1 && (
+                                          <span className="block text-[10px] text-muted-foreground">
+                                            (৳{getItemPrice(item.product, item.selectedSize).toLocaleString()} × {item.quantity})
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2.5 shrink-0">
-                                      <div className="flex items-center border border-border rounded-lg bg-muted/40 overflow-hidden">
+                                    {/* Bottom Row: Quantity Stepper and Quick Controls */}
+                                    <div className="flex items-center justify-between pt-1.5 border-t border-border/50">
+                                      <span className="text-xs font-semibold text-muted-foreground">
+                                        পরিমাণ (Quantity):
+                                      </span>
+
+                                      <div className="flex items-center border border-border rounded-lg bg-muted/40 overflow-hidden shadow-2xs">
                                         <button
                                           type="button"
                                           onClick={() => updateSizeQuantity(item.product, item.selectedSize, item.quantity - 1)}
-                                          className="size-7 flex items-center justify-center hover:bg-muted cursor-pointer font-bold"
+                                          className="size-7 sm:size-8 flex items-center justify-center hover:bg-muted active:bg-muted/80 cursor-pointer font-bold text-foreground transition-colors"
                                           aria-label="Decrease quantity"
                                         >
-                                          <Minus className="size-3" />
+                                          <Minus className="size-3.5" />
                                         </button>
-                                        <span className="w-6 text-center font-black text-xs sm:text-sm">{item.quantity}</span>
+                                        <span className="w-8 text-center font-black text-xs sm:text-sm bg-background py-1">
+                                          {item.quantity}
+                                        </span>
                                         <button
                                           type="button"
                                           onClick={() => updateSizeQuantity(item.product, item.selectedSize, item.quantity + 1)}
-                                          className="size-7 flex items-center justify-center hover:bg-muted cursor-pointer font-bold"
+                                          className="size-7 sm:size-8 flex items-center justify-center hover:bg-muted active:bg-muted/80 cursor-pointer font-bold text-foreground transition-colors"
                                           aria-label="Increase quantity"
                                         >
-                                          <Plus className="size-3" />
+                                          <Plus className="size-3.5" />
                                         </button>
                                       </div>
-
-                                      <span className="font-black text-foreground text-sm min-w-16 text-right">
-                                        ৳{(getItemPrice(item.product, item.selectedSize) * item.quantity).toLocaleString()}
-                                      </span>
                                     </div>
                                   </div>
                                 ))}
