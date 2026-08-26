@@ -45,6 +45,7 @@ export type Product = {
   bundleProducts?: string[];
   images?: string[];
   isActive?: boolean;
+  acceptPreOrder?: boolean;
 };
 
 export const getSizePrice = (product: Product, size: string): number =>
@@ -52,6 +53,30 @@ export const getSizePrice = (product: Product, size: string): number =>
 
 export const getSizeStock = (product: Product, size: string): number =>
   product.sizeStock?.[size] ?? 15;
+
+/**
+ * Checks if a specific size of a product is orderable based on:
+ * 1) AvailableStock >= requestedQuantity
+ * 2) OR Stock < requestedQuantity AND acceptPreOrder === true
+ */
+export const isSizeOrderable = (
+  product: Product,
+  size: string,
+  requestedQty: number = 1
+): boolean => {
+  const stock = getSizeStock(product, size);
+  if (stock >= requestedQty) return true;
+  return !!product.acceptPreOrder;
+};
+
+/**
+ * Checks if at least one size in the product is orderable or product has acceptPreOrder
+ */
+export const isProductOrderable = (product: Product): boolean => {
+  if (product.acceptPreOrder) return true;
+  if (!product.sizes || product.sizes.length === 0) return true;
+  return product.sizes.some((s) => (product.sizeStock?.[s] ?? 15) > 0);
+};
 
 export const COLOR_MAP: Record<string, string> = {
   black: "#000000",

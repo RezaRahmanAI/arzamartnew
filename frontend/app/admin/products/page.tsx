@@ -50,6 +50,7 @@ type FormState = {
   isBundle: boolean;
   bundleProducts: string[];
   isActive: boolean;
+  acceptPreOrder: boolean;
 };
 
 const emptyForm: FormState = {
@@ -70,6 +71,7 @@ const emptyForm: FormState = {
   isBundle: false,
   bundleProducts: [],
   isActive: true,
+  acceptPreOrder: false,
 };
 
 function slugify(s: string) {
@@ -148,7 +150,7 @@ export default function AdminProducts() {
       purchaseRate: p.purchaseRate,
       sizes: p.sizes.join(", "),
       description: p.description,
-      badge: p.badge ?? "",
+      badge: (p.badge ?? "").replace(/\|?PREORDER_ENABLED/g, "").trim(),
       sizePrices: p.sizePrices ?? {},
       videoUrl: p.videoUrl ?? "",
       returnPolicy: p.returnPolicy ?? "",
@@ -156,6 +158,7 @@ export default function AdminProducts() {
       isBundle: p.isBundle ?? false,
       bundleProducts: p.bundleProducts ?? [],
       isActive: p.isActive !== false,
+      acceptPreOrder: p.acceptPreOrder ?? (p.badge?.includes("PREORDER_ENABLED") ?? false),
     });
     setEditingSlug(p.slug);
     setOpen(true);
@@ -203,6 +206,7 @@ export default function AdminProducts() {
       isBundle: form.isBundle,
       bundleProducts: form.isBundle ? form.bundleProducts : undefined,
       isActive: form.isActive,
+      acceptPreOrder: form.acceptPreOrder,
     };
 
     if (editingSlug) {
@@ -678,6 +682,44 @@ export default function AdminProducts() {
                   onChange={(e) => update("badge", e.target.value)}
                   placeholder="Best seller"
                 />
+              </div>
+            </div>
+
+            {/* Accept Pre-Order Toggle */}
+            <div className="rounded-xl border border-border/60 bg-secondary/20 p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    Accept Pre-Order (স্টক না থাকলেও অর্ডার নেওয়া হবে কি?)
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Enable to allow normal customer checkout even when stock is 0. Internally saved as Pre-Order without showing any badges to customers.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 bg-background border border-border rounded-lg p-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => update("acceptPreOrder", false)}
+                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                      !form.acceptPreOrder
+                        ? "bg-muted text-foreground font-bold shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => update("acceptPreOrder", true)}
+                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                      form.acceptPreOrder
+                        ? "bg-indigo-600 text-white font-bold shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Yes
+                  </button>
+                </div>
               </div>
             </div>
 

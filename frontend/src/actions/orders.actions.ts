@@ -146,17 +146,68 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
     const totalAmount = input.total || subTotal + shippingFee;
     const discountAmount = Math.max(0, subTotal + shippingFee - totalAmount);
 
+    // 4. Validate items against actual stock & calculate isPreOrder
+    let calculatedIsPreOrder = false;
+
+    for (const item of input.items) {
+      const prod = await prisma.product.findFirst({
+        where: {
+          OR: [{ slug: item.slug }, { name: item.name }],
+        },
+        include: { variants: true },
+      });
+
+      if (!prod || !prod.isActive) {
+        return {
+          success: false,
+          error: `Product "${item.name}" is currently inactive or unavailable.`,
+        };
+      }
+
+      const acceptsPreOrder = prod.badge?.includes("PREORDER_ENABLED") ?? false;
+      let availableStock = 15;
+
+      if (item.size && prod.variants.length > 0) {
+        const variant = prod.variants.find((v) =>
+          v.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === item.size!.trim().toLowerCase()
+        );
+        if (variant) {
+          availableStock = variant.stockQuantity;
+        } else {
+          // If variant wasn't found by exact name, look for substring
+          const partialVariant = prod.variants.find((v) => v.name.includes(item.size!));
+          if (partialVariant) availableStock = partialVariant.stockQuantity;
+        }
+      }
+
+      const requestedQty = item.qty || 1;
+
+      if (availableStock < requestedQty) {
+        if (acceptsPreOrder) {
+          // Allowed: will be classified as Pre-Order
+          calculatedIsPreOrder = true;
+        } else {
+          // Blocked: Stock out & AcceptPreOrder = false
+          return {
+            success: false,
+            error: `"${item.name} (${item.size || "Standard"})" is Out of Stock.`,
+          };
+        }
+      }
+    }
+
     const fullAddressJson = JSON.stringify({
       address: input.address,
       city: input.city,
       area: input.area || "",
       note: input.note || "",
       paymentMethod: input.payment || "Cash on Delivery",
+      isPreOrder: calculatedIsPreOrder,
     });
 
     const statusInt = STATUS_MAP_STR_TO_INT[input.status || "pending"] ?? 1;
 
-    // 4. Create Order & OrderItems in a transaction
+    // 5. Create Order & OrderItems in a transaction
     const createdOrder = await prisma.$transaction(async (tx) => {
       const ord = await tx.order.create({
         data: {
@@ -179,15 +230,25 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
           where: {
             OR: [{ slug: item.slug }, { name: item.name }],
           },
-          select: { id: true, name: true, sku: true, basePrice: true },
+          include: { variants: true },
         });
 
         const productId = product?.id;
         if (productId) {
+          let matchedVariantId: string | undefined = undefined;
+          if (item.size && product.variants.length > 0) {
+            const v = product.variants.find(
+              (varItem) =>
+                varItem.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === item.size!.trim().toLowerCase()
+            );
+            if (v) matchedVariantId = v.id;
+          }
+
           await tx.orderItem.create({
             data: {
               orderId: ord.id,
               productId,
+              variantId: matchedVariantId,
               productName: item.size ? `${item.name} (${item.size})` : item.name,
               unitPrice: item.price,
               quantity: item.qty || 1,
@@ -196,7 +257,7 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
         }
       }
 
-      // 5. Deduct stock if order is confirmed
+      // 6. Deduct available stock only if confirmed AND not pre-order stock deficit
       if (input.status === "confirmed") {
         for (const item of input.items) {
           const prod = await tx.product.findFirst({
@@ -205,7 +266,9 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
           });
 
           if (prod && item.size && prod.variants.length > 0) {
-            const variant = prod.variants.find((v) => v.name.includes(item.size!));
+            const variant = prod.variants.find(
+              (v) => v.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === item.size!.trim().toLowerCase()
+            );
             if (variant && variant.stockQuantity >= item.qty) {
               await tx.productVariant.update({
                 where: { id: variant.id },

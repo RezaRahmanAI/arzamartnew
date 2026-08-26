@@ -45,6 +45,8 @@ export function mapPrismaOrder(o: {
   let note = "";
   let paymentMethod = o.paymentStatus === 2 ? "Paid (bKash/Online)" : "Cash on Delivery";
 
+  let isPreOrderFlag = o.orderStatus === 10; // status 10 is preorder
+
   if (o.shippingAddressJson) {
     const trimmed = o.shippingAddressJson.trim();
     if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
@@ -55,6 +57,7 @@ export function mapPrismaOrder(o: {
         if (parsed.area) extractedArea = parsed.area;
         if (parsed.note) note = parsed.note;
         if (parsed.paymentMethod) paymentMethod = parsed.paymentMethod;
+        if (typeof parsed.isPreOrder === "boolean") isPreOrderFlag = parsed.isPreOrder;
       } catch {
         // Not valid JSON, proceed with legacy regex parsing
       }
@@ -106,6 +109,7 @@ export function mapPrismaOrder(o: {
     status: STATUS_MAP_INT_TO_STR[o.orderStatus] || "pending",
     date: o.createdAtUtc.toISOString().slice(0, 10),
     source: isManual ? "manual" : "checkout",
+    isPreOrder: isPreOrderFlag,
     hasNotes: !!note,
   };
 }

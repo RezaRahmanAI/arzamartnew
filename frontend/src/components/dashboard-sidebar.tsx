@@ -21,6 +21,7 @@ import {
 const items = [
   { title: "Overview", url: "/admin", icon: BarChart3 },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
+  { title: "Pre-Orders", url: "/admin/orders?type=preorder", icon: PackagePlus },
   { title: "Incomplete Orders", url: "/admin/incomplete", icon: ClipboardX },
   { title: "Manual Order", url: "/admin/manual-order", icon: PlusCircle },
   { title: "Create Pre-order", url: "/admin/pre-order", icon: PackagePlus },

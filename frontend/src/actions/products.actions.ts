@@ -29,6 +29,7 @@ export interface CreateProductInput {
   isBundle?: boolean;
   bundleProducts?: string[];
   isActive?: boolean;
+  acceptPreOrder?: boolean;
 }
 
 export interface UpdateProductInput {
@@ -48,6 +49,7 @@ export interface UpdateProductInput {
   isBundle?: boolean;
   bundleProducts?: string[];
   isActive?: boolean;
+  acceptPreOrder?: boolean;
 }
 
 export async function getProductsAction(params?: {
@@ -160,6 +162,11 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
       ? JSON.stringify(input.bundleProducts)
       : null;
 
+    let finalBadge = input.badge?.trim() || "";
+    if (input.acceptPreOrder) {
+      finalBadge = finalBadge ? `${finalBadge}|PREORDER_ENABLED` : "PREORDER_ENABLED";
+    }
+
     const created = await prisma.$transaction(async (tx) => {
       const prod = await tx.product.create({
         data: {
@@ -173,7 +180,7 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
           basePrice,
           discountPrice,
           purchaseRate,
-          badge: input.badge || null,
+          badge: finalBadge || null,
           isBundle: input.isBundle ?? false,
           bundleProducts: bundleJson,
           isFeatured: false,
@@ -261,6 +268,14 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
       ? JSON.stringify(input.bundleProducts)
       : existing.bundleProducts;
 
+    let updatedBadge = input.badge !== undefined ? input.badge?.trim() || "" : (existing.badge || "");
+    if (input.acceptPreOrder !== undefined) {
+      const cleanWithoutTag = updatedBadge.replace(/\|?PREORDER_ENABLED/g, "").trim();
+      updatedBadge = input.acceptPreOrder
+        ? (cleanWithoutTag ? `${cleanWithoutTag}|PREORDER_ENABLED` : "PREORDER_ENABLED")
+        : cleanWithoutTag;
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.product.update({
         where: { id: existing.id },
@@ -271,7 +286,7 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
           basePrice,
           discountPrice,
           purchaseRate,
-          badge: input.badge !== undefined ? input.badge : existing.badge,
+          badge: updatedBadge || null,
           isBundle: input.isBundle !== undefined ? input.isBundle : existing.isBundle,
           bundleProducts: bundleJson,
           isActive: input.isActive !== undefined ? input.isActive : existing.isActive,

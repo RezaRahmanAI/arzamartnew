@@ -216,14 +216,18 @@ export default function CartPage() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {activeProduct.sizes.map((s) => {
                     const sp = getSizePrice(activeProduct, s);
+                    const st = activeProduct.sizeStock?.[s] ?? 15;
+                    const isOutOfStock = st === 0 && !activeProduct.acceptPreOrder;
                     return (
                       <button
                         key={s}
                         type="button"
-                        onClick={() => setEditSize(s)}
+                        onClick={() => !isOutOfStock && setEditSize(s)}
                         className={`min-w-10 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                           s === editSize
                             ? "border-primary bg-primary text-primary-foreground"
+                            : isOutOfStock
+                            ? "border-dashed border-destructive/40 bg-secondary/20 text-muted-foreground opacity-60 line-through cursor-not-allowed"
                             : "border-border bg-card text-foreground hover:border-primary"
                         }`}
                       >
@@ -268,18 +272,33 @@ export default function CartPage() {
 
             <div className="mt-6 flex flex-col gap-2">
               <div className="flex gap-2">
-                <button
-                  onClick={handleSaveChanges}
-                  className="flex-1 rounded-xl border border-primary bg-primary/10 text-primary py-2.5 text-xs font-bold hover:bg-primary/20 transition-colors cursor-pointer"
-                >
-                  Save changes
-                </button>
-                <button
-                  onClick={handleAddAsNew}
-                  className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
-                >
-                  Add as new size
-                </button>
+                {(() => {
+                  const selectedStock = activeProduct.sizeStock?.[editSize] ?? 15;
+                  const isBlocked = selectedStock < editQty && !activeProduct.acceptPreOrder;
+                  return isBlocked ? (
+                    <button
+                      disabled
+                      className="flex-1 rounded-xl bg-muted py-2.5 text-xs font-bold text-muted-foreground cursor-not-allowed border border-border"
+                    >
+                      Out of Stock
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleSaveChanges}
+                        className="flex-1 rounded-xl border border-primary bg-primary/10 text-primary py-2.5 text-xs font-bold hover:bg-primary/20 transition-colors cursor-pointer"
+                      >
+                        Save changes
+                      </button>
+                      <button
+                        onClick={handleAddAsNew}
+                        className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
+                      >
+                        Add as new size
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
               <button
                 onClick={() => setEditingIndex(null)}

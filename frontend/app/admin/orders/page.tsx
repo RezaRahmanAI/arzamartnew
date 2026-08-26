@@ -52,7 +52,7 @@ import { getSavedNotesStore } from "@/components/admin/order-notes-modal";
 import type { OutOfStockItem } from "@/components/admin/order-stock-warning-modal";
 import { DateRange } from "react-day-picker";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 // Dynamic imports for heavy modal components — reduces initial JS bundle by ~40KB
@@ -93,11 +93,14 @@ const getTodayRange = (): DateRange => {
 
 export default function AdminOrders() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialType = searchParams.get("type") === "preorder" ? "preorder" : "all";
+
   const [orderIdQuery, setOrderIdQuery] = useState("");
   const [phoneQuery, setPhoneQuery] = useState("");
   
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
-  const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "preorder" | "website">("all");
+  const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "preorder" | "website">(initialType);
   const [sourceFilter, setSourceFilter] = useState<"all" | "facebook" | "instagram">("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(getTodayRange);
 
@@ -351,8 +354,50 @@ export default function AdminOrders() {
     };
   };
 
+  const preOrderCount = useMemo(() => data.filter((o) => o.isPreOrder).length, [data]);
+
   return (
     <div className="space-y-4 relative">
+
+      {/* Quick Type Selection Tabs */}
+      <div className="flex items-center gap-2 border-b border-border pb-3">
+        <button
+          type="button"
+          onClick={() => setOrderTypeFilter("all")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+            orderTypeFilter === "all"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary"
+          }`}
+        >
+          <ShoppingCart className="size-3.5" />
+          All Orders ({data.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setOrderTypeFilter("website")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+            orderTypeFilter === "website"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary"
+          }`}
+        >
+          <Globe className="size-3.5" />
+          Normal Orders ({data.filter(o => !o.isPreOrder).length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setOrderTypeFilter("preorder")}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+            orderTypeFilter === "preorder"
+              ? "bg-indigo-600 text-white shadow-xs"
+              : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 hover:bg-indigo-100"
+          }`}
+        >
+          <PackagePlus className="size-3.5" />
+          Pre-Orders ({preOrderCount})
+        </button>
+      </div>
 
       {/* Filter Bar */}
       <div className="space-y-2.5">

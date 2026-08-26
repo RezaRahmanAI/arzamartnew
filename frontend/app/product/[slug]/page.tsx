@@ -301,7 +301,8 @@ export default function ProductPage() {
               {product.sizes.map((s) => {
                 const sp = getSizePrice(product, s);
                 const st = getSizeStock(product, s);
-                const isOutOfStock = st === 0;
+                // Out of stock only if stock is 0 and acceptPreOrder is false
+                const isOutOfStock = st === 0 && !product.acceptPreOrder;
                 return (
                   <button
                     key={s}
@@ -337,7 +338,14 @@ export default function ProductPage() {
                     <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
                     Low Stock! Only {getSizeStock(product, size)} left in size {size}
                   </span>
+                ) : product.acceptPreOrder ? (
+                  // Stock 0 + acceptPreOrder = true: Normal customer experience, do NOT show out of stock or pre-order badge
+                  <span className="text-emerald-600 font-semibold inline-flex items-center gap-1">
+                    <span className="size-2 rounded-full bg-emerald-500" />
+                    In Stock
+                  </span>
                 ) : (
+                  // Stock 0 + acceptPreOrder = false: Show Out of Stock
                   <span className="text-red-600 font-bold inline-flex items-center gap-1">
                     <span className="size-2 rounded-full bg-red-500" />
                     Out of Stock in size {size}
@@ -347,58 +355,81 @@ export default function ProductPage() {
             )}
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <div className="flex items-center rounded-lg border border-border bg-card">
-              <button
-                type="button"
-                aria-label="Decrease quantity"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-                className="grid size-11 place-items-center text-foreground hover:text-primary cursor-pointer"
-              >
-                <Minus className="size-4" />
-              </button>
-              <span className="w-8 text-center text-sm font-bold">{qty}</span>
-              <button
-                type="button"
-                aria-label="Increase quantity"
-                onClick={() => setQty((q) => q + 1)}
-                className="grid size-11 place-items-center text-foreground hover:text-primary cursor-pointer"
-              >
-                <Plus className="size-4" />
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={addToCart}
-              className="flex h-11 items-center gap-2 rounded-lg border border-primary px-5 text-sm font-bold text-primary transition-colors hover:bg-secondary cursor-pointer"
-            >
-              <ShoppingBag className="size-4" />
-              Add to cart
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                addToCart();
-                router.push("/checkout");
-              }}
-              className="h-11 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground transition-transform hover:scale-105 cursor-pointer"
-            >
-              Order now
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleWishlist(product)}
-              className={`flex h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-bold transition-colors cursor-pointer ${
-                isWishlisted
-                  ? "border-rose-500 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20"
-                  : "border-border bg-card text-foreground hover:border-rose-500 hover:text-rose-500"
-              }`}
-              title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-            >
-              <Heart className={`size-4 ${isWishlisted ? "fill-rose-500 text-rose-500" : ""}`} />
-              {isWishlisted ? "Wishlisted" : "Wishlist"}
-            </button>
-          </div>
+          {(() => {
+            const currentStock = getSizeStock(product, size);
+            const isOrderBlocked = currentStock < qty && !product.acceptPreOrder;
+
+            return (
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <div className="flex items-center rounded-lg border border-border bg-card">
+                  <button
+                    type="button"
+                    aria-label="Decrease quantity"
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    disabled={isOrderBlocked && currentStock === 0}
+                    className="grid size-11 place-items-center text-foreground hover:text-primary cursor-pointer disabled:opacity-40"
+                  >
+                    <Minus className="size-4" />
+                  </button>
+                  <span className="w-8 text-center text-sm font-bold">{qty}</span>
+                  <button
+                    type="button"
+                    aria-label="Increase quantity"
+                    onClick={() => setQty((q) => q + 1)}
+                    disabled={isOrderBlocked && currentStock === 0}
+                    className="grid size-11 place-items-center text-foreground hover:text-primary cursor-pointer disabled:opacity-40"
+                  >
+                    <Plus className="size-4" />
+                  </button>
+                </div>
+
+                {isOrderBlocked ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="h-11 flex-1 min-w-[200px] rounded-lg bg-muted text-muted-foreground font-bold text-sm cursor-not-allowed border border-border flex items-center justify-center gap-2"
+                  >
+                    Out of Stock
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={addToCart}
+                      className="flex h-11 items-center gap-2 rounded-lg border border-primary px-5 text-sm font-bold text-primary transition-colors hover:bg-secondary cursor-pointer"
+                    >
+                      <ShoppingBag className="size-4" />
+                      Add to cart
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addToCart();
+                        router.push("/checkout");
+                      }}
+                      className="h-11 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground transition-transform hover:scale-105 cursor-pointer"
+                    >
+                      Order now
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => toggleWishlist(product)}
+                  className={`flex h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-bold transition-colors cursor-pointer ${
+                    isWishlisted
+                      ? "border-rose-500 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20"
+                      : "border-border bg-card text-foreground hover:border-rose-500 hover:text-rose-500"
+                  }`}
+                  title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                >
+                  <Heart className={`size-4 ${isWishlisted ? "fill-rose-500 text-rose-500" : ""}`} />
+                  {isWishlisted ? "Wishlisted" : "Wishlist"}
+                </button>
+              </div>
+            );
+          })()}
 
           <div className="mt-7 grid gap-3 sm:grid-cols-2">
             <p className="flex items-center gap-2 text-sm text-muted-foreground">

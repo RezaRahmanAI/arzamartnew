@@ -75,6 +75,7 @@ export function mapPrismaProduct(p: {
     isBundle: p.isBundle,
     bundleProducts: parsedBundleProducts,
     isActive: p.isActive,
+    acceptPreOrder: p.badge?.includes("PREORDER_ENABLED") ?? false,
   };
 }
 

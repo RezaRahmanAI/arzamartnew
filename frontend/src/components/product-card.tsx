@@ -188,6 +188,8 @@ export function ProductCard({ product }: { product: Product }) {
               <div className="mt-2 flex flex-wrap gap-2">
                 {product.sizes.map((s) => {
                   const sp = getSizePrice(product, s);
+                  const st = product.sizeStock?.[s] ?? 15;
+                  const isOutOfStock = st === 0 && !product.acceptPreOrder;
                   return (
                     <button
                       key={s}
@@ -196,6 +198,8 @@ export function ProductCard({ product }: { product: Product }) {
                       className={`min-w-10 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                         s === size
                           ? "border-primary bg-primary text-primary-foreground"
+                          : isOutOfStock
+                          ? "border-dashed border-destructive/40 bg-secondary/20 text-muted-foreground opacity-60 line-through"
                           : "border-border bg-card text-foreground hover:border-primary"
                       }`}
                     >
@@ -245,12 +249,26 @@ export function ProductCard({ product }: { product: Product }) {
             >
               Cancel
             </button>
-            <button
-              onClick={handleAddToCart}
-              className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
-            >
-              Add to cart
-            </button>
+            {(() => {
+              const selectedStock = product.sizeStock?.[size] ?? 15;
+              const isBlocked = selectedStock < qty && !product.acceptPreOrder;
+              return isBlocked ? (
+                <button
+                  type="button"
+                  disabled
+                  className="flex-1 rounded-xl bg-muted py-2.5 text-xs font-bold text-muted-foreground cursor-not-allowed border border-border"
+                >
+                  Out of Stock
+                </button>
+              ) : (
+                <button
+                  onClick={handleAddToCart}
+                  className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
+                >
+                  Add to cart
+                </button>
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>
