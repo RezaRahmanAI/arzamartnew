@@ -58,14 +58,14 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
       <div className="max-w-4xl mx-auto">
         {/* Layout A: Title + Subtitle + Big Image */}
         {layoutType === "A" && (
-          <div className="text-center space-y-5">
+          <div className="text-center space-y-6">
             {getField("title") && getFieldValue("title") && (
-              <h2 className="text-2xl md:text-3xl font-black text-foreground whitespace-pre-line tracking-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground whitespace-pre-line tracking-tight leading-tight">
                 {getFieldValue("title")}
               </h2>
             )}
             {getField("subtitle") && getFieldValue("subtitle") && (
-              <p className="text-sm md:text-base text-muted-foreground whitespace-pre-line leading-relaxed max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg font-semibold text-foreground/85 whitespace-pre-line leading-relaxed max-w-2xl mx-auto">
                 {getFieldValue("subtitle")}
               </p>
             )}
@@ -85,7 +85,7 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
                 <button
                   type="button"
                   onClick={handleButtonClick}
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-base cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black px-9 py-4 rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all text-base md:text-lg cursor-pointer"
                 >
                   <span>{getFieldValue("button")}</span>
                   <ArrowRight className="size-5" />
@@ -99,12 +99,12 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
         {layoutType === "B" && (
           <div className="space-y-6">
             {getField("title") && getFieldValue("title") && (
-              <h2 className="text-2xl md:text-3xl font-black text-center text-foreground whitespace-pre-line tracking-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-center text-foreground whitespace-pre-line tracking-tight leading-tight">
                 {getFieldValue("title")}
               </h2>
             )}
             {getField("richtext") && getFieldValue("richtext") && (
-              <div className="text-sm md:text-base text-foreground/90 leading-relaxed whitespace-pre-line bg-muted/20 p-6 rounded-2xl border border-border">
+              <div className="text-base sm:text-lg font-medium text-foreground leading-relaxed whitespace-pre-line bg-muted/40 p-6 sm:p-7 rounded-2xl border border-border shadow-xs">
                 {getFieldValue("richtext")}
               </div>
             )}
@@ -113,7 +113,7 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
                 <button
                   type="button"
                   onClick={handleButtonClick}
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-base cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black px-9 py-4 rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all text-base md:text-lg cursor-pointer"
                 >
                   <span>{getFieldValue("button")}</span>
                   <ArrowRight className="size-5" />
@@ -127,16 +127,16 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
         {layoutType === "C" && (
           <div className="space-y-6">
             {getField("title") && getFieldValue("title") && (
-              <h2 className="text-2xl md:text-3xl font-black text-center text-foreground whitespace-pre-line tracking-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-center text-foreground whitespace-pre-line tracking-tight leading-tight">
                 {getFieldValue("title")}
               </h2>
             )}
             {getImagesList().length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 md:gap-5">
                 {getImagesList().map((imgUrl, idx) => (
                   <div
                     key={idx}
-                    className="aspect-square rounded-xl overflow-hidden bg-muted border border-border group"
+                    className="aspect-square rounded-2xl overflow-hidden bg-muted border border-border shadow-sm group"
                   >
                     <img
                       src={getImageUrl(imgUrl)}
@@ -156,21 +156,21 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
         {layoutType === "D" && (
           <div className="space-y-6">
             {getField("title") && getFieldValue("title") && (
-              <h2 className="text-2xl md:text-3xl font-black text-center text-foreground whitespace-pre-line tracking-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-center text-foreground whitespace-pre-line tracking-tight leading-tight">
                 {getFieldValue("title")}
               </h2>
             )}
             {getFeatures().length > 0 && (
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
                 {getFeatures().map((feature, idx) => (
                   <div
                     key={idx}
-                    className="p-5 bg-muted/40 rounded-xl border border-border hover:border-primary/40 transition-colors text-center flex flex-col items-center gap-3"
+                    className="p-5 sm:p-6 bg-muted/50 rounded-2xl border border-border hover:border-primary/40 transition-colors text-center flex flex-col items-center gap-3.5 shadow-xs"
                   >
-                    <div className="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-base">
+                    <div className="size-11 rounded-full bg-primary/15 text-primary flex items-center justify-center font-black text-lg">
                       {idx + 1}
                     </div>
-                    <p className="text-sm font-semibold text-foreground leading-relaxed">
+                    <p className="text-sm sm:text-base font-bold text-foreground leading-relaxed">
                       {feature}
                     </p>
                   </div>
@@ -185,12 +185,12 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-5">
               {getField("title") && getFieldValue("title") && (
-                <h2 className="text-2xl md:text-3xl font-black text-foreground whitespace-pre-line tracking-tight leading-tight">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground whitespace-pre-line tracking-tight leading-tight">
                   {getFieldValue("title")}
                 </h2>
               )}
               {getField("description") && getFieldValue("description") && (
-                <p className="text-sm md:text-base text-muted-foreground whitespace-pre-line leading-relaxed">
+                <p className="text-base sm:text-lg font-semibold text-foreground/85 whitespace-pre-line leading-relaxed">
                   {getFieldValue("description")}
                 </p>
               )}
@@ -199,17 +199,17 @@ export function CustomSectionRenderer({ section, onScrollToOrder }: CustomSectio
                   <button
                     type="button"
                     onClick={handleButtonClick}
-                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-7 py-3 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-sm md:text-base cursor-pointer"
+                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black px-8 py-3.5 rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all text-base md:text-lg cursor-pointer"
                   >
                     <span>{getFieldValue("button")}</span>
-                    <ArrowRight className="size-4" />
+                    <ArrowRight className="size-5" />
                   </button>
                 </div>
               )}
             </div>
 
             {getField("image") && getFieldValue("image") && (
-              <div className="rounded-2xl overflow-hidden bg-muted border border-border shadow-md">
+              <div className="rounded-2xl overflow-hidden bg-muted border border-border shadow-lg">
                 <img
                   src={getImageUrl(getFieldValue("image"))}
                   alt="Section showcase"

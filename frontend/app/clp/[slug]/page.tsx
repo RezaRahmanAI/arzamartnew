@@ -859,34 +859,34 @@ export default function CustomLandingPageRoute({
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
-                  className="py-8 md:py-12 px-4 bg-gradient-to-b from-primary/5 to-transparent text-center transition-colors"
+                  className="py-10 md:py-14 px-4 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent text-center transition-colors"
                   style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string, backgroundImage: "none" } : undefined}
                 >
-                  <div className="max-w-3xl mx-auto space-y-4">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs md:text-sm font-bold border border-primary/20">
-                      <Sparkles className="size-4" />
+                  <div className="max-w-3xl mx-auto space-y-5">
+                    <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary/15 text-primary text-sm md:text-base font-black border border-primary/30 shadow-xs">
+                      <Sparkles className="size-4.5" />
                       <span>{config?.promoText || "🔥 বিশেষ ধামাকা অফার!"}</span>
                     </div>
 
-                    <h1 className="text-2xl md:text-4xl font-black text-foreground tracking-tight leading-snug">
+                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-foreground tracking-tight leading-tight">
                       {product.name}
                     </h1>
 
-                    <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
+                    <p className="text-base sm:text-lg md:text-xl font-semibold text-foreground/90 leading-relaxed max-w-2xl mx-auto">
                       {product.shortDescription || product.description || "প্রিমিয়াম কোয়ালিটি এবং আধুনিক ডিজাইনের নির্ভরযোগ্য সমাধান। আজই সীমিত মূল্যে অর্ডার করুন!"}
                     </p>
 
-                    <div className="pt-2">
+                    <div className="pt-3">
                       <button
                         type="button"
                         onClick={() => {
                           const el = document.getElementById(nextSectionId) || document.getElementById("section-order-form");
                           if (el) el.scrollIntoView({ behavior: "smooth" });
                         }}
-                        className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all text-base cursor-pointer"
+                        className="inline-flex items-center gap-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black px-9 py-4 rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all text-base md:text-lg cursor-pointer"
                       >
                         <span>অর্ডার করতে এখানে চাপুন</span>
-                        <ArrowRight className="size-5" />
+                        <ArrowRight className="size-6" />
                       </button>
                     </div>
                   </div>
@@ -916,17 +916,17 @@ export default function CustomLandingPageRoute({
                     <div className="space-y-6 order-2 md:order-1">
                       <div>
                         {config?.productDetailsTitle && (
-                          <span className="inline-block text-xs font-bold uppercase tracking-widest text-amber-300 bg-black/20 px-3 py-1 rounded-full backdrop-blur-xs border border-white/10 mb-2">
+                          <span className="inline-block text-xs md:text-sm font-extrabold uppercase tracking-wider text-amber-300 bg-black/30 px-3.5 py-1.5 rounded-full backdrop-blur-xs border border-white/20 mb-3">
                             {config.productDetailsTitle}
                           </span>
                         )}
-                        <h2 className="text-2xl md:text-4xl font-black text-white leading-tight tracking-tight drop-shadow-xs">
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight tracking-tight drop-shadow-sm">
                           🔥 {config?.featuredProductName || product.name}
                         </h2>
                       </div>
 
                       {/* Description / Feature Points */}
-                      <div className="text-sm md:text-base text-white/95 leading-relaxed whitespace-pre-line bg-black/15 backdrop-blur-md p-5 rounded-2xl border border-white/15 shadow-inner">
+                      <div className="text-base sm:text-lg text-white font-medium leading-relaxed whitespace-pre-line bg-black/25 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-white/20 shadow-md">
                         {config?.customHeroDescription || product.shortDescription || product.description || "✨ সফট ও কমফোর্টেবল\n✨ স্মার্ট ও এলিগ্যান্ট ডিজাইন\n✨ Regular Fit — ডেইলি ইউজ ও আউটিং এর জন্য পারফেক্ট\n✨ দীর্ঘ সময় পরলেও আরামদায়ক ও স্টাইলিশ লুক"}
                       </div>
 
@@ -935,9 +935,9 @@ export default function CustomLandingPageRoute({
                         <button
                           type="button"
                           onClick={scrollToOrderForm}
-                          className="bg-white text-purple-900 hover:bg-slate-100 font-extrabold px-8 py-3.5 rounded-xl shadow-2xl hover:scale-105 active:scale-95 transition-all text-base flex items-center justify-center gap-2 cursor-pointer border-2 border-white/50"
+                          className="bg-white text-purple-950 hover:bg-slate-100 font-black px-9 py-4 rounded-xl shadow-2xl hover:scale-105 active:scale-95 transition-all text-base md:text-lg flex items-center justify-center gap-2.5 cursor-pointer border-2 border-white"
                         >
-                          <ShoppingBag className="size-5 text-purple-700" />
+                          <ShoppingBag className="size-5 text-purple-800" />
                           <span>অর্ডার করতে ক্লিক করুন</span>
                         </button>
                       </div>
@@ -945,7 +945,7 @@ export default function CustomLandingPageRoute({
 
                     {/* Right: Product Showcase Poster/Image */}
                     <div className="order-1 md:order-2 flex justify-center">
-                      <div className="relative rounded-2xl overflow-hidden border-2 border-white/30 shadow-2xl bg-black/10 backdrop-blur-xs aspect-[4/5] sm:aspect-square max-w-md w-full">
+                      <div className="relative rounded-2xl overflow-hidden border-2 border-white/40 shadow-2xl bg-black/20 backdrop-blur-xs aspect-[4/5] sm:aspect-square max-w-md w-full">
                         {(config?.customHeroImageUrl || product.imageUrl) ? (
                           <img
                             src={getImageUrl(config?.customHeroImageUrl || product.imageUrl, "large")}
@@ -967,7 +967,7 @@ export default function CustomLandingPageRoute({
 
                         {/* Discount Badge */}
                         {product.compareAtPrice && product.compareAtPrice > product.price && (
-                          <div className="absolute top-4 right-4 bg-rose-600 text-white text-xs font-black px-3.5 py-1.5 rounded-full shadow-xl flex items-center gap-1 border border-white/20">
+                          <div className="absolute top-4 right-4 bg-rose-600 text-white text-xs sm:text-sm font-black px-4 py-1.5 rounded-full shadow-xl flex items-center gap-1.5 border border-white/30">
                             <BadgePercent className="size-4" />
                             <span>
                               ৳{Math.round(product.compareAtPrice - product.price)} ছাড়
@@ -987,15 +987,15 @@ export default function CustomLandingPageRoute({
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
-                  className="py-8 px-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-center transition-colors"
+                  className="py-10 px-4 bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-700 text-white text-center transition-colors"
                   style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string, backgroundImage: "none" } : undefined}
                 >
-                  <div className="max-w-2xl mx-auto space-y-3">
-                    <h3 className="text-xl md:text-2xl font-black">
+                  <div className="max-w-2xl mx-auto space-y-3.5">
+                    <h3 className="text-2xl md:text-3xl font-black tracking-tight">
                       {config?.promoText || "🔥 আজকের স্পেশাল কম্বো অফার!"}
                     </h3>
 
-                    <p className="text-xs md:text-sm text-emerald-100 leading-relaxed">
+                    <p className="text-sm sm:text-base md:text-lg text-emerald-50 font-bold leading-relaxed">
                       {config?.freeShippingThresholdQuantity
                         ? `যেকোনো ${config.freeShippingThresholdQuantity}টি প্রোডাক্ট অর্ডার করলেই ফ্রি হোম ডেলিভারি!`
                         : "সীমিত সময়ের জন্য বিশেষ ছাড়ের সুযোগ গ্রহণ করুন।"}
@@ -1004,7 +1004,7 @@ export default function CustomLandingPageRoute({
                       <button
                         type="button"
                         onClick={scrollToOrderForm}
-                        className="bg-white text-emerald-800 font-black px-6 py-2.5 rounded-xl hover:bg-emerald-50 shadow-md transition-all text-xs md:text-sm cursor-pointer"
+                        className="bg-white text-emerald-900 hover:bg-emerald-50 font-black px-8 py-3 rounded-xl shadow-lg hover:scale-105 transition-all text-sm md:text-base cursor-pointer"
                       >
                         অর্ডার করতে এখানে চাপুন
                       </button>
@@ -1020,16 +1020,16 @@ export default function CustomLandingPageRoute({
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
-                  className="py-8 px-4 md:px-8 bg-card transition-colors"
+                  className="py-9 px-4 md:px-8 bg-card transition-colors"
                   style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
                 >
-                  <div className="max-w-4xl mx-auto p-6 bg-muted/40 rounded-2xl border border-border flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-                    <div className="size-14 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
-                      <ShieldCheck className="size-7" />
+                  <div className="max-w-4xl mx-auto p-6 md:p-7 bg-muted/60 rounded-2xl border border-border/80 flex flex-col md:flex-row items-center gap-5 text-center md:text-left shadow-xs">
+                    <div className="size-16 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="size-9" />
                     </div>
-                    <div className="flex-1">
-                      <h4 className="text-base font-bold text-foreground">১০০% নিরাপদ কেনাকাটা</h4>
-                      <p className="text-xs md:text-sm text-muted-foreground mt-1 leading-relaxed">
+                    <div className="flex-1 space-y-1">
+                      <h4 className="text-lg md:text-xl font-black text-foreground">১০০% নিরাপদ কেনাকাটা</h4>
+                      <p className="text-sm sm:text-base font-semibold text-foreground/80 leading-relaxed">
                         {config?.trustBannerText ||
                           "দেখে চেক করে রিসিভ করতে পারবেন। পছন্দ না হলে ডেলিভারি চার্জ দিয়ে রিটার্ন করে দিতে পারবেন সহজেই।"}
                       </p>
@@ -1045,12 +1045,12 @@ export default function CustomLandingPageRoute({
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
-                  className="py-6 px-4 md:px-8 bg-amber-500/10 border-y border-amber-500/20 text-center transition-colors"
+                  className="py-7 px-4 md:px-8 bg-amber-500/15 border-y border-amber-500/30 text-center transition-colors"
                   style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
                 >
-                  <div className="max-w-3xl mx-auto flex items-center justify-center gap-3 text-amber-900 dark:text-amber-200">
-                    <ShieldCheck className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-                    <p className="text-xs md:text-sm font-semibold">
+                  <div className="max-w-3xl mx-auto flex items-center justify-center gap-3 text-amber-950 dark:text-amber-100">
+                    <ShieldCheck className="size-6 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p className="text-sm sm:text-base md:text-lg font-black leading-snug">
                       {(sec.settings?.text as string) || (sec.settings?.infoBannerText as string) || config?.trustBannerDescription || "পণ্য হাতে পেয়ে দেখে মূল্য পরিশোধের সম্পূর্ণ নিশ্চয়তা!"}
                     </p>
                   </div>
@@ -1301,66 +1301,66 @@ export default function CustomLandingPageRoute({
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
-                  className="py-10 px-4 md:px-8 bg-card transition-colors"
+                  className="py-12 px-4 md:px-8 bg-card transition-colors"
                   style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
                 >
                   <div className="max-w-4xl mx-auto space-y-6">
-                    <div className="text-center space-y-1">
-                      <div className="flex items-center justify-center gap-1 text-amber-400">
+                    <div className="text-center space-y-1.5">
+                      <div className="flex items-center justify-center gap-1.5 text-amber-400">
                         {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="size-4 fill-current" />
+                          <Star key={i} className="size-5 fill-current" />
                         ))}
                       </div>
-                      <h3 className="text-xl md:text-2xl font-black text-foreground">
+                      <h3 className="text-2xl md:text-3xl font-black text-foreground tracking-tight">
                         কাস্টমারদের প্রতিক্রিয়া ও রিভিউ
                       </h3>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm md:text-base font-semibold text-foreground/80">
                         সারা বাংলাদেশের শত শত সন্তুষ্ট গ্রাহক আমাদের প্রোডাক্ট ব্যবহার করছেন
                       </p>
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-4">
-                      <div className="p-4 rounded-xl bg-muted/40 border border-border space-y-2">
+                      <div className="p-5 rounded-2xl bg-muted/60 border border-border space-y-2.5 shadow-xs">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-foreground">তানভীর হাসান</span>
-                          <span className="text-[10px] text-emerald-600 font-bold">Verified Buyer</span>
+                          <span className="font-extrabold text-sm text-foreground">তানভীর হাসান</span>
+                          <span className="text-xs text-emerald-600 font-extrabold">Verified Buyer</span>
                         </div>
-                        <div className="flex gap-0.5 text-amber-400">
+                        <div className="flex gap-1 text-amber-400">
                           {[...Array(5)].map((_, i) => (
-                            <Star key={i} className="size-3 fill-current" />
+                            <Star key={i} className="size-3.5 fill-current" />
                           ))}
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <p className="text-sm font-medium text-foreground/90 leading-relaxed">
                           "কোয়ালিটি খুবই ভালো! সময়মতো ডেলিভারি পেয়েছি এবং কাপড়ের ফিনিশিং প্রিমিয়াম ছিল।"
                         </p>
                       </div>
 
-                      <div className="p-4 rounded-xl bg-muted/40 border border-border space-y-2">
+                      <div className="p-5 rounded-2xl bg-muted/60 border border-border space-y-2.5 shadow-xs">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-foreground">ফারহানা আক্তার</span>
-                          <span className="text-[10px] text-emerald-600 font-bold">Verified Buyer</span>
+                          <span className="font-extrabold text-sm text-foreground">ফারহানা আক্তার</span>
+                          <span className="text-xs text-emerald-600 font-extrabold">Verified Buyer</span>
                         </div>
-                        <div className="flex gap-0.5 text-amber-400">
+                        <div className="flex gap-1 text-amber-400">
                           {[...Array(5)].map((_, i) => (
-                            <Star key={i} className="size-3 fill-current" />
+                            <Star key={i} className="size-3.5 fill-current" />
                           ))}
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <p className="text-sm font-medium text-foreground/90 leading-relaxed">
                           "ছবিতে যেমন দেখেছি হুবহু তেমনই পেয়েছি। রিটার্ন সুবিধার ভরসা থাকায় নিশ্চিন্তে অর্ডার করেছিলাম।"
                         </p>
                       </div>
 
-                      <div className="p-4 rounded-xl bg-muted/40 border border-border space-y-2">
+                      <div className="p-5 rounded-2xl bg-muted/60 border border-border space-y-2.5 shadow-xs">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-foreground">মো: রাশেদুল ইসলাম</span>
-                          <span className="text-[10px] text-emerald-600 font-bold">Verified Buyer</span>
+                          <span className="font-extrabold text-sm text-foreground">মো: রাশেদুল ইসলাম</span>
+                          <span className="text-xs text-emerald-600 font-extrabold">Verified Buyer</span>
                         </div>
-                        <div className="flex gap-0.5 text-amber-400">
+                        <div className="flex gap-1 text-amber-400">
                           {[...Array(5)].map((_, i) => (
-                            <Star key={i} className="size-3 fill-current" />
+                            <Star key={i} className="size-3.5 fill-current" />
                           ))}
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <p className="text-sm font-medium text-foreground/90 leading-relaxed">
                           "ক্যাশ অন ডেলিভারিতে চেক করে নেওয়ার সুবিধাটা দারুণ। সার্ভিস ও ব্যবহার খুব চমৎকার!"
                         </p>
                       </div>
@@ -1392,28 +1392,28 @@ export default function CustomLandingPageRoute({
                 >
                   <div className="max-w-5xl mx-auto bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
                     {/* Form Header */}
-                    <div className="bg-primary text-primary-foreground p-5 md:p-6 text-center space-y-1">
-                      <h3 className="text-xl md:text-2xl font-black">
+                    <div className="bg-primary text-primary-foreground p-6 md:p-7 text-center space-y-1.5">
+                      <h3 className="text-2xl md:text-3xl font-black tracking-tight">
                         📝 সরাসরি অর্ডার করতে তথ্য পূরণ করুন
                       </h3>
-                      <p className="text-xs md:text-sm text-primary-foreground/90 font-medium">
+                      <p className="text-sm md:text-base text-primary-foreground font-bold">
                         ক্যাশ অন ডেলিভারি — পণ্য হাতে পেয়ে মূল্য পরিশোধ করুন
                       </p>
                     </div>
 
-                    <form onSubmit={handlePlaceOrder} className="p-5 md:p-8">
+                    <form onSubmit={handlePlaceOrder} className="p-5 sm:p-7 md:p-9">
                       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
                         {/* Left Column (Customer Form Details): 7 cols on lg */}
-                        <div className="lg:col-span-7 space-y-4">
-                          <h4 className="text-sm font-bold text-foreground flex items-center gap-2 pb-2 border-b border-border">
-                            <Truck className="size-4 text-primary" />
+                        <div className="lg:col-span-7 space-y-4 sm:space-y-5">
+                          <h4 className="text-base sm:text-lg font-black text-foreground flex items-center gap-2 pb-2.5 border-b border-border">
+                            <Truck className="size-5 text-primary" />
                             ডেলিভারির তথ্য
                           </h4>
 
                           {/* Customer Name & Phone */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                              <label className="text-xs font-bold text-foreground">আপনার নাম *</label>
+                              <label className="text-sm font-black text-foreground">আপনার নাম *</label>
                               <input
                                 type="text"
                                 required
@@ -1421,12 +1421,12 @@ export default function CustomLandingPageRoute({
                                 onChange={(e) => setCustomerName(e.target.value)}
                                 onBlur={(e) => saveIncompleteDraft(e.target.value, undefined)}
                                 placeholder="যেমন: মোঃ করিম"
-                                className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                                className="w-full h-12 px-4 bg-background border border-border rounded-xl text-sm sm:text-base font-semibold text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                               />
                             </div>
 
                             <div className="space-y-1.5">
-                              <label className="text-xs font-bold text-foreground">
+                              <label className="text-sm font-black text-foreground">
                                 মোবাইল নম্বর * (১১ ডিজিট)
                               </label>
                               <input
@@ -1436,7 +1436,7 @@ export default function CustomLandingPageRoute({
                                 onChange={(e) => setCustomerPhone(e.target.value)}
                                 onBlur={(e) => saveIncompleteDraft(undefined, e.target.value)}
                                 placeholder="01XXXXXXXXX"
-                                className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                                className="w-full h-12 px-4 bg-background border border-border rounded-xl text-sm sm:text-base font-semibold text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                               />
                             </div>
                           </div>
@@ -1444,11 +1444,11 @@ export default function CustomLandingPageRoute({
                           {/* Division & District Selection */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                              <label className="text-xs font-bold text-foreground">বিভাগ সিলেক্ট করুন *</label>
+                              <label className="text-sm font-black text-foreground">বিভাগ সিলেক্ট করুন *</label>
                               <select
                                 value={selectedDivision}
                                 onChange={(e) => handleDivisionChange(e.target.value)}
-                                className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                                className="w-full h-12 px-4 bg-background border border-border rounded-xl text-sm sm:text-base font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                               >
                                 {BANGLADESH_DIVISIONS.map((d) => (
                                   <option key={d} value={d}>{d}</option>
@@ -1456,11 +1456,11 @@ export default function CustomLandingPageRoute({
                               </select>
                             </div>
                             <div className="space-y-1.5">
-                              <label className="text-xs font-bold text-foreground">জেলা সিলেক্ট করুন *</label>
+                              <label className="text-sm font-black text-foreground">জেলা সিলেক্ট করুন *</label>
                               <select
                                 value={selectedDistrict}
                                 onChange={(e) => handleDistrictChange(e.target.value)}
-                                className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                                className="w-full h-12 px-4 bg-background border border-border rounded-xl text-sm sm:text-base font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                               >
                                 {availableDistricts.map((d) => (
                                   <option key={d} value={d}>{d}</option>
@@ -1471,7 +1471,7 @@ export default function CustomLandingPageRoute({
 
                           {/* Full Address */}
                           <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-foreground">
+                            <label className="text-sm font-black text-foreground">
                               পূর্ণাঙ্গ ঠিকানা (বাসা/রোড/এলাকা) *
                             </label>
                             <textarea
@@ -1480,19 +1480,19 @@ export default function CustomLandingPageRoute({
                               value={customerAddress}
                               onChange={(e) => setCustomerAddress(e.target.value)}
                               placeholder="বাসা নম্বর, রোড, এলাকার বিস্তারিত লিখুন..."
-                              className="w-full px-3.5 py-2.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary resize-none"
+                              className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm sm:text-base font-semibold text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary resize-none"
                             />
                           </div>
 
                           {/* Note */}
                           <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-foreground">নোট (ঐচ্ছিক)</label>
+                            <label className="text-sm font-black text-foreground">নোট (ঐচ্ছিক)</label>
                             <input
                               type="text"
                               value={notes}
                               onChange={(e) => setNotes(e.target.value)}
                               placeholder="অর্ডার সম্পর্কে কিছু জানাতে চাইলে লিখুন..."
-                              className="w-full h-11 px-3.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                              className="w-full h-12 px-4 bg-background border border-border rounded-xl text-sm sm:text-base font-semibold text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                             />
                           </div>
 
@@ -1500,44 +1500,44 @@ export default function CustomLandingPageRoute({
 
                         {/* Right Column (Cart Summary & Total Pricing): 5 cols on lg */}
                         <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-20">
-                          <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-4">
-                            <div className="flex items-center justify-between pb-2 border-b border-border">
-                              <label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                                <ShoppingBag className="size-4 text-primary" />
+                          <div className="bg-muted/40 border border-border rounded-2xl p-5 space-y-4 shadow-sm">
+                            <div className="flex items-center justify-between pb-3 border-b border-border">
+                              <label className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                                <ShoppingBag className="size-4.5 text-primary" />
                                 আপনার কার্ট ({selectedProductList.length}টি পণ্য)
                               </label>
                             </div>
 
                             {/* Cart Products List */}
                             {selectedProductList.length === 0 ? (
-                              <div className="py-5 px-3 text-center rounded-lg border border-dashed border-border bg-background/50 space-y-1.5">
-                                <ShoppingBag className="size-6 text-muted-foreground/50 mx-auto" />
-                                <p className="text-xs font-bold text-muted-foreground">এখনও কোনো পণ্য নির্বাচন করা হয়নি</p>
-                                <p className="text-[11px] text-muted-foreground/70">উপরের প্রোডাক্ট কার্ড থেকে সাইজ সিলেক্ট করে "যুক্ত করুন" বাটনে ক্লিক করুন</p>
+                              <div className="py-6 px-4 text-center rounded-xl border border-dashed border-border bg-background/60 space-y-2">
+                                <ShoppingBag className="size-7 text-muted-foreground/50 mx-auto" />
+                                <p className="text-sm font-black text-foreground/80">এখনও কোনো পণ্য নির্বাচন করা হয়নি</p>
+                                <p className="text-xs font-semibold text-muted-foreground">উপরের প্রোডাক্ট কার্ড থেকে সাইজ সিলেক্ট করে "যুক্ত করুন" বাটনে ক্লিক করুন</p>
                               </div>
                             ) : (
-                              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                                 {selectedProductList.map((item) => (
                                   <div
                                     key={item.key}
-                                    className="flex items-center justify-between gap-2.5 p-2.5 bg-background rounded-lg border border-border text-xs shadow-sm"
+                                    className="flex items-center justify-between gap-3 p-3 bg-background rounded-xl border border-border text-sm shadow-xs"
                                   >
-                                    <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="flex items-center gap-3 min-w-0">
                                       <img
                                         src={getImageUrl(item.product.imageUrl || (item.product.images?.[0]?.imageUrl ?? ""), "thumb")}
                                         alt={item.product.name}
-                                        width={40}
-                                        height={40}
+                                        width={44}
+                                        height={44}
                                         loading="lazy"
                                         decoding="async"
-                                        className="size-10 rounded-md object-cover border border-border shrink-0"
+                                        className="size-11 rounded-lg object-cover border border-border shrink-0"
                                         onError={handleImageError}
                                       />
                                       <div className="min-w-0">
-                                        <p className="font-bold text-foreground truncate text-xs">{item.product.name}</p>
-                                        <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                                        <p className="font-extrabold text-foreground truncate text-sm">{item.product.name}</p>
+                                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                           {item.selectedSize && (
-                                            <span className="inline-block text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.2 rounded">
+                                            <span className="inline-block text-xs font-extrabold bg-primary/10 text-primary px-2 py-0.5 rounded">
                                               সাইজ: {item.selectedSize}
                                             </span>
                                           )}
@@ -1545,28 +1545,28 @@ export default function CustomLandingPageRoute({
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <div className="flex items-center border border-border rounded bg-muted/40">
+                                    <div className="flex items-center gap-2.5 shrink-0">
+                                      <div className="flex items-center border border-border rounded-lg bg-muted/40 overflow-hidden">
                                         <button
                                           type="button"
                                           onClick={() => updateSizeQuantity(item.product, item.selectedSize, item.quantity - 1)}
-                                          className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                          className="size-7 flex items-center justify-center hover:bg-muted cursor-pointer font-bold"
                                           aria-label="Decrease quantity"
                                         >
-                                          <Minus className="size-2.5" />
+                                          <Minus className="size-3" />
                                         </button>
-                                        <span className="w-5 text-center font-bold text-xs">{item.quantity}</span>
+                                        <span className="w-6 text-center font-black text-xs sm:text-sm">{item.quantity}</span>
                                         <button
                                           type="button"
                                           onClick={() => updateSizeQuantity(item.product, item.selectedSize, item.quantity + 1)}
-                                          className="size-6 flex items-center justify-center hover:bg-muted cursor-pointer"
+                                          className="size-7 flex items-center justify-center hover:bg-muted cursor-pointer font-bold"
                                           aria-label="Increase quantity"
                                         >
-                                          <Plus className="size-2.5" />
+                                          <Plus className="size-3" />
                                         </button>
                                       </div>
 
-                                      <span className="font-bold text-foreground text-xs min-w-14 text-right">
+                                      <span className="font-black text-foreground text-sm min-w-16 text-right">
                                         ৳{(getItemPrice(item.product, item.selectedSize) * item.quantity).toLocaleString()}
                                       </span>
                                     </div>
@@ -1576,22 +1576,22 @@ export default function CustomLandingPageRoute({
                             )}
 
                             {/* Pricing Breakdown */}
-                            <div className="p-3.5 bg-background rounded-xl border border-border space-y-2 text-xs">
-                              <div className="flex justify-between text-muted-foreground">
+                            <div className="p-4 bg-background rounded-xl border border-border space-y-2.5 text-sm">
+                              <div className="flex justify-between text-foreground/80 font-medium">
                                 <span>প্রোডাক্ট সাবটোটাল</span>
-                                <span className="font-bold text-foreground">
+                                <span className="font-extrabold text-foreground">
                                   ৳{subtotal.toLocaleString()}
                                 </span>
                               </div>
-                              <div className="flex justify-between text-muted-foreground">
+                              <div className="flex justify-between text-foreground/80 font-medium">
                                 <span>ডেলিভারি চার্জ</span>
-                                <span className="font-bold text-foreground">
+                                <span className="font-extrabold text-foreground">
                                   {deliveryCharge === 0 ? "ফ্রি" : `৳${deliveryCharge}`}
                                 </span>
                               </div>
-                              <div className="border-t border-border pt-2 flex justify-between text-sm font-black text-foreground">
+                              <div className="border-t border-border pt-3 flex justify-between text-base font-black text-foreground">
                                 <span>সর্বমোট প্রদেয় বিল</span>
-                                <span className="text-primary text-base font-black">
+                                <span className="text-primary text-lg sm:text-xl font-black">
                                   ৳{grandTotal.toLocaleString()}
                                 </span>
                               </div>
@@ -1601,36 +1601,36 @@ export default function CustomLandingPageRoute({
                             <button
                               type="submit"
                               disabled={isSubmitting || selectedProductList.length === 0}
-                              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3.5 rounded-xl shadow-xl hover:shadow-2xl transition-all text-sm md:text-base flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-4 rounded-xl shadow-xl hover:shadow-2xl transition-all text-base sm:text-lg flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
                             >
                               {isSubmitting ? (
                                 <>
-                                  <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  <div className="size-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                   <span>অর্ডার প্রসেস হচ্ছে...</span>
                                 </>
                               ) : selectedProductList.length === 0 ? (
                                 <>
-                                  <ShoppingBag className="size-5" />
+                                  <ShoppingBag className="size-5.5" />
                                   <span>প্রথমে পণ্য নির্বাচন করুন</span>
                                 </>
                               ) : (
                                 <>
-                                  <CheckCircle2 className="size-5" />
+                                  <CheckCircle2 className="size-5.5" />
                                   <span>অর্ডার নিশ্চিত করুন (৳{grandTotal.toLocaleString()})</span>
                                 </>
                               )}
                             </button>
 
                             {/* Trust Badges under Button */}
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground bg-muted/20 p-3 rounded-lg border border-border">
+                            <div className="flex flex-wrap items-center justify-between gap-2.5 text-xs font-semibold text-foreground/80 bg-muted/30 p-3.5 rounded-xl border border-border">
                               <span className="flex items-center gap-1.5">
-                                <ShieldCheck className="size-4 text-emerald-600 shrink-0" /> ১০০% অরিজিনাল পণ্য
+                                <ShieldCheck className="size-4.5 text-emerald-600 shrink-0" /> ১০০% অরিজিনাল পণ্য
                               </span>
                               <span className="flex items-center gap-1.5">
-                                <HeartHandshake className="size-4 text-blue-600 shrink-0" /> সহজ রিটার্ন সুবিধা
+                                <HeartHandshake className="size-4.5 text-blue-600 shrink-0" /> সহজ রিটার্ন সুবিধা
                               </span>
                               <span className="flex items-center gap-1.5">
-                                <Truck className="size-4 text-amber-600 shrink-0" /> দ্রুত ক্যাশ অন ডেলিভারি
+                                <Truck className="size-4.5 text-amber-600 shrink-0" /> দ্রুত ক্যাশ অন ডেলিভারি
                               </span>
                             </div>
                           </div>
@@ -1759,13 +1759,13 @@ export default function CustomLandingPageRoute({
                     )}
 
                     {/* Trust Highlights */}
-                    <div className="grid grid-cols-2 gap-2 pt-2 text-[10px] text-muted-foreground font-medium">
-                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/30 border border-border/40">
-                        <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" />
+                    <div className="grid grid-cols-2 gap-2.5 pt-2 text-xs font-semibold text-foreground/80">
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/40 border border-border">
+                        <ShieldCheck className="size-4 text-emerald-600 shrink-0" />
                         <span>১০০% অরিজিনাল পণ্য</span>
                       </div>
-                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/30 border border-border/40">
-                        <Truck className="size-3.5 text-blue-600 shrink-0" />
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/40 border border-border">
+                        <Truck className="size-4 text-blue-600 shrink-0" />
                         <span>ক্যাশ অন ডেলিভারি</span>
                       </div>
                     </div>
@@ -1774,43 +1774,43 @@ export default function CustomLandingPageRoute({
                   {/* Right Column: Title, Price, Attributes & Controls */}
                   <div className="space-y-4">
                     {/* Title & SKU */}
-                    <div className="space-y-1">
-                      <h3 className="text-lg sm:text-xl font-extrabold text-foreground leading-snug">
+                    <div className="space-y-1.5">
+                      <h3 className="text-xl sm:text-2xl font-black text-foreground leading-snug">
                         {selectedProductForDetails.name}
                       </h3>
                       {selectedProductForDetails.slug && (
-                        <p className="text-[11px] text-muted-foreground font-mono">
+                        <p className="text-xs text-muted-foreground font-mono">
                           আইটেম কোড: {selectedProductForDetails.slug}
                         </p>
                       )}
                     </div>
 
                     {/* Price Block */}
-                    <div className="flex items-baseline gap-2.5 pb-3 border-b border-border/60">
-                      <span className="text-2xl font-black text-primary">
+                    <div className="flex items-baseline gap-3 pb-3 border-b border-border/60">
+                      <span className="text-2xl sm:text-3xl font-black text-primary">
                         ৳{modalSizePrice.toLocaleString()}
                       </span>
                       {modalHasDiscount && (
-                        <span className="text-sm text-muted-foreground line-through">
+                        <span className="text-sm sm:text-base text-muted-foreground line-through font-medium">
                           ৳{selectedProductForDetails.compareAtPrice!.toLocaleString()}
                         </span>
                       )}
                       {modalHasDiscount && (
-                        <span className="text-[11px] font-bold text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded">
+                        <span className="text-xs font-black text-rose-600 bg-rose-500/15 px-2.5 py-0.5 rounded-md">
                           {Math.round(((selectedProductForDetails.compareAtPrice! - modalSizePrice) / selectedProductForDetails.compareAtPrice!) * 100)}% ছাড়
                         </span>
                       )}
                     </div>
 
                     {/* Stock Status */}
-                    <div className="text-xs">
+                    <div className="text-sm">
                       {modalStock > 0 || selectedProductForDetails.isPreOrder ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold inline-flex items-center gap-1.5">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold inline-flex items-center gap-1.5">
                           <span className="size-2 rounded-full bg-emerald-500" />
                           ইন স্টক
                         </span>
                       ) : (
-                        <span className="text-rose-600 font-bold inline-flex items-center gap-1.5">
+                        <span className="text-rose-600 font-black inline-flex items-center gap-1.5">
                           <span className="size-2 rounded-full bg-rose-500" />
                           আউট অফ স্টক
                         </span>
@@ -1819,16 +1819,16 @@ export default function CustomLandingPageRoute({
 
                     {/* Size Selector */}
                     {modalUniqueSizes.length > 0 && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-foreground">সাইজ সিলেক্ট করুন:</span>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-black text-foreground">সাইজ সিলেক্ট করুন:</span>
                           {modalSelectedSize && (
-                            <span className="font-semibold text-primary">
+                            <span className="font-bold text-primary">
                               {modalSelectedSize} {isSizeInCart ? `(${modalSelectedQty}টি কার্টে)` : ""}
                             </span>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-2">
                           {modalUniqueSizes.map((sz) => {
                             const isSzActive = modalSelectedSize === sz;
                             const szCartQty = getQtyForSize(selectedProductForDetails.id, sz);
@@ -1841,15 +1841,15 @@ export default function CustomLandingPageRoute({
                                   const existingQty = getQtyForSize(selectedProductForDetails.id, sz);
                                   setModalQty(existingQty > 0 ? existingQty : 1);
                                 }}
-                                className={`relative min-w-10 h-9 px-2 flex items-center justify-center transition-all border text-xs font-bold rounded-md cursor-pointer ${
+                                className={`relative min-w-11 h-10 px-3 flex items-center justify-center transition-all border text-sm font-bold rounded-lg cursor-pointer ${
                                   isSzActive
-                                    ? "bg-primary text-primary-foreground border-primary shadow-xs scale-105"
+                                    ? "bg-primary text-primary-foreground border-primary shadow-sm scale-105"
                                     : "bg-card text-foreground border-border hover:border-primary/50"
                                 }`}
                               >
                                 <span>{sz}</span>
                                 {szCartQty > 0 && !isSzActive && (
-                                  <span className="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-emerald-600 text-[9px] text-white font-black flex items-center justify-center shadow-xs">
+                                  <span className="absolute -top-1.5 -right-1.5 size-4.5 rounded-full bg-emerald-600 text-[10px] text-white font-black flex items-center justify-center shadow-xs">
                                     {szCartQty}
                                   </span>
                                 )}
@@ -1862,35 +1862,35 @@ export default function CustomLandingPageRoute({
 
                     {/* Quantity Selector */}
                     <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs font-bold text-foreground">পরিমাণ (Quantity):</span>
-                      <div className="flex items-center border border-border rounded-lg overflow-hidden bg-background">
+                      <span className="text-sm font-black text-foreground">পরিমাণ (Quantity):</span>
+                      <div className="flex items-center border border-border rounded-xl overflow-hidden bg-background">
                         <button
                           type="button"
                           onClick={() => setModalQty((q) => Math.max(1, q - 1))}
-                          className="size-8 flex items-center justify-center hover:bg-muted cursor-pointer transition-colors"
+                          className="size-9 flex items-center justify-center hover:bg-muted cursor-pointer transition-colors"
                         >
-                          <Minus className="size-3" />
+                          <Minus className="size-3.5" />
                         </button>
-                        <div className="w-8 text-center font-bold text-xs text-foreground">
+                        <div className="w-10 text-center font-black text-sm text-foreground">
                           {modalQty}
                         </div>
                         <button
                           type="button"
                           onClick={() => setModalQty((q) => q + 1)}
-                          className="size-8 flex items-center justify-center hover:bg-muted cursor-pointer transition-colors"
+                          className="size-9 flex items-center justify-center hover:bg-muted cursor-pointer transition-colors"
                         >
-                          <Plus className="size-3" />
+                          <Plus className="size-3.5" />
                         </button>
                       </div>
                     </div>
 
                     {/* Description Text */}
                     {(selectedProductForDetails.description || selectedProductForDetails.shortDescription) && (
-                      <div className="space-y-1 pt-2 border-t border-border/60">
-                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      <div className="space-y-1.5 pt-2 border-t border-border/60">
+                        <span className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider">
                           বিবরণ:
                         </span>
-                        <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line max-h-28 overflow-y-auto bg-muted/20 p-2.5 rounded-lg border border-border/40">
+                        <p className="text-sm font-medium text-foreground/90 leading-relaxed whitespace-pre-line max-h-36 overflow-y-auto bg-muted/40 p-3 rounded-xl border border-border/60">
                           {selectedProductForDetails.description || selectedProductForDetails.shortDescription}
                         </p>
                       </div>
