@@ -187,8 +187,39 @@ export default function CustomLandingPageRoute({
             images: pageData.product.images,
             variants: pageData.product.variants,
           };
-          const firstSize = mainProd.variants?.[0]?.name || "Standard";
-          setActiveCardSizes({ [mainProd.id]: firstSize });
+          const sortSizeOrder = ["XS", "S", "M", "L", "XL", "XXL", "2XL", "3XL", "4XL", "5XL", "36", "38", "40", "42", "44", "46", "28", "30", "32", "34"];
+          let smallestSize = mainProd.variants?.[0]?.name || "Standard";
+          if (mainProd.variants && mainProd.variants.length > 0) {
+            // Find smallest size by matching standard size order, or numeric value, or default to first
+            const sortedVariants = [...mainProd.variants].sort((a, b) => {
+              const aName = a.name.trim().toUpperCase();
+              const bName = b.name.trim().toUpperCase();
+              const aIndex = sortSizeOrder.indexOf(aName);
+              const bIndex = sortSizeOrder.indexOf(bName);
+              if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+              if (aIndex !== -1) return -1;
+              if (bIndex !== -1) return 1;
+              const aNum = parseInt(aName, 10);
+              const bNum = parseInt(bName, 10);
+              if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+              return 0;
+            });
+            smallestSize = sortedVariants[0].name;
+          }
+
+          setActiveCardSizes({ [mainProd.id]: smallestSize });
+
+          // Auto-select this product with the smallest size (Qty: 1)
+          const autoKey = `${mainProd.id}__${smallestSize}`;
+          setProductSelections({
+            [autoKey]: {
+              key: autoKey,
+              productId: mainProd.id,
+              selectedSize: smallestSize,
+              quantity: 1,
+              product: mainProd,
+            },
+          });
         }
 
         // Populate allStoreProducts from cached products (no API call)

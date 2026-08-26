@@ -27,6 +27,20 @@ export function FloatingActions() {
   const cleanNumber = rawNumber.replace(/[^0-9]/g, "");
   const waUrl = `https://wa.me/${cleanNumber}`;
 
+  const isClp = pathname.startsWith("/clp");
+
+  const handleCartClick = (e: React.MouseEvent) => {
+    if (isClp) {
+      e.preventDefault();
+      const el = document.getElementById("section-order-form");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth" });
+      } else {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      }
+    }
+  };
+
   return (
     <>
       <a
@@ -39,7 +53,8 @@ export function FloatingActions() {
         WhatsApp
       </a>
       <Link
-        href="/cart"
+        href={isClp ? "#section-order-form" : "/cart"}
+        onClick={handleCartClick}
         className="fixed bottom-5 right-4 z-40 flex items-center gap-2 rounded-[var(--radius)] gradient-sale px-4 py-3 text-sm font-bold text-primary-foreground shadow-float transition-transform hover:scale-105"
       >
         <ShoppingCart className="size-5" />
