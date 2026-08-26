@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2, X, Image as ImageIcon } from "lucide-react";
 import { LandingSection, CustomField, CustomFieldValue } from "@/lib/api/services/custom-landing-page.service";
+import { ImageUploader } from "@/components/image-uploader";
 
 interface CustomSectionEditorProps {
   section: LandingSection;
@@ -151,26 +152,13 @@ export function CustomSectionEditor({ section, onChange }: CustomSectionEditorPr
 
                 {field.type === "image" && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-muted-foreground">ছবির URL</label>
-                    <input
-                      type="url"
+                    <ImageUploader
                       value={typeof field.value === "string" ? field.value : ""}
-                      onChange={(e) => updateFieldValue(field.key, e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                      className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                      onChange={(url) => updateFieldValue(field.key, url)}
+                      label={field.label}
+                      sublabel="ছবি আপলোড করুন বা লিংক দিন"
+                      folder="landing-pages"
                     />
-                    {typeof field.value === "string" && field.value && (
-                      <div className="mt-1 rounded-md overflow-hidden border border-border bg-background h-24 flex items-center justify-center">
-                        <img
-                          src={field.value}
-                          alt="Preview"
-                          className="h-full w-full object-contain"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLElement).style.display = "none";
-                          }}
-                        />
-                      </div>
-                    )}
                   </div>
                 )}
 

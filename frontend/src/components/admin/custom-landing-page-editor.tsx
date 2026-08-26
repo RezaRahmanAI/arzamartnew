@@ -707,6 +707,14 @@ export function CustomLandingPageEditor({
                     </div>
                   )}
 
+                  {/* Custom Dynamic Section Editor */}
+                  {sec.type === "custom" && (
+                    <CustomSectionEditor
+                      section={sec}
+                      onChange={handleCustomSectionChange}
+                    />
+                  )}
+
                   {/* Other default sections */}
                   {(sec.type === "reviews" ||
                     sec.type === "order-form") && (
