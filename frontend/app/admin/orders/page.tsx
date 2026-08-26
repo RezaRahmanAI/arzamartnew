@@ -228,7 +228,12 @@ export default function AdminOrders() {
 
   const copyOrderId = (id: string) => {
     navigator.clipboard.writeText(id);
-    toast.success(`Copied ${id}`);
+    toast.success(`Copied Order #${id}`);
+  };
+
+  const copyCustomerPhone = (phoneNumber: string) => {
+    navigator.clipboard.writeText(phoneNumber);
+    toast.success(`Copied phone: ${phoneNumber}`);
   };
 
   const updateStatus = async (orderId: string, newStatus: OrderStatus) => {
@@ -669,7 +674,16 @@ export default function AdminOrders() {
                       <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 shrink-0" />
                     </Link>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{o.phone}</TableCell>
+                  <TableCell>
+                    <div
+                      className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors select-none group/phone"
+                      onClick={() => copyCustomerPhone(o.phone)}
+                      title="Click to copy phone number"
+                    >
+                      <span className="text-xs text-muted-foreground group-hover/phone:text-primary font-medium">{o.phone}</span>
+                      <Copy className="h-3 w-3 opacity-0 group-hover/phone:opacity-100 transition-opacity text-primary" />
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
