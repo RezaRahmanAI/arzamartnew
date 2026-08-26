@@ -20,7 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Database Connection (SQL Server)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? "Data Source=104.234.134.230,52196;Initial Catalog=arzamarttest;Persist Security Info=True;User ID=arzamarttest;Password=F&N67Xmyytokp5u!;Pooling=True;MultipleActiveResultSets=True;Encrypt=False;TrustServerCertificate=True;Command Timeout=30;Connect Timeout=30";
+    ?? "Data Source=104.234.134.230,52196;Initial Catalog=arzamart;Persist Security Info=True;User ID=arzamart;Password=EscOOh5lch21ud;Pooling=True;MultipleActiveResultSets=True;Encrypt=False;TrustServerCertificate=True;Command Timeout=30;Connect Timeout=30";
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
