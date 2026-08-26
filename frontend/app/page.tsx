@@ -27,8 +27,11 @@ export default async function HomePage() {
 
   const ICON_MAP = { Truck, RotateCcw, ShieldCheck, BadgePercent };
 
-  const dealProducts = products.filter((p) => (p.compareAt && p.compareAt > p.price) || p.isBundle);
-  const activeProducts = products.filter((p) => p.isActive !== false);
+  // Bundle / Combo products appear first in Deals of the Week, followed by discounted products
+  const dealProducts = products
+    .filter((p) => (p.isActive !== false) && (p.isBundle || (p.compareAt && p.compareAt > p.price)))
+    .sort((a, b) => (b.isBundle ? 1 : 0) - (a.isBundle ? 1 : 0));
+  const activeProducts = products.filter((p) => p.isActive !== false && !p.isBundle);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
