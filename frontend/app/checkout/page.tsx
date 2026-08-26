@@ -274,98 +274,6 @@ export default function CheckoutPage() {
               />
             </label>
 
-            {/* Delivery Method Selection Cards (Matching User Exact Design) */}
-            <div className="sm:col-span-2 space-y-2 pt-1">
-              <label className="text-base font-bold text-foreground block">
-                ডেলিভারি
-              </label>
-              <div className="space-y-2.5">
-                {/* 1. Outside Dhaka - 150 Tk */}
-                <label
-                  onClick={() => {
-                    setUserOverriddenZone(true);
-                    setSelectedDeliveryZone("outside_dhaka");
-                  }}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all cursor-pointer select-none ${
-                    selectedDeliveryZone === "outside_dhaka"
-                      ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
-                      : "border-border bg-background hover:border-border/80"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="delivery_zone"
-                    value="outside_dhaka"
-                    checked={selectedDeliveryZone === "outside_dhaka"}
-                    onChange={() => {
-                      setUserOverriddenZone(true);
-                      setSelectedDeliveryZone("outside_dhaka");
-                    }}
-                    className="size-4.5 accent-primary cursor-pointer"
-                  />
-                  <span className="text-sm sm:text-base font-extrabold text-foreground flex-1">
-                    ঢাকার বাইরে — ১৫০ ৳
-                  </span>
-                </label>
-
-                {/* 2. Dhaka Sub-Area - 120 Tk */}
-                <label
-                  onClick={() => {
-                    setUserOverriddenZone(true);
-                    setSelectedDeliveryZone("dhaka_sub_area");
-                  }}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all cursor-pointer select-none ${
-                    selectedDeliveryZone === "dhaka_sub_area"
-                      ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
-                      : "border-border bg-background hover:border-border/80"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="delivery_zone"
-                    value="dhaka_sub_area"
-                    checked={selectedDeliveryZone === "dhaka_sub_area"}
-                    onChange={() => {
-                      setUserOverriddenZone(true);
-                      setSelectedDeliveryZone("dhaka_sub_area");
-                    }}
-                    className="size-4.5 accent-primary cursor-pointer"
-                  />
-                  <span className="text-sm sm:text-base font-extrabold text-foreground flex-1">
-                    ঢাকার সাব-এরিয়া — ১২০ ৳
-                  </span>
-                </label>
-
-                {/* 3. Inside Dhaka - 70 Tk */}
-                <label
-                  onClick={() => {
-                    setUserOverriddenZone(true);
-                    setSelectedDeliveryZone("inside_dhaka");
-                  }}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all cursor-pointer select-none ${
-                    selectedDeliveryZone === "inside_dhaka"
-                      ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
-                      : "border-border bg-background hover:border-border/80"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="delivery_zone"
-                    value="inside_dhaka"
-                    checked={selectedDeliveryZone === "inside_dhaka"}
-                    onChange={() => {
-                      setUserOverriddenZone(true);
-                      setSelectedDeliveryZone("inside_dhaka");
-                    }}
-                    className="size-4.5 accent-primary cursor-pointer"
-                  />
-                  <span className="text-sm sm:text-base font-extrabold text-foreground flex-1">
-                    ঢাকার ভিতরে — ৭০ ৳
-                  </span>
-                </label>
-              </div>
-            </div>
-
             <Field label="Note (optional)" name="note" placeholder="Anything we should know?" value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
 
@@ -383,27 +291,123 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <aside className="h-fit rounded-xl border border-border bg-card p-5 shadow-card">
-          <h2 className="font-display text-lg font-bold text-foreground">Your order</h2>
-          <ul className="mt-4 space-y-3">
-            {detailedLines.map((line) => (
-              <li
-                key={`${line.slug}-${line.size}`}
-                className="flex justify-between gap-3 text-sm"
-              >
-                <span className="text-muted-foreground">
-                  {line.product.name}
-                  <span className="block text-xs">
-                    {line.size} · ×{line.qty}
+        {/* RIGHT SIDE: Your Order & Delivery Method Selection */}
+        <aside className="h-fit rounded-xl border border-border bg-card p-5 shadow-card space-y-5">
+          <div>
+            <h2 className="font-display text-lg font-bold text-foreground">Your order</h2>
+            <ul className="mt-4 space-y-3">
+              {detailedLines.map((line) => (
+                <li
+                  key={`${line.slug}-${line.size}`}
+                  className="flex justify-between gap-3 text-sm"
+                >
+                  <span className="text-muted-foreground">
+                    {line.product.name}
+                    <span className="block text-xs">
+                      {line.size} · ×{line.qty}
+                    </span>
                   </span>
+                  <span className="font-semibold">
+                    {formatBDT(getSizePrice(line.product, line.size) * line.qty)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Delivery Method Selection Cards (Moved to Right Side as Requested) */}
+          <div className="space-y-2 pt-3 border-t border-border">
+            <label className="text-base font-bold text-foreground block">
+              ডেলিভারি
+            </label>
+            <div className="space-y-2">
+              {/* 1. Outside Dhaka - 150 Tk */}
+              <label
+                onClick={() => {
+                  setUserOverriddenZone(true);
+                  setSelectedDeliveryZone("outside_dhaka");
+                }}
+                className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all cursor-pointer select-none ${
+                  selectedDeliveryZone === "outside_dhaka"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
+                    : "border-border bg-background hover:border-border/80"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="delivery_zone"
+                  value="outside_dhaka"
+                  checked={selectedDeliveryZone === "outside_dhaka"}
+                  onChange={() => {
+                    setUserOverriddenZone(true);
+                    setSelectedDeliveryZone("outside_dhaka");
+                  }}
+                  className="size-4 accent-primary cursor-pointer"
+                />
+                <span className="text-xs sm:text-sm font-extrabold text-foreground flex-1">
+                  ঢাকার বাইরে — ১৫০ ৳
                 </span>
-                <span className="font-semibold">
-                  {formatBDT(getSizePrice(line.product, line.size) * line.qty)}
+              </label>
+
+              {/* 2. Dhaka Sub-Area - 120 Tk */}
+              <label
+                onClick={() => {
+                  setUserOverriddenZone(true);
+                  setSelectedDeliveryZone("dhaka_sub_area");
+                }}
+                className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all cursor-pointer select-none ${
+                  selectedDeliveryZone === "dhaka_sub_area"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
+                    : "border-border bg-background hover:border-border/80"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="delivery_zone"
+                  value="dhaka_sub_area"
+                  checked={selectedDeliveryZone === "dhaka_sub_area"}
+                  onChange={() => {
+                    setUserOverriddenZone(true);
+                    setSelectedDeliveryZone("dhaka_sub_area");
+                  }}
+                  className="size-4 accent-primary cursor-pointer"
+                />
+                <span className="text-xs sm:text-sm font-extrabold text-foreground flex-1">
+                  ঢাকার সাব-এরিয়া — ১২০ ৳
                 </span>
-              </li>
-            ))}
-          </ul>
-          <dl className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
+              </label>
+
+              {/* 3. Inside Dhaka - 70 Tk */}
+              <label
+                onClick={() => {
+                  setUserOverriddenZone(true);
+                  setSelectedDeliveryZone("inside_dhaka");
+                }}
+                className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all cursor-pointer select-none ${
+                  selectedDeliveryZone === "inside_dhaka"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
+                    : "border-border bg-background hover:border-border/80"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="delivery_zone"
+                  value="inside_dhaka"
+                  checked={selectedDeliveryZone === "inside_dhaka"}
+                  onChange={() => {
+                    setUserOverriddenZone(true);
+                    setSelectedDeliveryZone("inside_dhaka");
+                  }}
+                  className="size-4 accent-primary cursor-pointer"
+                />
+                <span className="text-xs sm:text-sm font-extrabold text-foreground flex-1">
+                  ঢাকার ভিতরে — ৭০ ৳
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <dl className="space-y-2 border-t border-border pt-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Subtotal</dt>
               <dd className="font-semibold">{formatBDT(subtotal)}</dd>
@@ -420,7 +424,7 @@ export default function CheckoutPage() {
           <button
             type="submit"
             disabled={placing}
-            className="mt-5 w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-transform hover:scale-[1.02] disabled:opacity-60 cursor-pointer"
+            className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-transform hover:scale-[1.02] disabled:opacity-60 cursor-pointer"
           >
             {placing ? "Placing order..." : "Confirm order"}
           </button>
