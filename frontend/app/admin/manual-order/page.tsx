@@ -512,14 +512,7 @@ export default function AdminManualOrder() {
       price: l.price,
     }));
 
-    const orderNotes = [
-      sourcePage ? `Source: ${sourcePage}` : "",
-      socialSource ? `Social: ${socialSource}` : "",
-      area ? `Area: ${area}` : "",
-      note ? `${noteType} Note: ${note}` : "",
-    ]
-      .filter(Boolean)
-      .join(" | ");
+    const actualNote = note.trim() ? `${noteType} Note: ${note.trim()}` : "";
 
     const order: Order = {
       id: editOrderId || generateNextOrderId(),
@@ -528,7 +521,7 @@ export default function AdminManualOrder() {
       address: address.trim() ? address.trim() : `${area}, ${city}`,
       city,
       area,
-      note: orderNotes,
+      note: actualNote,
       payment: paid >= total ? "Paid" : paid > 0 ? "Partial Paid" : "Cash on delivery",
       items: orderItems,
       total,
@@ -538,6 +531,8 @@ export default function AdminManualOrder() {
       status: editOrderId ? existingStatus : "pending",
       date: new Date().toISOString().slice(0, 10),
       source: "manual",
+      sourcePageName: sourcePage || undefined,
+      socialMediaSourceName: socialSource || undefined,
       hasNotes: !!note.trim(),
     };
 

@@ -69,37 +69,78 @@ export function OrderNotesModal({
       // If no saved notes list exists yet, check if order.note was populated during order creation/placement
       if (savedForOrder.length === 0 && order.note && order.note.trim()) {
         const parts = order.note.split(" | ");
-        const initialNotes: NoteRecord[] = parts.map((part, idx) => {
-          const isInternal = part.toLowerCase().startsWith("internal note:");
-          return {
+        const initialNotes: NoteRecord[] = [];
+
+        parts.forEach((part, idx) => {
+          const trimmed = part.trim();
+          // Filter out synthetic system fields (Source:, Social:, Area:, [PRE-ORDER])
+          if (
+            !trimmed ||
+            trimmed.startsWith("Source:") ||
+            trimmed.startsWith("Social:") ||
+            trimmed.startsWith("Area:") ||
+            trimmed.startsWith("Expected Dispatch:") ||
+            trimmed === "[PRE-ORDER]"
+          ) {
+            return;
+          }
+
+          const isInternal = trimmed.toLowerCase().startsWith("internal note:");
+          initialNotes.push({
             id: `init-${idx}`,
-            text: part.replace(/^(internal note|customer note|customer \/ delivery note):\s*/i, "").trim(),
+            text: trimmed.replace(/^(internal note|customer note|customer \/ delivery note):\s*/i, "").trim(),
             noteType: isInternal ? "Internal Note" : "Customer / Delivery Note",
             author: isInternal ? "Staff / Admin" : "Customer",
             timestamp: order.date || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          };
+          });
         });
 
         savedForOrder = initialNotes;
-        store[order.id] = initialNotes;
-        saveNotesStore(store);
+        if (initialNotes.length > 0) {
+          store[order.id] = initialNotes;
+          saveNotesStore(store);
+        }
       }
 
-      const normalized: NoteRecord[] = savedForOrder.map((item: string | NoteRecord, idx: number) => {
+      const normalized: NoteRecord[] = [];
+
+      savedForOrder.forEach((item: string | NoteRecord, idx: number) => {
         if (typeof item === "string") {
-          const isInternal = item.toLowerCase().startsWith("internal note:");
-          return {
+          const trimmed = item.trim();
+          if (
+            !trimmed ||
+            trimmed.startsWith("Source:") ||
+            trimmed.startsWith("Social:") ||
+            trimmed.startsWith("Area:") ||
+            trimmed.startsWith("Expected Dispatch:") ||
+            trimmed === "[PRE-ORDER]"
+          ) {
+            return;
+          }
+          const isInternal = trimmed.toLowerCase().startsWith("internal note:");
+          normalized.push({
             id: `note-${idx}`,
-            text: item.replace(/^(internal note|customer note|customer \/ delivery note):\s*/i, "").trim(),
+            text: trimmed.replace(/^(internal note|customer note|customer \/ delivery note):\s*/i, "").trim(),
             noteType: isInternal ? "Internal Note" : "Customer / Delivery Note",
             author: isInternal ? "Staff / Admin" : "Customer",
             timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
-          };
+          });
+          return;
         }
-        return {
+
+        if (
+          item.text?.startsWith("Source:") ||
+          item.text?.startsWith("Social:") ||
+          item.text?.startsWith("Area:") ||
+          item.text === "[PRE-ORDER]"
+        ) {
+          return;
+        }
+
+        normalized.push({
           ...item,
           noteType: item.noteType || (item.text?.toLowerCase().startsWith("internal note:") ? "Internal Note" : "Customer / Delivery Note"),
-        };
+        });
       });
 
       setNotesList(normalized);

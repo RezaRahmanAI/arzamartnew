@@ -472,16 +472,7 @@ export default function AdminPreOrderPage() {
       price: l.price,
     }));
 
-    const preOrderNotes = [
-      "[PRE-ORDER]",
-      expectedDispatchDate ? `Expected Dispatch: ${expectedDispatchDate}` : "",
-      sourcePage ? `Source: ${sourcePage}` : "",
-      socialSource ? `Social: ${socialSource}` : "",
-      area ? `Area: ${area}` : "",
-      note ? `${noteType} Note: ${note}` : "",
-    ]
-      .filter(Boolean)
-      .join(" | ");
+    const actualNote = note.trim() ? `${noteType} Note: ${note.trim()}` : "";
 
     const order: Order = {
       id: editOrderId || generateNextOrderId(),
@@ -490,7 +481,7 @@ export default function AdminPreOrderPage() {
       address: address.trim() ? address.trim() : `${area}, ${city}`,
       city,
       area,
-      note: preOrderNotes,
+      note: actualNote,
       payment: paid >= total ? "Paid" : paid > 0 ? "Advance Paid" : "Pending Advance",
       items: orderItems,
       total,
@@ -500,6 +491,8 @@ export default function AdminPreOrderPage() {
       status: editOrderId ? existingStatus : "pending",
       date: new Date().toISOString().slice(0, 10),
       source: "pre-order",
+      sourcePageName: sourcePage || undefined,
+      socialMediaSourceName: socialSource || undefined,
       hasNotes: !!note.trim(),
     };
 
