@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartBar as BarChart3, Boxes, ClipboardX, Hop as Home, Image, Link as LinkIcon, MessageSquare, CirclePlus as PlusCircle, ShoppingBag, Users, FolderOpen, Layers, SlidersHorizontal, PackagePlus, UserCog, Menu, Globe } from "lucide-react";
+import { ChartBar as BarChart3, Boxes, ClipboardX, Hop as Home, Image, Link as LinkIcon, MessageSquare, CirclePlus as PlusCircle, ShoppingBag, Users, FolderOpen, Layers, SlidersHorizontal, PackagePlus, UserCog, Menu, Globe, Truck, PackageCheck } from "lucide-react";
 import { useSettings } from "@/context/settings-context";
 
 import {
@@ -21,6 +21,8 @@ import {
 const items = [
   { title: "Overview", url: "/admin", icon: BarChart3 },
   { title: "Orders", url: "/admin/orders", icon: ShoppingBag },
+  { title: "Bulk Shipment", url: "/admin/bulk-shipment", icon: PackageCheck },
+  { title: "Couriers", url: "/admin/couriers", icon: Truck },
   { title: "Pre-Orders", url: "/admin/orders?type=preorder", icon: PackagePlus },
   { title: "Incomplete Orders", url: "/admin/incomplete", icon: ClipboardX },
   { title: "Manual Order", url: "/admin/manual-order", icon: PlusCircle },

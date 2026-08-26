@@ -446,6 +446,90 @@ async function main() {
     console.log("Created admin user: admin@arzamart.com (password: admin123)");
   }
 
+  // 7. Seed Bangladesh Courier Services
+  const courierDefs = [
+    {
+      name: "Steadfast Courier",
+      code: "steadfast",
+      contactPerson: "Steadfast Support",
+      phone: "09678-045045",
+      email: "support@steadfast.com.bd",
+      website: "https://steadfast.com.bd",
+      apiStatus: "simulated",
+      notes: "Nationwide express COD delivery partner with daily pickup.",
+      isActive: true,
+      displayOrder: 1,
+    },
+    {
+      name: "Pathao Courier",
+      code: "pathao",
+      contactPerson: "Pathao Merchant Desk",
+      phone: "09610-003030",
+      email: "merchant@pathao.com",
+      website: "https://merchant.pathao.com",
+      apiStatus: "simulated",
+      notes: "Fast delivery inside Dhaka and major divisional cities.",
+      isActive: true,
+      displayOrder: 2,
+    },
+    {
+      name: "RedX Delivery",
+      code: "redx",
+      contactPerson: "RedX Business Team",
+      phone: "09612-223344",
+      email: "support@redx.com.bd",
+      website: "https://redx.com.bd",
+      apiStatus: "manual",
+      notes: "Comprehensive doorstep delivery with automated tracking.",
+      isActive: true,
+      displayOrder: 3,
+    },
+    {
+      name: "Paperfly",
+      code: "paperfly",
+      contactPerson: "Paperfly Logistics",
+      phone: "09606-000555",
+      email: "info@paperfly.com.bd",
+      website: "https://paperfly.com.bd",
+      apiStatus: "manual",
+      notes: "Doorstep delivery across all union parishads in Bangladesh.",
+      isActive: true,
+      displayOrder: 4,
+    },
+    {
+      name: "Sundarban Courier Service",
+      code: "sundarban",
+      contactPerson: "Sundarban Head Office",
+      phone: "02-9568725",
+      email: "info@sundarbancourier.com",
+      website: "https://sundarbancourier.com",
+      apiStatus: "manual",
+      notes: "Branch-to-branch and condition parcel delivery.",
+      isActive: false,
+      displayOrder: 5,
+    },
+    {
+      name: "SA Paribahan",
+      code: "sa-paribahan",
+      contactPerson: "SA Paribahan Desk",
+      phone: "02-9333333",
+      email: "info@saparibahan.com",
+      website: "https://saparibahan.com",
+      apiStatus: "manual",
+      notes: "Condition parcel and cash delivery across countrywide stations.",
+      isActive: false,
+      displayOrder: 6,
+    },
+  ];
+
+  for (const c of courierDefs) {
+    const existing = await prisma.courier.findUnique({ where: { code: c.code } });
+    if (!existing) {
+      await prisma.courier.create({ data: c });
+      console.log(`Created courier: ${c.name} (${c.isActive ? "Active" : "Inactive"})`);
+    }
+  }
+
   console.log("Database seeded successfully!");
 }
 

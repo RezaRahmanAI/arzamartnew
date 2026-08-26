@@ -173,6 +173,7 @@ model Order {
 
   customer Customer    @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items    OrderItem[]
+  shipment Shipment?
 
   @@index([orderStatus, createdAtUtc], map: "IX_Orders_OrderStatus_CreatedAtUtc")
   @@index([createdAtUtc], map: "IX_Orders_CreatedAtUtc")
@@ -398,4 +399,88 @@ model AuditLog {
   timestampUtc  DateTime @default(now()) @map("TimestampUtc")
 
   @@map("AuditLogs")
+}
+
+model Courier {
+  id            String          @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  name          String          @map("Name") @db.NVarChar(100)
+  code          String          @unique @map("Code") @db.NVarChar(50)
+  logoUrl       String?         @map("LogoUrl") @db.NVarChar(Max)
+  contactPerson String?         @map("ContactPerson") @db.NVarChar(100)
+  phone         String?         @map("Phone") @db.NVarChar(30)
+  email         String?         @map("Email") @db.NVarChar(150)
+  website       String?         @map("Website") @db.NVarChar(255)
+  apiStatus     String          @default("manual") @map("ApiStatus") @db.NVarChar(50)
+  notes         String?         @map("Notes") @db.NVarChar(1000)
+  isActive      Boolean         @default(true) @map("IsActive")
+  displayOrder  Int             @default(0) @map("DisplayOrder")
+  createdAtUtc  DateTime        @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc  DateTime?       @updatedAt @map("UpdatedAtUtc")
+
+  shipmentBatches ShipmentBatch[]
+  shipments       Shipment[]
+
+  @@map("Couriers")
+}
+
+model ShipmentBatch {
+  id                 String     @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  batchNumber        String     @unique @map("BatchNumber") @db.NVarChar(60)
+  courierId          String     @map("CourierId") @db.UniqueIdentifier
+  status             String     @default("processing") @map("Status") @db.NVarChar(50)
+  totalOrders        Int        @default(0) @map("TotalOrders")
+  totalShipmentValue Decimal    @default(0) @map("TotalShipmentValue") @db.Decimal(18, 2)
+  notes              String?    @map("Notes") @db.NVarChar(1000)
+  createdBy          String     @default("Admin") @map("CreatedBy") @db.NVarChar(100)
+  createdAtUtc       DateTime   @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc       DateTime?  @updatedAt @map("UpdatedAtUtc")
+
+  courier   Courier    @relation(fields: [courierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  shipments Shipment[]
+
+  @@index([courierId, createdAtUtc], map: "IX_ShipmentBatches_Courier_CreatedAt")
+  @@map("ShipmentBatches")
+}
+
+model Shipment {
+  id              String                  @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  orderId         String                  @unique @map("OrderId") @db.UniqueIdentifier
+  courierId       String                  @map("CourierId") @db.UniqueIdentifier
+  shipmentBatchId String                  @map("ShipmentBatchId") @db.UniqueIdentifier
+  trackingNumber  String?                 @map("TrackingNumber") @db.NVarChar(100)
+  status          String                  @default("assigned") @map("Status") @db.NVarChar(50)
+  shippedAtUtc    DateTime?               @map("ShippedAtUtc")
+  deliveredAtUtc  DateTime?               @map("DeliveredAtUtc")
+  cancelledAtUtc  DateTime?               @map("CancelledAtUtc")
+  returnedAtUtc   DateTime?               @map("ReturnedAtUtc")
+  returnReason    String?                 @map("ReturnReason") @db.NVarChar(500)
+  cancelReason    String?                 @map("CancelReason") @db.NVarChar(500)
+  notes           String?                 @map("Notes") @db.NVarChar(1000)
+  createdAtUtc    DateTime                @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc    DateTime?               @updatedAt @map("UpdatedAtUtc")
+
+  order           Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  courier         Courier                 @relation(fields: [courierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  batch           ShipmentBatch           @relation(fields: [shipmentBatchId], references: [id], onDelete: Cascade)
+  statusHistory   ShipmentStatusHistory[]
+
+  @@index([courierId, status], map: "IX_Shipments_Courier_Status")
+  @@index([shipmentBatchId], map: "IX_Shipments_BatchId")
+  @@map("Shipments")
+}
+
+model ShipmentStatusHistory {
+  id             String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  shipmentId     String    @map("ShipmentId") @db.UniqueIdentifier
+  previousStatus String?   @map("PreviousStatus") @db.NVarChar(50)
+  newStatus      String    @map("NewStatus") @db.NVarChar(50)
+  note           String?   @map("Note") @db.NVarChar(500)
+  changedBy      String    @default("Admin") @map("ChangedBy") @db.NVarChar(100)
+  source         String    @default("manual") @map("Source") @db.NVarChar(50)
+  changedAtUtc   DateTime  @default(now()) @map("ChangedAtUtc")
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId, changedAtUtc], map: "IX_ShipmentStatusHistory_Shipment_Date")
+  @@map("ShipmentStatusHistories")
 }
