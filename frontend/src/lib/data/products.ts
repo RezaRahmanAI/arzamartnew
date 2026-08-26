@@ -33,16 +33,23 @@ export function mapPrismaProduct(p: {
   const mainImage = sortedImages.find((img) => img.isMain)?.imageUrl || sortedImages[0]?.imageUrl || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800";
   const allImages = sortedImages.map((img) => img.imageUrl);
 
+  const cleanSizeLabel = (name: string) => {
+    return name
+      .replace(/^Size:\s*/i, "")
+      .replace(/^(?:Pack\s+of\s+\d+|Combo\s+Pack|Set\s+Pack)\s*\(([^)]+)\)$/i, "$1")
+      .trim();
+  };
+
   const variants = p.variants || [];
   const sizes = variants.length > 0
-    ? variants.map((v) => v.name.replace(/^Size:\s*/i, ""))
+    ? variants.map((v) => cleanSizeLabel(v.name))
     : ["M", "L", "XL", "XXL"];
 
   const sizePrices: Record<string, number> = {};
   const sizeStock: Record<string, number> = {};
 
   variants.forEach((v) => {
-    const cleanSize = v.name.replace(/^Size:\s*/i, "");
+    const cleanSize = cleanSizeLabel(v.name);
     sizePrices[cleanSize] = v.priceOverride !== null && v.priceOverride !== undefined ? Number(v.priceOverride) : activePrice;
     sizeStock[cleanSize] = v.stockQuantity;
   });
