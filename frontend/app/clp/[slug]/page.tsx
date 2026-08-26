@@ -1019,7 +1019,7 @@ export default function CustomLandingPageRoute({
                   className="py-14 md:py-20 px-4 md:px-8 bg-background border-b border-border transition-colors"
                   style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
                 >
-                  <div className="max-w-[1200px] mx-auto">
+                  <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-10 md:mb-12">
                       <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-2">
                         {(sec.settings?.sectionTitle as string) || "পণ্য নির্বাচন করুন"}
@@ -1029,7 +1029,7 @@ export default function CustomLandingPageRoute({
                       </p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                       {allSelectableProducts.map((p) => {
                         const activeSize = getActiveCardSize(p);
                         const activeSizeQty = getQtyForSize(p.id, activeSize);
