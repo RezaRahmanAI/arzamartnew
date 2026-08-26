@@ -132,7 +132,7 @@ async function main() {
       description: "Pair our bestselling heavyweight tee with the active stretch trousers. A versatile combo.",
       badge: "Bundle Save",
       purchaseRate: 800,
-      sizes: ["Standard", "Combo Pack (M+32)", "Combo Pack (L+34)"],
+      sizes: ["Combo Pack (M+32)", "Combo Pack (L+34)", "Combo Pack (XL+36)"],
       isBundle: true,
       bundleProducts: ["midnight-heavy-tee", "stretch-chinos-black"],
     },
@@ -146,7 +146,7 @@ async function main() {
       description: "Two premium light linen shirts to beat the summer heat in classic shades.",
       badge: "Bundle Save",
       purchaseRate: 1100,
-      sizes: ["Standard", "Set Pack (M)", "Set Pack (L)"],
+      sizes: ["Set Pack (M)", "Set Pack (L)", "Set Pack (XL)"],
       isBundle: true,
       bundleProducts: ["cloudlight-linen-shirt", "cloudlight-linen-shirt"],
     },
@@ -160,19 +160,19 @@ async function main() {
       description: "Get 3 of our premium combed cotton tees in a single value pack.",
       badge: "Popular Bundle",
       purchaseRate: 900,
-      sizes: ["Standard", "Pack of 3 (M)", "Pack of 3 (L)", "Pack of 3 (XL)"],
+      sizes: ["Pack of 3 (M)", "Pack of 3 (L)", "Pack of 3 (XL)"],
       isBundle: true,
       bundleProducts: ["midnight-heavy-tee", "arza-graphic-tee", "midnight-heavy-tee"],
     },
   ];
 
   for (const p of products) {
-    const existing = await prisma.product.findUnique({ where: { slug: p.slug } });
-    if (!existing) {
-      const categoryId = catMap[p.categorySlug] || 1;
-      const sku = `ARZA-${p.slug.toUpperCase().slice(0, 10)}`;
+    const categoryId = catMap[p.categorySlug] || 1;
+    const sku = `ARZA-${p.slug.toUpperCase().slice(0, 10)}`;
 
-      const prod = await prisma.product.create({
+    let prod = await prisma.product.findUnique({ where: { slug: p.slug } });
+    if (!prod) {
+      prod = await prisma.product.create({
         data: {
           brandId: brand.id,
           categoryId,
@@ -203,22 +203,44 @@ async function main() {
           displayOrder: 0,
         },
       });
+      console.log(`Created product: ${p.name}`);
+    } else {
+      // Update existing product attributes if needed
+      await prisma.product.update({
+        where: { id: prod.id },
+        data: {
+          isBundle: p.isBundle || false,
+          bundleProducts: p.bundleProducts ? JSON.stringify(p.bundleProducts) : null,
+        },
+      });
+    }
 
-      // Variants
-      for (let i = 0; i < p.sizes.length; i++) {
-        const sizeName = p.sizes[i];
+    // Upsert / refresh variants and remove 'Standard' size if present
+    await prisma.productVariant.deleteMany({
+      where: {
+        productId: prod.id,
+        name: { in: ["Standard", "standard", "Default"] },
+      },
+    });
+
+    for (let i = 0; i < p.sizes.length; i++) {
+      const sizeName = p.sizes[i];
+      const variantSku = `${sku}-${sizeName.replace(/[^a-zA-Z0-9]/g, "")}`;
+      const existingVar = await prisma.productVariant.findFirst({
+        where: { productId: prod.id, name: sizeName },
+      });
+
+      if (!existingVar) {
         await prisma.productVariant.create({
           data: {
             productId: prod.id,
             name: sizeName,
-            sku: `${sku}-${sizeName.replace(/[^a-zA-Z0-9]/g, "")}`,
+            sku: variantSku,
             stockQuantity: 50,
             isActive: true,
           },
         });
       }
-
-      console.log(`Created product: ${p.name}`);
     }
   }
 
