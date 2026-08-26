@@ -128,7 +128,7 @@ export function HomePageArrivals({ products }: { products: Product[] }) {
           {products.map((p) => (
             <div
               key={p.slug}
-              className="w-[180px] sm:w-[220px] md:w-[260px] shrink-0"
+              className="w-[calc((100%-16px)/2)] sm:w-[calc((100%-32px)/3)] lg:w-[calc((100%-48px)/4)] shrink-0"
             >
               <ProductCard product={p} />
             </div>
