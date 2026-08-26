@@ -560,15 +560,23 @@ export default function AdminOrders() {
             <DateRangePicker value={dateRange} onUpdate={setDateRange} />
           </div>
 
-          <div className="flex-1" />
-          
-          <div className="flex gap-2 w-full md:w-auto">
-            <Button variant="secondary" className="gap-2 w-full md:w-auto text-xs h-9" asChild>
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            {activeFiltersCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAllFilters}
+                className="gap-1.5 text-xs h-9 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive font-medium"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Clear Filters ({activeFiltersCount})
+              </Button>
+            )}
+            <Button variant="secondary" className="gap-2 w-full sm:w-auto text-xs h-9" asChild>
               <Link href="/admin/manual-order">
                 <ShoppingCart className="h-4 w-4" /> New Order
               </Link>
             </Button>
-            <Button className="gap-2 w-full md:w-auto text-xs h-9" asChild>
+            <Button className="gap-2 w-full sm:w-auto text-xs h-9" asChild>
               <Link href="/admin/pre-order">
                 <PackagePlus className="h-4 w-4" /> Pre-order
               </Link>
@@ -578,98 +586,6 @@ export default function AdminOrders() {
             </Button>
           </div>
         </div>
-
-        {/* Active Filter Chips / Status Indicator */}
-        {activeFiltersCount > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 px-1 py-1 text-xs">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase mr-1">Active:</span>
-
-            {dateRange?.from && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium text-[11px]">
-                📅 Date: {isTodayActive ? "Today" : "Custom Range"}
-                <button
-                  onClick={() => setDateRange(undefined)}
-                  className="p-0.5 hover:bg-primary/20 rounded-full"
-                  title="Remove date filter"
-                >
-                  <X className="size-3" />
-                </button>
-              </span>
-            )}
-
-            {statusFilter !== "all" && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border font-medium text-[11px] capitalize">
-                🏷️ Status: {statusFilter}
-                <button
-                  onClick={() => setStatusFilter("all")}
-                  className="p-0.5 hover:bg-muted rounded-full"
-                  title="Remove status filter"
-                >
-                  <X className="size-3" />
-                </button>
-              </span>
-            )}
-
-            {orderTypeFilter !== "all" && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border font-medium text-[11px] capitalize">
-                📦 Type: {orderTypeFilter}
-                <button
-                  onClick={() => setOrderTypeFilter("all")}
-                  className="p-0.5 hover:bg-muted rounded-full"
-                  title="Remove type filter"
-                >
-                  <X className="size-3" />
-                </button>
-              </span>
-            )}
-
-            {sourceFilter !== "all" && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border font-medium text-[11px] capitalize">
-                🌐 Source: {sourceFilter}
-                <button
-                  onClick={() => setSourceFilter("all")}
-                  className="p-0.5 hover:bg-muted rounded-full"
-                  title="Remove source filter"
-                >
-                  <X className="size-3" />
-                </button>
-              </span>
-            )}
-
-            {orderIdQuery.trim() && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border font-medium text-[11px]">
-                🔍 ID: {orderIdQuery}
-                <button
-                  onClick={() => setOrderIdQuery("")}
-                  className="p-0.5 hover:bg-muted rounded-full"
-                  title="Clear search query"
-                >
-                  <X className="size-3" />
-                </button>
-              </span>
-            )}
-
-            {phoneQuery.trim() && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border font-medium text-[11px]">
-                📱 Phone: {phoneQuery}
-                <button
-                  onClick={() => setPhoneQuery("")}
-                  className="p-0.5 hover:bg-muted rounded-full"
-                  title="Clear phone query"
-                >
-                  <X className="size-3" />
-                </button>
-              </span>
-            )}
-
-            <button
-              onClick={clearAllFilters}
-              className="text-[11px] text-destructive hover:underline font-semibold ml-auto flex items-center gap-1"
-            >
-              <RotateCcw className="size-3" /> Clear All
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Orders Table */}
