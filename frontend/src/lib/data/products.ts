@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import type { Product } from "@/lib/shop-data";
 import { Prisma } from "@prisma/client";
+import { sortSizes } from "@/lib/utils";
 
 export function mapPrismaProduct(p: {
   id: string;
@@ -41,9 +42,10 @@ export function mapPrismaProduct(p: {
   };
 
   const variants = p.variants || [];
-  const sizes = variants.length > 0
+  const rawSizes = variants.length > 0
     ? variants.map((v) => cleanSizeLabel(v.name))
     : ["M", "L", "XL", "XXL"];
+  const sizes = sortSizes(Array.from(new Set(rawSizes)));
 
   const sizePrices: Record<string, number> = {};
   const sizeStock: Record<string, number> = {};
@@ -94,6 +96,7 @@ export async function getProducts(options?: {
   categoryId?: number;
   isFeatured?: boolean;
   activeOnly?: boolean;
+  isActive?: boolean;
 }): Promise<{ products: Product[]; totalCount: number }> {
   try {
     const page = Math.max(1, options?.page || 1);
@@ -102,7 +105,9 @@ export async function getProducts(options?: {
 
     const where: Prisma.ProductWhereInput = {};
 
-    if (options?.activeOnly !== false) {
+    if (options?.isActive !== undefined) {
+      where.isActive = options.isActive;
+    } else if (options?.activeOnly === true) {
       where.isActive = true;
     }
 

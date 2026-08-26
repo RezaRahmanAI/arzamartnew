@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartBar as BarChart3, Boxes, ClipboardX, Hop as Home, Image, Link as LinkIcon, MessageSquare, CirclePlus as PlusCircle, ShoppingBag, Users, FolderOpen, SlidersHorizontal, PackagePlus, UserCog, Menu, Globe } from "lucide-react";
+import { ChartBar as BarChart3, Boxes, ClipboardX, Hop as Home, Image, Link as LinkIcon, MessageSquare, CirclePlus as PlusCircle, ShoppingBag, Users, FolderOpen, Layers, SlidersHorizontal, PackagePlus, UserCog, Menu, Globe } from "lucide-react";
 import { useSettings } from "@/context/settings-context";
 
 import {
@@ -27,6 +27,7 @@ const items = [
   { title: "Create Pre-order", url: "/admin/pre-order", icon: PackagePlus },
   { title: "Products", url: "/admin/products", icon: Boxes },
   { title: "Categories", url: "/admin/categories", icon: FolderOpen },
+  { title: "Sub-Categories", url: "/admin/sub-categories", icon: Layers },
   { title: "Header Navigation", url: "/admin/menu", icon: Menu },
   { title: "Reviews", url: "/admin/reviews", icon: MessageSquare },
   { title: "Customers", url: "/admin/customers", icon: Users },

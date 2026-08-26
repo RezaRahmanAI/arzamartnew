@@ -52,3 +52,60 @@ export function handleImageError(e: React.SyntheticEvent<HTMLImageElement, Event
   e.currentTarget.onerror = null;
   e.currentTarget.src = FALLBACK_IMAGE;
 }
+
+/**
+ * Standard Clothing & Numeric Size Order (Smallest to Largest)
+ */
+const SIZE_ORDER_MAP: Record<string, number> = {
+  "3xs": 1,
+  "xxxs": 1,
+  "2xs": 2,
+  "xxs": 2,
+  "xs": 3,
+  "s": 4,
+  "small": 4,
+  "m": 5,
+  "medium": 5,
+  "l": 6,
+  "large": 6,
+  "xl": 7,
+  "1xl": 7,
+  "2xl": 8,
+  "xxl": 8,
+  "3xl": 9,
+  "xxxl": 9,
+  "4xl": 10,
+  "xxxxl": 10,
+  "5xl": 11,
+  "6xl": 12,
+  "standard": 20,
+  "free": 21,
+  "freesize": 21,
+};
+
+export function sortSizes(sizes: string[]): string[] {
+  if (!sizes || !Array.isArray(sizes)) return [];
+  return [...sizes].sort((a, b) => {
+    const aClean = a.toLowerCase().trim();
+    const bClean = b.toLowerCase().trim();
+
+    // Check size map
+    const aRank = SIZE_ORDER_MAP[aClean];
+    const bRank = SIZE_ORDER_MAP[bClean];
+
+    if (aRank !== undefined && bRank !== undefined) {
+      return aRank - bRank;
+    }
+    if (aRank !== undefined) return -1;
+    if (bRank !== undefined) return 1;
+
+    // Check numeric sizes (e.g. 38, 40, 42, 44 or 28, 30, 32)
+    const aNum = parseFloat(aClean);
+    const bNum = parseFloat(bClean);
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      return aNum - bNum;
+    }
+
+    return aClean.localeCompare(bClean);
+  });
+}

@@ -17,10 +17,15 @@ const catHoodie = typeof catHoodieImg === "string" ? catHoodieImg : catHoodieImg
 const catTrouser = typeof catTrouserImg === "string" ? catTrouserImg : catTrouserImg.src;
 
 export type Category = {
+  id?: number;
   slug: string;
   name: string;
   image: string;
   blurb: string;
+  parentCategoryId?: number | null;
+  parentSlug?: string | null;
+  parentName?: string | null;
+  subCategories?: Category[];
 };
 
 export type Product = {
@@ -28,6 +33,7 @@ export type Product = {
   slug: string;
   name: string;
   category: string;
+  subcategory?: string;
   price: number;
   compareAt?: number;
   mrp?: number;

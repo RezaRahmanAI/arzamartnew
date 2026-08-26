@@ -29,6 +29,8 @@ export async function createCategoryAction(data: {
   slug?: string;
   image?: string;
   blurb?: string;
+  parentCategoryId?: number | null;
+  parentSlug?: string | null;
 }): Promise<{ success: boolean; category?: Category; error?: string }> {
   try {
     if (!data.name?.trim()) {
@@ -50,6 +52,16 @@ export async function createCategoryAction(data: {
       slug = `${slug}-${Date.now().toString().slice(-4)}`;
     }
 
+    let parentCategoryId = data.parentCategoryId;
+    if (!parentCategoryId && data.parentSlug) {
+      const parentCat = await prisma.category.findFirst({
+        where: { slug: data.parentSlug },
+      });
+      if (parentCat) {
+        parentCategoryId = parentCat.id;
+      }
+    }
+
     const maxOrder = await prisma.category.aggregate({
       _max: { displayOrder: true },
     });
@@ -62,7 +74,11 @@ export async function createCategoryAction(data: {
         imageUrl: data.image || null,
         blurb: data.blurb || null,
         displayOrder: nextOrder,
+        parentCategoryId: parentCategoryId || null,
         isActive: true,
+      },
+      include: {
+        parentCategory: true,
       },
     });
 
@@ -72,10 +88,14 @@ export async function createCategoryAction(data: {
     return {
       success: true,
       category: {
+        id: row.id,
         slug: row.slug,
         name: row.name,
         image: row.imageUrl || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
         blurb: row.blurb || "",
+        parentCategoryId: row.parentCategoryId,
+        parentSlug: row.parentCategory?.slug || null,
+        parentName: row.parentCategory?.name || null,
       },
     };
   } catch (error: unknown) {
@@ -86,7 +106,7 @@ export async function createCategoryAction(data: {
 
 export async function updateCategoryAction(
   slug: string,
-  data: Partial<Category>
+  data: Partial<Category> & { parentSlug?: string | null; parentCategoryId?: number | null }
 ): Promise<{ success: boolean; category?: Category; error?: string }> {
   try {
     const existing = await prisma.category.findFirst({
@@ -102,9 +122,27 @@ export async function updateCategoryAction(
     if (data.image !== undefined) updateData.imageUrl = data.image;
     if (data.blurb !== undefined) updateData.blurb = data.blurb;
 
+    if (data.parentCategoryId !== undefined) {
+      updateData.parentCategory = data.parentCategoryId
+        ? { connect: { id: data.parentCategoryId } }
+        : { disconnect: true };
+    } else if (data.parentSlug !== undefined) {
+      if (data.parentSlug) {
+        const parentCat = await prisma.category.findFirst({ where: { slug: data.parentSlug } });
+        if (parentCat) {
+          updateData.parentCategory = { connect: { id: parentCat.id } };
+        }
+      } else {
+        updateData.parentCategory = { disconnect: true };
+      }
+    }
+
     const updated = await prisma.category.update({
       where: { id: existing.id },
       data: updateData,
+      include: {
+        parentCategory: true,
+      },
     });
 
     revalidatePath("/");
@@ -114,10 +152,14 @@ export async function updateCategoryAction(
     return {
       success: true,
       category: {
+        id: updated.id,
         slug: updated.slug,
         name: updated.name,
         image: updated.imageUrl || "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
         blurb: updated.blurb || "",
+        parentCategoryId: updated.parentCategoryId,
+        parentSlug: updated.parentCategory?.slug || null,
+        parentName: updated.parentCategory?.name || null,
       },
     };
   } catch (error: unknown) {
@@ -136,12 +178,13 @@ export async function deleteCategoryAction(slug: string): Promise<{ success: boo
       return { success: false, error: "Category not found" };
     }
 
-    // Check if products exist in category
-    const productCount = await prisma.product.count({
-      where: { categoryId: existing.id },
-    });
+    // Check if products or subcategories exist in category
+    const [productCount, subCatCount] = await Promise.all([
+      prisma.product.count({ where: { categoryId: existing.id } }),
+      prisma.category.count({ where: { parentCategoryId: existing.id } }),
+    ]);
 
-    if (productCount > 0) {
+    if (productCount > 0 || subCatCount > 0) {
       // Soft-deactivate to avoid foreign key errors
       await prisma.category.update({
         where: { id: existing.id },
@@ -162,3 +205,4 @@ export async function deleteCategoryAction(slug: string): Promise<{ success: boo
     return { success: false, error: error instanceof Error ? error.message : "Failed to delete category." };
   }
 }
+

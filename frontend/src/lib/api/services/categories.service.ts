@@ -32,6 +32,8 @@ class CategoriesService {
       slug: category.slug,
       image: category.image,
       blurb: category.blurb,
+      parentCategoryId: category.parentCategoryId,
+      parentSlug: category.parentSlug,
     });
     if (!res.success || !res.category) {
       throw new Error(res.error || "Failed to create category");

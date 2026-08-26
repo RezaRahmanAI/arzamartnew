@@ -359,23 +359,23 @@ export async function deleteProductAction(slug: string): Promise<{ success: bool
       return { success: false, error: "Product not found" };
     }
 
-    // Safe soft-delete / deactivation to preserve foreign key constraints with previous orders
+    // Check if product exists in any completed or existing orders
     const orderItemCount = await prisma.orderItem.count({
       where: { productId: existing.id },
     });
 
     if (orderItemCount > 0) {
-      await prisma.product.update({
-        where: { id: existing.id },
-        data: { isActive: false },
-      });
-    } else {
-      await prisma.$transaction([
-        prisma.productImage.deleteMany({ where: { productId: existing.id } }),
-        prisma.productVariant.deleteMany({ where: { productId: existing.id } }),
-        prisma.product.delete({ where: { id: existing.id } }),
-      ]);
+      return {
+        success: false,
+        error: `এই প্রোডাক্টটির (${existing.name}) সাথে অর্ডারের রেকর্ড সংযুক্ত রয়েছে, তাই এটি ডিলিট করা সম্ভব নয়। আপনি চাইলে প্রোডাক্টটি 'Inactive' করে রাখতে পারেন।`,
+      };
     }
+
+    await prisma.$transaction([
+      prisma.productImage.deleteMany({ where: { productId: existing.id } }),
+      prisma.productVariant.deleteMany({ where: { productId: existing.id } }),
+      prisma.product.delete({ where: { id: existing.id } }),
+    ]);
 
     revalidatePath("/");
     revalidatePath("/admin/products");

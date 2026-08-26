@@ -23,7 +23,7 @@ async function main() {
     console.log("Created brand: ARZA");
   }
 
-  // 2. Seed Categories
+  // 2. Seed Categories & Sub-Categories
   const categoryDefs = [
     { slug: "t-shirts", name: "T-Shirts", image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800", displayOrder: 1 },
     { slug: "shirts", name: "Shirts", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800", displayOrder: 2 },
@@ -46,8 +46,58 @@ async function main() {
         },
       });
       console.log(`Created category: ${c.name}`);
+    } else {
+      cat = await prisma.category.update({
+        where: { id: cat.id },
+        data: {
+          name: c.name,
+          imageUrl: c.image,
+          displayOrder: c.displayOrder,
+          isActive: true,
+        },
+      });
     }
     catMap[c.slug] = cat.id;
+  }
+
+  // 2.1 Seed Sub-Categories
+  const subCategoryDefs = [
+    { slug: "graphic-tees", name: "Graphic Tees", parentSlug: "t-shirts", image: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800", displayOrder: 1 },
+    { slug: "heavyweight-tees", name: "Heavyweight Tees", parentSlug: "t-shirts", image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800", displayOrder: 2 },
+    { slug: "linen-shirts", name: "Linen Shirts", parentSlug: "shirts", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800", displayOrder: 1 },
+    { slug: "formal-shirts", name: "Formal Shirts", parentSlug: "shirts", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800", displayOrder: 2 },
+    { slug: "heritage-panjabi", name: "Heritage Panjabi", parentSlug: "panjabi", image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800", displayOrder: 1 },
+    { slug: "stretch-chinos", name: "Stretch Chinos", parentSlug: "trousers", image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800", displayOrder: 1 },
+  ];
+
+  for (const sc of subCategoryDefs) {
+    const parentId = catMap[sc.parentSlug];
+    let subCat = await prisma.category.findFirst({ where: { slug: sc.slug } });
+    if (!subCat) {
+      subCat = await prisma.category.create({
+        data: {
+          name: sc.name,
+          slug: sc.slug,
+          imageUrl: sc.image,
+          parentCategoryId: parentId,
+          displayOrder: sc.displayOrder,
+          isActive: true,
+        },
+      });
+      console.log(`Created sub-category: ${sc.name} (Parent: ${sc.parentSlug})`);
+    } else {
+      subCat = await prisma.category.update({
+        where: { id: subCat.id },
+        data: {
+          name: sc.name,
+          imageUrl: sc.image,
+          parentCategoryId: parentId,
+          displayOrder: sc.displayOrder,
+          isActive: true,
+        },
+      });
+    }
+    catMap[sc.slug] = subCat.id;
   }
 
   // 3. Seed Products
@@ -55,31 +105,31 @@ async function main() {
     {
       slug: "midnight-heavy-tee",
       name: "Midnight Heavyweight Tee",
-      categorySlug: "t-shirts",
+      categorySlug: "heavyweight-tees",
       price: 790,
       compareAt: 990,
       image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
       description: "A 240 GSM combed cotton tee with a boxy fall, ribbed neck and pre-shrunk finish. Keeps its shape after every wash.",
       badge: "Best seller",
       purchaseRate: 450,
-      sizes: ["M", "L", "XL", "XXL"],
+      sizes: ["S", "M", "L", "XL", "XXL"],
     },
     {
       slug: "arza-graphic-tee",
       name: "Arza Rooftop Graphic Tee",
-      categorySlug: "t-shirts",
+      categorySlug: "graphic-tees",
       price: 890,
       compareAt: 1090,
       image: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800",
       description: "Oversized silhouette with a hand-drawn print, screen printed with water-based ink so the graphic stays soft.",
       badge: "New",
       purchaseRate: 520,
-      sizes: ["M", "L", "XL", "XXL"],
+      sizes: ["S", "M", "L", "XL", "XXL"],
     },
     {
       slug: "cloudlight-linen-shirt",
       name: "Cloudlight Linen Shirt",
-      categorySlug: "shirts",
+      categorySlug: "linen-shirts",
       price: 1390,
       compareAt: 1690,
       image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800",
@@ -90,14 +140,14 @@ async function main() {
     {
       slug: "festive-cotton-panjabi",
       name: "Heritage Jacquard Panjabi",
-      categorySlug: "panjabi",
+      categorySlug: "heritage-panjabi",
       price: 1890,
       compareAt: 2290,
       image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800",
       description: "Fine combed cotton with subtle jacquard weave, Mandarin collar, concealed placket and side pockets.",
       badge: "Festive",
       purchaseRate: 1100,
-      sizes: ["M", "L", "XL", "XXL"],
+      sizes: ["38", "40", "42", "44", "46"],
     },
     {
       slug: "heavy-fleece-hoodie",
@@ -113,13 +163,13 @@ async function main() {
     {
       slug: "stretch-chinos-black",
       name: "Everyday Stretch Chinos",
-      categorySlug: "trousers",
+      categorySlug: "stretch-chinos",
       price: 1190,
       compareAt: 1490,
       image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800",
       description: "Tailored slim fit with 3% elastane for unrestricted movement. Deep pockets, YKK zipper, reinforced waistband.",
       purchaseRate: 700,
-      sizes: ["30", "32", "34", "36"],
+      sizes: ["28", "30", "32", "34", "36"],
     },
     // Combo / Bundle Products
     {

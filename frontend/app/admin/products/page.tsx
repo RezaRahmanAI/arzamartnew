@@ -36,6 +36,7 @@ type FormState = {
   slug: string;
   name: string;
   category: string;
+  subcategory?: string;
   image: string;
   price: number;
   compareAt: number;
@@ -57,6 +58,7 @@ const emptyForm: FormState = {
   slug: "",
   name: "",
   category: "t-shirts",
+  subcategory: "",
   image: "",
   price: 0,
   compareAt: 0,
@@ -92,6 +94,26 @@ export default function AdminProducts() {
   const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null);
   const [stockForm, setStockForm] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Group parent categories and sub-categories
+  const parentCategories = useMemo(() => {
+    return categories.filter((c) => !c.parentCategoryId && !c.parentSlug);
+  }, [categories]);
+
+  const subCategories = useMemo(() => {
+    return categories.filter((c) => Boolean(c.parentCategoryId || c.parentSlug));
+  }, [categories]);
+
+  // Subcategories available for selected category
+  const availableSubCategories = useMemo(() => {
+    const parent = categories.find((c) => c.slug === form.category);
+    if (!parent) return [];
+    return categories.filter(
+      (c) => c.parentSlug === parent.slug || (parent.id && c.parentCategoryId === parent.id)
+    );
+  }, [categories, form.category]);
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -100,7 +122,8 @@ export default function AdminProducts() {
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.slug.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q)
+        p.category.toLowerCase().includes(q) ||
+        (p.subcategory && p.subcategory.toLowerCase().includes(q))
     );
   }, [products, searchQuery]);
 
@@ -131,9 +154,10 @@ export default function AdminProducts() {
     .filter(Boolean);
 
   const openCreate = () => {
+    const firstParent = parentCategories[0]?.slug || categories[0]?.slug || "t-shirts";
     setForm({
       ...emptyForm,
-      category: categories[0]?.slug || "t-shirts",
+      category: firstParent,
     });
     setEditingSlug(null);
     setOpen(true);
@@ -144,6 +168,7 @@ export default function AdminProducts() {
       slug: p.slug,
       name: p.name,
       category: p.category,
+      subcategory: p.subcategory || "",
       image: p.image,
       price: p.price,
       compareAt: p.mrp ?? p.compareAt ?? 0,
@@ -190,7 +215,8 @@ export default function AdminProducts() {
     const product: Product = {
       slug,
       name: form.name,
-      category: form.category,
+      category: form.subcategory || form.category,
+      subcategory: form.subcategory || undefined,
       price: basePrice,
       compareAt: Number(form.compareAt) > 0 ? Number(form.compareAt) : undefined,
       mrp: Number(form.compareAt) > 0 ? Number(form.compareAt) : undefined,
@@ -243,9 +269,21 @@ export default function AdminProducts() {
     });
   };
 
-  const remove = (slug: string) => {
-    deleteProduct(slug);
-    toast.success("Product deleted");
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return;
+    try {
+      setIsDeleting(true);
+      await deleteProduct(productToDelete.slug);
+      toast.success("Product deleted", {
+        description: productToDelete.name,
+      });
+      setProductToDelete(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete product";
+      toast.error(msg);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -337,7 +375,14 @@ export default function AdminProducts() {
                       <span className="font-medium">{p.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="capitalize text-muted-foreground">{p.category}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="capitalize text-foreground font-medium text-xs">{p.category}</span>
+                      {p.subcategory && (
+                        <span className="text-[10px] text-muted-foreground capitalize">↳ {p.subcategory}</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {formatBDT(p.purchaseRate)}
                   </TableCell>
@@ -416,7 +461,7 @@ export default function AdminProducts() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => remove(p.slug)}
+                        onClick={() => setProductToDelete(p)}
                         className="rounded-md border border-border p-2 text-foreground transition-colors hover:border-destructive hover:text-destructive cursor-pointer"
                         aria-label="Delete"
                         title="Delete Product"
@@ -432,6 +477,45 @@ export default function AdminProducts() {
         </Table>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={!!productToDelete} onOpenChange={(isOpen) => !isOpen && setProductToDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <Trash2 className="size-5" /> প্রোডাক্ট ডিলিট কনফার্মেশন
+            </DialogTitle>
+            <DialogDescription>
+              আপনি কি নিশ্চিত যে আপনি <span className="font-bold text-foreground">"{productToDelete?.name}"</span> প্রোডাক্টটি ডিলিট করতে চান?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="bg-destructive/10 text-destructive text-xs p-3 rounded-lg border border-destructive/20 space-y-1">
+            <p className="font-bold">সতর্কবার্তা:</p>
+            <p>এই প্রোডাক্টটির সাথে যদি কোনো কাস্টমার বা অ্যাডমিন অর্ডার হিস্টোরি থাকে, তাহলে ডাটাবেজ ইন্টিগ্রিটি রক্ষার স্বার্থে এটি ডিলিট করা যাবে না।</p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setProductToDelete(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="gap-1.5"
+            >
+              {isDeleting ? "Deleting..." : "Confirm Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
@@ -562,20 +646,57 @@ export default function AdminProducts() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">Category (Main) *</Label>
                 <select
                   id="category"
                   value={form.category}
                   onChange={(e) => update("category", e.target.value)}
-                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium"
                 >
-                  {categories.map((c) => (
+                  {parentCategories.map((c) => (
                     <option key={c.slug} value={c.slug}>
                       {c.name}
                     </option>
                   ))}
+                  {/* Also allow top-level categories if any */}
+                  {categories
+                    .filter((c) => !parentCategories.some((p) => p.slug === c.slug) && !c.parentSlug)
+                    .map((c) => (
+                      <option key={c.slug} value={c.slug}>
+                        {c.name}
+                      </option>
+                    ))}
                 </select>
               </div>
+
+              {availableSubCategories.length > 0 ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="subcategory">Sub-Category (Optional)</Label>
+                  <select
+                    id="subcategory"
+                    value={form.subcategory || ""}
+                    onChange={(e) => update("subcategory", e.target.value)}
+                    className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium"
+                  >
+                    <option value="">-- None / General --</option>
+                    {availableSubCategories.map((sc) => (
+                      <option key={sc.slug} value={sc.slug}>
+                        {sc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label className="text-muted-foreground text-xs">Sub-Category</Label>
+                  <div className="h-10 w-full rounded-md border border-dashed border-border flex items-center px-3 text-xs text-muted-foreground">
+                    No sub-categories defined for this category
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
               <ImageUploader
                 label="Featured Image"
                 value={form.image}
