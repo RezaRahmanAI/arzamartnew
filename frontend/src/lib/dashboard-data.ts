@@ -31,6 +31,10 @@ export type Order = {
   sourcePageName?: string;
   socialMediaSourceName?: string;
   hasNotes?: boolean;
+  courierName?: string | null;
+  courierTrackingNumber?: string | null;
+  shipmentStatus?: string | null;
+  shipmentBatchId?: string | null;
 };
 
 export type Customer = {

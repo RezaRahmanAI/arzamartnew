@@ -33,6 +33,13 @@ export function mapPrismaOrder(o: {
   createdAtUtc: Date;
   customer?: { id: string; fullName: string; phone: string; district: string; defaultAddress: string | null; area: string | null } | null;
   items?: { id: number; productId: string; productName: string; unitPrice: Prisma.Decimal | number | string; quantity: number; product?: { slug: string; name: string } | null }[];
+  shipment?: {
+    id: string;
+    trackingNumber: string | null;
+    status: string;
+    shipmentBatchId: string;
+    courier?: { name: string; code: string } | null;
+  } | null;
 }): Order {
   const customerName = o.customer?.fullName || "Customer";
   const customerPhone = o.customer?.phone || "";
@@ -111,6 +118,10 @@ export function mapPrismaOrder(o: {
     source: isManual ? "manual" : "checkout",
     isPreOrder: isPreOrderFlag,
     hasNotes: !!note,
+    courierName: o.shipment?.courier?.name || null,
+    courierTrackingNumber: o.shipment?.trackingNumber || null,
+    shipmentStatus: o.shipment?.status || null,
+    shipmentBatchId: o.shipment?.shipmentBatchId || null,
   };
 }
 
@@ -120,6 +131,11 @@ export async function getAllOrders(): Promise<{ orders: Order[]; incomplete: Ord
       prisma.order.findMany({
         include: {
           customer: true,
+          shipment: {
+            include: {
+              courier: true,
+            },
+          },
           items: {
             include: {
               product: true,
@@ -182,6 +198,11 @@ export async function getOrderById(idOrNumber: string): Promise<Order | null> {
       },
       include: {
         customer: true,
+        shipment: {
+          include: {
+            courier: true,
+          },
+        },
         items: {
           include: {
             product: true,
