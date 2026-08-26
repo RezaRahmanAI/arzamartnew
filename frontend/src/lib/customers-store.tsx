@@ -111,7 +111,7 @@ export function CustomersProvider({ children }: { children: ReactNode }) {
             district: c.district || "Dhaka",
             isGoogleVerified: false,
             hasPassword: false,
-            createdAt: existing ? existing.createdAt : c.createdAtUtc,
+            createdAt: existing ? existing.createdAt : (c.createdAt || c.createdAtUtc || new Date().toISOString()),
             updatedAt: new Date().toISOString(),
           });
         }

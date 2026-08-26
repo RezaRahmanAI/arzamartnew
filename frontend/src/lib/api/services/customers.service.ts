@@ -21,6 +21,13 @@ export interface ApiCustomerProfile {
   isGuest: boolean;
   createdAt: string;
   createdAtUtc?: string;
+  googleId?: string | null;
+  googleEmail?: string | null;
+  profileImage?: string | null;
+  area?: string | null;
+  postalCode?: string | null;
+  hasPassword?: boolean;
+  lastLoginAtUtc?: string | null;
 }
 
 export type ApiCustomer = ApiCustomerProfile;
@@ -86,10 +93,11 @@ class CustomersService {
 
   public async setPassword(
     phoneOrId: string,
-    newPass: string
+    newPass: string,
+    currentPass?: string
   ): Promise<{ ok: boolean; customer?: CustomerAuthCustomer; message?: string; isNetworkError?: boolean }> {
     try {
-      return await setCustomerPasswordAction(phoneOrId, newPass);
+      return await setCustomerPasswordAction(phoneOrId, newPass, currentPass);
     } catch {
       return { ok: false, message: "Network connection failed", isNetworkError: true };
     }

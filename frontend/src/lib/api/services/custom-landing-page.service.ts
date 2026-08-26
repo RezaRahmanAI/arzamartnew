@@ -66,6 +66,7 @@ export interface LandingPageProduct {
   imageUrl: string;
   images?: LandingPageProductImage[];
   variants?: LandingPageProductVariant[];
+  category?: { id: number; name: string; slug: string } | null;
 }
 
 export interface RelatedProductItem {

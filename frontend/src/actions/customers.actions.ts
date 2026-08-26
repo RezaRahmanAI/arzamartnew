@@ -125,7 +125,8 @@ export async function updateCustomerProfileAction(
 
 export async function setCustomerPasswordAction(
   phoneOrId: string,
-  newPassword: string
+  newPassword: string,
+  currentPassword?: string
 ): Promise<{ ok: boolean; customer?: CustomerAuthCustomer; message?: string; isNetworkError?: boolean }> {
   try {
     const clean = phoneOrId.trim();
@@ -137,6 +138,13 @@ export async function setCustomerPasswordAction(
 
     if (!customer) {
       return { ok: false, message: "Customer account not found." };
+    }
+
+    if (currentPassword && customer.passwordHash) {
+      const hashedCurrent = hashPassword(currentPassword);
+      if (customer.passwordHash !== hashedCurrent && customer.passwordHash !== currentPassword) {
+        return { ok: false, message: "Current password is incorrect." };
+      }
     }
 
     const hashed = hashPassword(newPassword);

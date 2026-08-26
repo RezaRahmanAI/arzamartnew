@@ -20,10 +20,11 @@ export async function getAllCustomers(): Promise<ApiCustomer[]> {
         phone: c.phone,
         email: c.email,
         district: c.district,
-        defaultAddress: c.defaultAddress,
+        defaultAddress: c.defaultAddress || undefined,
         isGuest: c.isGuest,
+        createdAt: c.createdAtUtc.toISOString(),
         createdAtUtc: c.createdAtUtc.toISOString(),
-        orderCount,
+        totalOrders: orderCount,
         totalSpent,
       };
     });
@@ -50,15 +51,18 @@ export async function getCustomerByPhone(phone: string): Promise<ApiCustomerProf
       googleId: c.googleId,
       googleEmail: c.googleEmail,
       profileImage: c.profileImage,
-      defaultAddress: c.defaultAddress,
+      defaultAddress: c.defaultAddress || undefined,
       area: c.area,
       district: c.district,
       postalCode: c.postalCode,
-      defaultNote: c.defaultNote,
+      defaultNote: c.defaultNote || undefined,
       isGuest: c.isGuest,
       hasPassword: !!c.passwordHash,
       lastLoginAtUtc: c.lastLoginAtUtc ? c.lastLoginAtUtc.toISOString() : null,
+      createdAt: c.createdAtUtc.toISOString(),
       createdAtUtc: c.createdAtUtc.toISOString(),
+      totalOrders: 0,
+      totalSpent: 0,
     };
   } catch (error) {
     console.error(`getCustomerByPhone query failed for ${phone}:`, error);

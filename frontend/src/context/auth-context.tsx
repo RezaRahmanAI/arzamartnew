@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 1) Try the SQL Server backend first (single source of truth for passwords)
       const result = await customersService.login(emailOrPhone.trim(), pass);
-      if (result.ok) {
+      if (result.ok && result.customer) {
         const master = upsertCustomerFromServer(result.customer);
         setCustomerSessionFromMaster(master);
         toast.success("Welcome back!", { description: `Logged in as ${master.fullName}` });
@@ -191,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 1) Persist password hash to SQL Server (works across devices).
       const result = await customersService.setPassword(phone, password);
-      if (result.ok) {
+      if (result.ok && result.customer) {
         const master = upsertCustomerFromServer(result.customer);
         setCustomerSessionFromMaster(master);
         toast.success("Password set successfully!", {
@@ -232,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 1) Change password on SQL Server (verifies current password server-side).
       const result = await customersService.setPassword(phone, newPassword, currentPassword);
-      if (result.ok) {
+      if (result.ok && result.customer) {
         const master = upsertCustomerFromServer(result.customer);
         setCustomerSessionFromMaster(master);
         toast.success("Password updated successfully!", {
@@ -307,7 +307,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       const passwordResult = await customersService.setPassword(data.phone, data.password);
-      if (createdOnServer && passwordResult.ok) {
+      if (createdOnServer && passwordResult.ok && passwordResult.customer) {
         const synced = upsertCustomerFromServer(passwordResult.customer);
         setCustomerSessionFromMaster(synced);
         toast.success("Account created successfully!", {
