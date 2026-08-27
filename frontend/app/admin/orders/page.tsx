@@ -152,12 +152,18 @@ export default function AdminOrders() {
     if (orderTypeFilter === "preorder") {
       filtered = filtered.filter(o => o.isPreOrder);
     } else if (orderTypeFilter === "website") {
-      filtered = filtered.filter(o => !o.isPreOrder && !o.sourcePageName && !o.socialMediaSourceName);
+      filtered = filtered.filter(o => !o.isPreOrder && !o.sourcePageName && !o.socialMediaSourceName && o.source !== "manual");
     }
     if (sourceFilter === "facebook") {
-      filtered = filtered.filter(o => o.sourcePageName === "Facebook Campaign");
+      filtered = filtered.filter(o =>
+        (o.sourcePageName && o.sourcePageName.toLowerCase().includes("facebook")) ||
+        (o.socialMediaSourceName && o.socialMediaSourceName.toLowerCase().includes("facebook"))
+      );
     } else if (sourceFilter === "instagram") {
-      filtered = filtered.filter(o => o.socialMediaSourceName === "Instagram");
+      filtered = filtered.filter(o =>
+        (o.sourcePageName && o.sourcePageName.toLowerCase().includes("instagram")) ||
+        (o.socialMediaSourceName && o.socialMediaSourceName.toLowerCase().includes("instagram"))
+      );
     }
     if (dateRange?.from) {
       const from = new Date(dateRange.from);
@@ -343,12 +349,14 @@ export default function AdminOrders() {
       }
     }
 
-    const isWebsite = (!socialMedia && !pageName) || socialMedia.toLowerCase() === "website" || pageName.toLowerCase() === "website";
+    const isWebsite =
+      (!socialMedia && !pageName && o.source !== "manual") ||
+      (socialMedia.toLowerCase() === "website" && !pageName);
 
     return {
       isWebsite,
-      socialMedia: socialMedia || (isWebsite ? "Website" : "Social Media"),
-      pageName: pageName || "-",
+      socialMedia: socialMedia || (o.source === "manual" ? "Manual Order" : isWebsite ? "Website" : "Social Media"),
+      pageName: pageName || (o.source === "manual" ? "POS / Direct" : "-"),
     };
   };
 

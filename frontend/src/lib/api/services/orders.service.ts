@@ -29,6 +29,9 @@ export interface CreateOrderPayload {
   subtotal?: number;
   totalAmount?: number;
   total?: number;
+  source?: "checkout" | "manual" | "pre-order";
+  sourcePageName?: string;
+  socialMediaSourceName?: string;
   items?: Array<{
     productId?: string;
     slug?: string;
@@ -120,6 +123,8 @@ class OrdersService {
         delivery: order.delivery,
         status: order.status,
         source: order.source,
+        sourcePageName: order.sourcePageName,
+        socialMediaSourceName: order.socialMediaSourceName,
       });
 
       if (res.success && res.orderNumber) {
@@ -155,7 +160,9 @@ class OrdersService {
         total: orderPayload.totalAmount || orderPayload.total || 0,
         delivery: orderPayload.deliveryCharge || orderPayload.delivery || 0,
         status: "pending",
-        source: "checkout",
+        source: orderPayload.source || "checkout",
+        sourcePageName: orderPayload.sourcePageName,
+        socialMediaSourceName: orderPayload.socialMediaSourceName,
       });
 
       return { orderNumber: res.orderNumber };

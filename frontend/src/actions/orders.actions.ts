@@ -43,6 +43,8 @@ export interface CreateOrderInput {
   delivery: number;
   status?: OrderStatus;
   source?: "checkout" | "manual" | "pre-order";
+  sourcePageName?: string;
+  socialMediaSourceName?: string;
 }
 
 async function resolveNextOrderNumber(): Promise<string> {
@@ -207,6 +209,9 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       note: input.note || "",
       paymentMethod: input.payment || "Cash on Delivery",
       isPreOrder: calculatedIsPreOrder,
+      source: input.source || "checkout",
+      sourcePageName: input.sourcePageName || "",
+      socialMediaSourceName: input.socialMediaSourceName || "",
     });
 
     const statusInt = STATUS_MAP_STR_TO_INT[input.status || "pending"] ?? 1;

@@ -35,6 +35,7 @@ export type Order = {
   courierTrackingNumber?: string | null;
   shipmentStatus?: string | null;
   shipmentBatchId?: string | null;
+  source?: "checkout" | "manual" | "pre-order";
 };
 
 export type Customer = {

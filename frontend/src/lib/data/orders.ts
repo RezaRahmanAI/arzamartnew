@@ -53,6 +53,9 @@ export function mapPrismaOrder(o: {
   let paymentMethod = o.paymentStatus === 2 ? "Paid (bKash/Online)" : "Cash on Delivery";
 
   let isPreOrderFlag = o.orderStatus === 10; // status 10 is preorder
+  let orderSource: "checkout" | "manual" | "pre-order" = "checkout";
+  let sourcePageName: string | undefined = undefined;
+  let socialMediaSourceName: string | undefined = undefined;
 
   if (o.shippingAddressJson) {
     const trimmed = o.shippingAddressJson.trim();
@@ -65,6 +68,9 @@ export function mapPrismaOrder(o: {
         if (parsed.note) note = parsed.note;
         if (parsed.paymentMethod) paymentMethod = parsed.paymentMethod;
         if (typeof parsed.isPreOrder === "boolean") isPreOrderFlag = parsed.isPreOrder;
+        if (parsed.source) orderSource = parsed.source;
+        if (parsed.sourcePageName) sourcePageName = parsed.sourcePageName;
+        if (parsed.socialMediaSourceName) socialMediaSourceName = parsed.socialMediaSourceName;
       } catch {
         // Not valid JSON, proceed with legacy regex parsing
       }
@@ -76,6 +82,19 @@ export function mapPrismaOrder(o: {
         note = noteMatch[1].trim();
       }
       cleanAddress = cleanAddress.replace(/\s*\(Note:[^)]+\)/i, "").trim();
+    }
+
+    // Check for legacy source / social tags in note or address string
+    if (!sourcePageName || !socialMediaSourceName) {
+      const combinedText = `${note} ${o.shippingAddressJson}`;
+      const sourceMatch = combinedText.match(/Source:\s*([^|\n,]+)/i);
+      const socialMatch = combinedText.match(/Social:\s*([^|\n,]+)/i);
+      if (sourceMatch && sourceMatch[1] && !sourcePageName) {
+        sourcePageName = sourceMatch[1].trim();
+      }
+      if (socialMatch && socialMatch[1] && !socialMediaSourceName) {
+        socialMediaSourceName = socialMatch[1].trim();
+      }
     }
   }
 
@@ -97,7 +116,12 @@ export function mapPrismaOrder(o: {
     };
   });
 
-  const isManual = o.shippingAddressJson.toLowerCase().includes("manual") || o.shippingAddressJson.toLowerCase().includes("source:");
+  const isManual =
+    orderSource === "manual" ||
+    !!sourcePageName ||
+    !!socialMediaSourceName ||
+    o.shippingAddressJson.toLowerCase().includes("manual") ||
+    o.shippingAddressJson.toLowerCase().includes("source:");
 
   return {
     id: o.orderNumber || `ORD-${o.id}`,
@@ -115,7 +139,9 @@ export function mapPrismaOrder(o: {
     discount: Number(o.discountAmount) || 0,
     status: STATUS_MAP_INT_TO_STR[o.orderStatus] || "pending",
     date: o.createdAtUtc.toISOString().slice(0, 10),
-    source: isManual ? "manual" : "checkout",
+    source: isManual ? "manual" : orderSource,
+    sourcePageName,
+    socialMediaSourceName,
     isPreOrder: isPreOrderFlag,
     hasNotes: !!note,
     courierName: o.shipment?.courier?.name || null,
