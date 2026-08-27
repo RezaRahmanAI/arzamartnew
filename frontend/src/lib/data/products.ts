@@ -20,7 +20,7 @@ export function mapPrismaProduct(p: {
   reviewCount: number;
   purchaseRate: Prisma.Decimal | number | string;
   badge: string | null;
-  category?: { id: number; name: string; slug: string } | null;
+  category?: { id: number; name: string; slug: string; parentCategoryId?: number | null; parentCategory?: { id: number; name: string; slug: string } | null } | null;
   images?: { id: number; imageUrl: string; isMain: boolean; displayOrder: number }[];
   variants?: { id: string; name: string; sku: string; priceOverride: Prisma.Decimal | number | string | null; stockQuantity: number; isActive: boolean }[];
 }): Product {
@@ -65,11 +65,27 @@ export function mapPrismaProduct(p: {
     }
   }
 
+  // Determine main category and subcategory from DB hierarchy
+  let mainCategorySlug = "t-shirts";
+  let subCategorySlug: string | undefined = undefined;
+
+  if (p.category) {
+    if (p.category.parentCategory) {
+      // Current category is a sub-category!
+      mainCategorySlug = p.category.parentCategory.slug;
+      subCategorySlug = p.category.slug;
+    } else {
+      // Current category is a main category
+      mainCategorySlug = p.category.slug;
+    }
+  }
+
   return {
     id: p.id,
     slug: p.slug,
     name: p.name,
-    category: p.category?.slug || "t-shirts",
+    category: mainCategorySlug,
+    subcategory: subCategorySlug,
     price: activePrice,
     compareAt: compareAt,
     mrp: basePrice,
@@ -118,7 +134,11 @@ export async function getProducts(options?: {
     if (options?.categoryId) {
       where.categoryId = options.categoryId;
     } else if (options?.categorySlug) {
-      where.category = { slug: options.categorySlug.toLowerCase() };
+      const cleanSlug = options.categorySlug.toLowerCase();
+      where.OR = [
+        { category: { slug: cleanSlug } },
+        { category: { parentCategory: { slug: cleanSlug } } },
+      ];
     }
 
     if (options?.search) {
@@ -135,7 +155,11 @@ export async function getProducts(options?: {
       prisma.product.findMany({
         where,
         include: {
-          category: true,
+          category: {
+            include: {
+              parentCategory: true,
+            },
+          },
           images: true,
           variants: true,
         },
@@ -167,7 +191,11 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
         ],
       },
       include: {
-        category: true,
+        category: {
+          include: {
+            parentCategory: true,
+          },
+        },
         images: true,
         variants: true,
       },
@@ -186,7 +214,11 @@ export async function getProductById(id: string): Promise<Product | null> {
     const row = await prisma.product.findUnique({
       where: { id },
       include: {
-        category: true,
+        category: {
+          include: {
+            parentCategory: true,
+          },
+        },
         images: true,
         variants: true,
       },
@@ -209,7 +241,11 @@ export async function getRelatedProducts(productId: string, categoryId: number, 
         categoryId: categoryId,
       },
       include: {
-        category: true,
+        category: {
+          include: {
+            parentCategory: true,
+          },
+        },
         images: true,
         variants: true,
       },
@@ -225,7 +261,11 @@ export async function getRelatedProducts(productId: string, categoryId: number, 
           id: { notIn: [productId, ...rows.map((r) => r.id)] },
         },
         include: {
-          category: true,
+          category: {
+            include: {
+              parentCategory: true,
+            },
+          },
           images: true,
           variants: true,
         },

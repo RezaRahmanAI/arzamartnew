@@ -32,6 +32,7 @@ class ProductsService {
       name: product.name,
       slug: product.slug,
       category: product.category,
+      subcategory: product.subcategory,
       price: product.price,
       compareAt: product.compareAt,
       mrp: product.mrp,
@@ -58,6 +59,7 @@ class ProductsService {
     const res = await updateProductAction(slug, {
       name: updated.name,
       category: updated.category,
+      subcategory: updated.subcategory,
       price: updated.price,
       compareAt: updated.compareAt,
       mrp: updated.mrp,

@@ -184,7 +184,7 @@ export function SiteHeader() {
                 </Link>
               ));
             }
-            return categories.slice(0, 4).map((c) => (
+            return categories.filter((c) => !c.parentCategoryId && !c.parentSlug).slice(0, 4).map((c) => (
               <Link
                 key={c.slug}
                 href={`/category/${c.slug}`}
@@ -348,7 +348,7 @@ export function SiteHeader() {
               defaultValue=""
             >
               <option value="">All Categories</option>
-              {categories.map((c) => (
+              {categories.filter((c) => !c.parentCategoryId && !c.parentSlug).map((c) => (
                 <option key={c.slug} value={c.slug}>
                   {c.name}
                 </option>
@@ -397,7 +397,7 @@ export function SiteHeader() {
             }
             return (
               <>
-                {categories.map((c) => (
+                {categories.filter((c) => !c.parentCategoryId && !c.parentSlug).map((c) => (
                   <Link
                     key={c.slug}
                     href={`/category/${c.slug}`}

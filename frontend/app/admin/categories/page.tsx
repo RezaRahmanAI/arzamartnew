@@ -56,6 +56,9 @@ export default function CategoriesPage() {
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
 
+  // Show only main/parent categories in this table (sub-categories are managed on /admin/sub-categories)
+  const mainCategories = categories.filter((c) => !c.parentCategoryId && !c.parentSlug);
+
   const openCreate = () => {
     setEditingSlug(null);
     setForm(emptyForm);
@@ -128,7 +131,7 @@ export default function CategoriesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {categories.map((c) => {
+            {mainCategories.map((c) => {
               return (
                 <TableRow key={c.slug}>
                   <TableCell>

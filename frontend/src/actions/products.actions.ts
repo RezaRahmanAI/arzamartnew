@@ -15,6 +15,7 @@ export interface CreateProductInput {
   name: string;
   slug?: string;
   category?: string;
+  subcategory?: string;
   price: number;
   compareAt?: number;
   mrp?: number;
@@ -35,6 +36,7 @@ export interface CreateProductInput {
 export interface UpdateProductInput {
   name?: string;
   category?: string;
+  subcategory?: string;
   price?: number;
   compareAt?: number;
   mrp?: number;
@@ -125,13 +127,15 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
       });
     }
 
-    // Resolve or create category
+    // Resolve category (prefer subcategory if selected, otherwise main category)
     let categoryId = 1;
-    if (input.category) {
-      const catSlug = input.category.toLowerCase().trim().replace(/[^a-z0-9-]+/g, "-");
+    const targetCatIdentifier = input.subcategory?.trim() || input.category?.trim();
+
+    if (targetCatIdentifier) {
+      const catSlug = targetCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
       const foundCat = await prisma.category.findFirst({
         where: {
-          OR: [{ slug: catSlug }, { name: input.category }],
+          OR: [{ slug: catSlug }, { name: targetCatIdentifier }],
         },
       });
 
@@ -140,7 +144,7 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
       } else {
         const newCat = await prisma.category.create({
           data: {
-            name: input.category,
+            name: targetCatIdentifier,
             slug: catSlug || `cat-${Date.now()}`,
             displayOrder: 1,
             isActive: true,
@@ -248,11 +252,15 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
     }
 
     let categoryId = existing.categoryId;
-    if (input.category) {
-      const catSlug = input.category.toLowerCase().trim().replace(/[^a-z0-9-]+/g, "-");
+    const targetCatIdentifier = input.subcategory !== undefined
+      ? (input.subcategory?.trim() || input.category?.trim())
+      : input.category?.trim();
+
+    if (targetCatIdentifier) {
+      const catSlug = targetCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
       const foundCat = await prisma.category.findFirst({
         where: {
-          OR: [{ slug: catSlug }, { name: input.category }],
+          OR: [{ slug: catSlug }, { name: targetCatIdentifier }],
         },
       });
       if (foundCat) {

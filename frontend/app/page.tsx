@@ -90,7 +90,7 @@ export default async function HomePage() {
       <section className="mt-12">
         <h2 className="section-title border-l-4 border-primary">Our Categories</h2>
         <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {categories.map((c) => (
+          {categories.filter((c) => !c.parentCategoryId && !c.parentSlug).map((c) => (
             <Link
               key={c.slug}
               href={`/category/${c.slug}`}

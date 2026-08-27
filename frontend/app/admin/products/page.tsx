@@ -94,6 +94,8 @@ export default function AdminProducts() {
   const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null);
   const [stockForm, setStockForm] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>("ALL");
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -106,7 +108,7 @@ export default function AdminProducts() {
     return categories.filter((c) => Boolean(c.parentCategoryId || c.parentSlug));
   }, [categories]);
 
-  // Subcategories available for selected category
+  // Subcategories available for selected category in form
   const availableSubCategories = useMemo(() => {
     const parent = categories.find((c) => c.slug === form.category);
     if (!parent) return [];
@@ -115,17 +117,47 @@ export default function AdminProducts() {
     );
   }, [categories, form.category]);
 
+  // Subcategories available for category filter
+  const filterAvailableSubCategories = useMemo(() => {
+    if (selectedCategory === "ALL") return [];
+    const parent = categories.find((c) => c.slug === selectedCategory);
+    if (!parent) return [];
+    return categories.filter(
+      (c) => c.parentSlug === parent.slug || (parent.id && c.parentCategoryId === parent.id)
+    );
+  }, [categories, selectedCategory]);
+
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.slug.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        (p.subcategory && p.subcategory.toLowerCase().includes(q))
-    );
-  }, [products, searchQuery]);
+    return products.filter((p) => {
+      // Search filter
+      if (
+        q &&
+        !p.name.toLowerCase().includes(q) &&
+        !p.slug.toLowerCase().includes(q) &&
+        !p.category.toLowerCase().includes(q) &&
+        (!p.subcategory || !p.subcategory.toLowerCase().includes(q))
+      ) {
+        return false;
+      }
+
+      // Category filter
+      if (selectedCategory !== "ALL") {
+        if (p.category.toLowerCase() !== selectedCategory.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // Sub-category filter
+      if (selectedSubCategory !== "ALL") {
+        if (!p.subcategory || p.subcategory.toLowerCase() !== selectedSubCategory.toLowerCase()) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [products, searchQuery, selectedCategory, selectedSubCategory]);
 
   const openStockModal = (p: Product) => {
     setStockModalProduct(p);
@@ -289,26 +321,75 @@ export default function AdminProducts() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, slug or category..."
-            className="pl-9"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-              aria-label="Clear search"
+        <div className="flex flex-1 flex-wrap items-center gap-3">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, slug..."
+              className="pl-9"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+
+          <select
+            value={selectedCategory}
+            onChange={(e) => {
+              setSelectedCategory(e.target.value);
+              setSelectedSubCategory("ALL");
+            }}
+            className="h-9 rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground cursor-pointer"
+          >
+            <option value="ALL">All Categories</option>
+            {parentCategories.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          {selectedCategory !== "ALL" && filterAvailableSubCategories.length > 0 && (
+            <select
+              value={selectedSubCategory}
+              onChange={(e) => setSelectedSubCategory(e.target.value)}
+              className="h-9 rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground cursor-pointer animate-in fade-in duration-200"
             >
-              <X className="size-4" />
-            </button>
+              <option value="ALL">All Sub-Categories</option>
+              {filterAvailableSubCategories.map((sc) => (
+                <option key={sc.slug} value={sc.slug}>
+                  {sc.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {(selectedCategory !== "ALL" || selectedSubCategory !== "ALL" || searchQuery) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedCategory("ALL");
+                setSelectedSubCategory("ALL");
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground h-9 cursor-pointer"
+            >
+              Reset Filters
+            </Button>
           )}
         </div>
-        <Button onClick={openCreate} className="gap-2 cursor-pointer">
+
+        <Button onClick={openCreate} className="gap-2 cursor-pointer shrink-0">
           <Plus className="size-4" />
           Create product
         </Button>
@@ -650,7 +731,10 @@ export default function AdminProducts() {
                 <select
                   id="category"
                   value={form.category}
-                  onChange={(e) => update("category", e.target.value)}
+                  onChange={(e) => {
+                    update("category", e.target.value);
+                    update("subcategory", "");
+                  }}
                   className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium"
                 >
                   {parentCategories.map((c) => (
