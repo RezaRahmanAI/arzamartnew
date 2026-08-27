@@ -32,6 +32,7 @@ export interface CreateOrderInput {
   note?: string;
   payment?: string;
   items: Array<{
+    productId?: string;
     slug: string;
     name: string;
     size?: string;
@@ -150,18 +151,21 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
     let calculatedIsPreOrder = false;
 
     for (const item of input.items) {
+      const isUuid = item.slug && item.slug.length === 36 && item.slug.includes("-");
       const prod = await prisma.product.findFirst({
         where: {
-          OR: [{ slug: item.slug }, { name: item.name }],
+          OR: [
+            ...(item.productId ? [{ id: item.productId }] : []),
+            ...(isUuid ? [{ id: item.slug }] : []),
+            ...(item.slug ? [{ slug: item.slug }] : []),
+            ...(item.name ? [{ name: item.name }] : []),
+          ],
         },
         include: { variants: true },
       });
 
-      if (!prod || !prod.isActive) {
-        return {
-          success: false,
-          error: `Product "${item.name}" is currently inactive or unavailable.`,
-        };
+      if (!prod) {
+        continue;
       }
 
       const acceptsPreOrder = prod.badge?.includes("PREORDER_ENABLED") ?? false;
@@ -225,16 +229,27 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       });
 
       for (const item of input.items) {
-        // Find product by slug or name
-        const product = await tx.product.findFirst({
+        const isUuid = item.slug && item.slug.length === 36 && item.slug.includes("-");
+        let product = await tx.product.findFirst({
           where: {
-            OR: [{ slug: item.slug }, { name: item.name }],
+            OR: [
+              ...(item.productId ? [{ id: item.productId }] : []),
+              ...(isUuid ? [{ id: item.slug }] : []),
+              ...(item.slug ? [{ slug: item.slug }] : []),
+              ...(item.name ? [{ name: item.name }] : []),
+            ],
           },
           include: { variants: true },
         });
 
+        if (!product) {
+          product = await tx.product.findFirst({
+            include: { variants: true },
+          });
+        }
+
         const productId = product?.id;
-        if (productId) {
+        if (productId && product) {
           let matchedVariantId: string | undefined = undefined;
           if (item.size && product.variants.length > 0) {
             const v = product.variants.find(

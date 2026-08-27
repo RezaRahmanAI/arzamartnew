@@ -145,6 +145,7 @@ class OrdersService {
         note: orderPayload.notes || orderPayload.note,
         payment: orderPayload.paymentMethod || orderPayload.payment,
         items: (orderPayload.items || []).map((i) => ({
+          productId: i.productId,
           slug: i.slug || i.productId || "product",
           name: i.productName || i.name || "Product",
           size: i.size || i.variantName || "Standard",

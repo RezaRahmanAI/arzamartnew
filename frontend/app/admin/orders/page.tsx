@@ -116,7 +116,7 @@ export default function AdminOrders() {
 
   // Instantly reflect cached orders in memory
   useEffect(() => {
-    if (contextOrders && contextOrders.length > 0) {
+    if (contextOrders) {
       setData(contextOrders as unknown as Order[]);
     }
   }, [contextOrders]);
@@ -125,7 +125,7 @@ export default function AdminOrders() {
   const fetchOrders = async () => {
     try {
       const result = await ordersService.getAll();
-      if (result.orders && result.orders.length > 0) {
+      if (result && Array.isArray(result.orders)) {
         setData(result.orders as unknown as Order[]);
       }
     } catch {
