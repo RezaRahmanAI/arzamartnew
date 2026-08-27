@@ -84,14 +84,6 @@ const nextStatusLabels: Partial<Record<OrderStatus, string>> = {
   shipped: "Deliver",
 };
 
-const getTodayRange = (): DateRange => {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date();
-  end.setHours(23, 59, 59, 999);
-  return { from: start, to: end };
-};
-
 export default function AdminOrders() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -103,7 +95,7 @@ export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "preorder" | "website">(initialType);
   const [sourceFilter, setSourceFilter] = useState<"all" | "facebook" | "instagram">("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(getTodayRange);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const [activeNotesOrder, setActiveNotesOrder] = useState<Order | null>(null);
   const [activeTrackingOrder, setActiveTrackingOrder] = useState<Order | null>(null);
