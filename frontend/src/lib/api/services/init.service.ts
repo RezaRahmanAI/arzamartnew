@@ -10,6 +10,7 @@ export interface RawApiInitProduct {
   name: string;
   categoryName?: string;
   category?: string;
+  subcategory?: string;
   basePrice?: number;
   price?: number;
   discountPrice?: number;
@@ -44,11 +45,16 @@ export interface RawApiInitBanner {
 }
 
 export interface RawApiInitCategory {
+  id?: number;
   slug: string;
   name: string;
   imageUrl?: string;
   image?: string;
   blurb?: string;
+  parentCategoryId?: number | null;
+  parentSlug?: string | null;
+  parentName?: string | null;
+  subCategories?: RawApiInitCategory[];
 }
 
 export interface RawApiInitReview {
@@ -78,7 +84,7 @@ export interface AppInitData {
   timestamp: number;
 }
 
-export const APP_INIT_STORAGE_KEY = "arzamart_app_init_cache_v3";
+export const APP_INIT_STORAGE_KEY = "arzamart_app_init_cache_v4";
 
 class InitService {
   private mapRawProductToFrontend(p: RawApiInitProduct): Product {
@@ -90,6 +96,7 @@ class InitService {
       slug: p.slug,
       name: p.name,
       category: p.categoryName ? String(p.categoryName).toLowerCase() : p.category ? String(p.category).toLowerCase() : "t-shirts",
+      subcategory: p.subcategory ? String(p.subcategory).toLowerCase() : undefined,
       price: discountPrice && discountPrice > 0 ? discountPrice : basePrice,
       compareAt: discountPrice && discountPrice < basePrice ? basePrice : undefined,
       mrp: basePrice,
@@ -132,10 +139,17 @@ class InitService {
 
   private mapRawCategoryToFrontend(c: RawApiInitCategory): Category {
     return {
+      id: c.id,
       slug: c.slug,
       name: c.name,
       image: getImageUrl(c.imageUrl || c.image),
       blurb: c.blurb || "",
+      parentCategoryId: c.parentCategoryId,
+      parentSlug: c.parentSlug || null,
+      parentName: c.parentName || null,
+      subCategories: Array.isArray(c.subCategories)
+        ? c.subCategories.map((sub) => this.mapRawCategoryToFrontend(sub))
+        : [],
     };
   }
 

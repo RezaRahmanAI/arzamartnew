@@ -126,11 +126,18 @@ export const offerBanner = {
 };
 
 export const categories: Category[] = [
-  { slug: "t-shirts", name: "T-Shirts", image: catTshirt, blurb: "Everyday heavyweight cotton" },
-  { slug: "shirts", name: "Shirts", image: catShirt, blurb: "Linen, oxford & cotton" },
-  { slug: "panjabi", name: "Panjabi", image: catPanjabi, blurb: "Festive & everyday" },
-  { slug: "hoodies", name: "Hoodies", image: catHoodie, blurb: "Winter-ready fleece" },
-  { slug: "trousers", name: "Trousers", image: catTrouser, blurb: "Chinos & joggers" },
+  { id: 1, slug: "t-shirts", name: "T-Shirts", image: catTshirt, blurb: "Everyday heavyweight cotton", parentCategoryId: null, parentSlug: null },
+  { id: 2, slug: "shirts", name: "Shirts", image: catShirt, blurb: "Linen, oxford & cotton", parentCategoryId: null, parentSlug: null },
+  { id: 3, slug: "panjabi", name: "Panjabi", image: catPanjabi, blurb: "Festive & everyday", parentCategoryId: null, parentSlug: null },
+  { id: 4, slug: "hoodies", name: "Hoodies", image: catHoodie, blurb: "Winter-ready fleece", parentCategoryId: null, parentSlug: null },
+  { id: 5, slug: "trousers", name: "Trousers", image: catTrouser, blurb: "Chinos & joggers", parentCategoryId: null, parentSlug: null },
+  // Sub-categories
+  { id: 6, slug: "graphic-tees", name: "Graphic Tees", image: catTshirt, blurb: "Printed & graphic heavyweight tees", parentCategoryId: 1, parentSlug: "t-shirts", parentName: "T-Shirts" },
+  { id: 7, slug: "heavyweight-tees", name: "Heavyweight Tees", image: catTshirt, blurb: "240 GSM dense cotton essentials", parentCategoryId: 1, parentSlug: "t-shirts", parentName: "T-Shirts" },
+  { id: 8, slug: "linen-shirts", name: "Linen Shirts", image: catShirt, blurb: "Pure breathable linen wear", parentCategoryId: 2, parentSlug: "shirts", parentName: "Shirts" },
+  { id: 9, slug: "formal-shirts", name: "Formal Shirts", image: catShirt, blurb: "Crisp cotton & oxford shirts", parentCategoryId: 2, parentSlug: "shirts", parentName: "Shirts" },
+  { id: 10, slug: "heritage-panjabi", name: "Heritage Panjabi", image: catPanjabi, blurb: "Jacquard & premium festive panjabi", parentCategoryId: 3, parentSlug: "panjabi", parentName: "Panjabi" },
+  { id: 11, slug: "stretch-chinos", name: "Stretch Chinos", image: catTrouser, blurb: "Comfortable flexible daily chinos", parentCategoryId: 5, parentSlug: "trousers", parentName: "Trousers" },
 ];
 
 const SIZES = ["M", "L", "XL", "XXL"];
