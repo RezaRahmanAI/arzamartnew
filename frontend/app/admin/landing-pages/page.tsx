@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import {
-  Globe,
   Search,
   Sparkles,
   ExternalLink,
@@ -12,7 +11,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Package,
-  Layers,
   ArrowUpRight,
   Eye,
 } from "lucide-react";
@@ -85,63 +83,8 @@ export default function AdminLandingPagesPage() {
     });
   }, [items, search, filterCategory, filterStatus]);
 
-  const stats = useMemo(() => {
-    const total = items.length;
-    const custom = items.filter((i) => i.hasCustomConfig).length;
-    const standard = total - custom;
-    return { total, custom, standard };
-  }, [items]);
-
   return (
-    <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto animate-in fade-in">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-        <div>
-          <div className="flex items-center gap-2 text-primary font-bold text-sm tracking-wide uppercase">
-            <Globe className="size-4" />
-            <span>Growth & Conversion Engine</span>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-foreground mt-1">
-            Custom Landing Pages Manager
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Design high-converting, single-product custom landing pages with modular sections, timers & instant checkout.
-          </p>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl bg-card border border-border flex items-center gap-4 shadow-xs">
-          <div className="size-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            <Package className="size-5" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-medium">Total Products</p>
-            <p className="text-2xl font-bold text-foreground">{stats.total}</p>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-card border border-border flex items-center gap-4 shadow-xs">
-          <div className="size-11 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-            <Sparkles className="size-5" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-medium">Custom Designed Pages (CLP)</p>
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.custom}</p>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-card border border-border flex items-center gap-4 shadow-xs">
-          <div className="size-11 rounded-lg bg-muted text-muted-foreground flex items-center justify-center">
-            <Layers className="size-5" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-medium">Default Standard Layout</p>
-            <p className="text-2xl font-bold text-foreground">{stats.standard}</p>
-          </div>
-        </div>
-      </div>
+    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto animate-in fade-in">
 
       {/* Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-card p-3 rounded-xl border border-border">
