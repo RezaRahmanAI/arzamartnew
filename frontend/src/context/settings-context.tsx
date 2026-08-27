@@ -16,7 +16,9 @@ interface SettingsContextType {
   updateSection: <K extends keyof SystemSettings>(section: K, values: Partial<SystemSettings[K]>) => void;
   saveSettings: (options?: { silent?: boolean }) => Promise<boolean>;
   resetDrafts: () => void;
-  resetToFactoryDefaults: () => Promise<void>;
+  resetSectionDraft: (section: keyof SystemSettings) => void;
+  resetSectionToDefaults: (section: keyof SystemSettings, persistToDb?: boolean) => Promise<void>;
+  resetToFactoryDefaults: (persistToDb?: boolean) => Promise<void>;
   clearSystemCache: () => Promise<void>;
 }
 
@@ -28,6 +30,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { initData, isFreshLoaded, updateInitSettings, refetchInit } = useAppInit();
 
   const [settings, setSettings] = useState<SystemSettings>(() => {
+    if (initData.settings) return initData.settings;
     if (typeof window !== "undefined") {
       try {
         const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
@@ -39,7 +42,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         /* ignore */
       }
     }
-    return initData.settings || DEFAULT_SYSTEM_SETTINGS;
+    return DEFAULT_SYSTEM_SETTINGS;
   });
   const [draftSettings, setDraftSettings] = useState<SystemSettings>(() => settings);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
@@ -121,7 +124,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [draftSettings, updateInitSettings, refetchInit]);
 
-  // Reset draft changes back to saved settings
+  // Reset all draft changes back to saved settings
   const resetDrafts = useCallback(() => {
     setDraftSettings(settings);
     toast.info("Draft Changes Discarded", {
@@ -129,28 +132,107 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     });
   }, [settings]);
 
-  // Reset to factory defaults
-  const resetToFactoryDefaults = useCallback(async () => {
-    setSettings(DEFAULT_SYSTEM_SETTINGS);
-    setDraftSettings(DEFAULT_SYSTEM_SETTINGS);
-    await settingsService.update(DEFAULT_SYSTEM_SETTINGS, "System");
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(DEFAULT_SYSTEM_SETTINGS));
-    toast.success("Reset to Factory Defaults", {
-      description: "All settings restored to system initial state.",
+  // Reset a specific section's draft back to last saved settings
+  const resetSectionDraft = useCallback((section: keyof SystemSettings) => {
+    setDraftSettings((prev) => ({
+      ...prev,
+      [section]: settings[section],
+    }));
+    toast.info("Section Changes Discarded", {
+      description: `Restored ${String(section)} to last saved state.`,
     });
-  }, []);
+  }, [settings]);
 
-  // Clear system cache
-  const clearSystemCache = useCallback(async () => {
-    toast.promise(
-      new Promise((resolve) => setTimeout(resolve, 1200)),
-      {
-        loading: "Invalidating CDN & Redis Cache...",
-        success: "Cache Cleared & Navigation Rebuilt!",
-        error: "Failed to clear cache",
+  // Reset a specific section to factory defaults (either draft or persist directly to DB)
+  const resetSectionToDefaults = useCallback(async (section: keyof SystemSettings, persistToDb = false) => {
+    const defaultSection = DEFAULT_SYSTEM_SETTINGS[section];
+    if (!persistToDb) {
+      setDraftSettings((prev) => ({
+        ...prev,
+        [section]: defaultSection,
+      }));
+      toast.success("Reset Section to Defaults (Draft)", {
+        description: `${String(section)} reverted to factory defaults. Click 'Save Changes' to apply.`,
+      });
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const res = await settingsService.reset(section);
+      if (res.success && res.settings) {
+        setSettings(res.settings);
+        setDraftSettings(res.settings);
+        updateInitSettings(res.settings);
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(res.settings));
+        refetchInit();
+        toast.success("Section Reset Successfully", {
+          description: `${String(section)} settings restored to factory defaults in the database.`,
+        });
+      } else {
+        toast.error("Failed to Reset Section", {
+          description: res.error || "An unexpected error occurred.",
+        });
       }
-    );
-  }, []);
+    } catch (err) {
+      toast.error("Failed to Reset Section", {
+        description: err instanceof Error ? err.message : "Network error",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [updateInitSettings, refetchInit]);
+
+  // Reset all settings to factory defaults (either draft or direct DB flush)
+  const resetToFactoryDefaults = useCallback(async (persistToDb = true) => {
+    if (!persistToDb) {
+      setDraftSettings(DEFAULT_SYSTEM_SETTINGS);
+      toast.success("All Sections Reverted to Defaults (Draft)", {
+        description: "All tabs loaded with factory defaults. Click 'Save Changes' to apply.",
+      });
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const res = await settingsService.reset("all");
+      if (res.success && res.settings) {
+        setSettings(res.settings);
+        setDraftSettings(res.settings);
+        updateInitSettings(res.settings);
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(res.settings));
+        refetchInit();
+        toast.success("Full System Reset Completed", {
+          description: "All database settings restored to production factory defaults.",
+        });
+      } else {
+        toast.error("Reset Failed", {
+          description: res.error || "Could not reset system settings.",
+        });
+      }
+    } catch (err) {
+      toast.error("Reset Failed", {
+        description: err instanceof Error ? err.message : "Network error",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [updateInitSettings, refetchInit]);
+
+  // Clear system cache & refetch from database
+  const clearSystemCache = useCallback(async () => {
+    try {
+      localStorage.removeItem(SETTINGS_STORAGE_KEY);
+      await refetchInit();
+      toast.success("Cache Cleared & Settings Refreshed", {
+        description: "All system cache and application states have been refreshed from the database.",
+      });
+    } catch (err) {
+      toast.error("Cache Clear Failed", {
+        description: err instanceof Error ? err.message : "Failed to clear cache",
+      });
+    }
+  }, [refetchInit]);
 
   return (
     <SettingsContext.Provider
@@ -164,6 +246,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         updateSection,
         saveSettings,
         resetDrafts,
+        resetSectionDraft,
+        resetSectionToDefaults,
         resetToFactoryDefaults,
         clearSystemCache,
       }}

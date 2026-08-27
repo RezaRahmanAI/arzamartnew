@@ -94,3 +94,35 @@ export async function updateSettingsAction(newSettings: SystemSettings): Promise
     return { success: false, error: error instanceof Error ? error.message : "Failed to update settings." };
   }
 }
+
+export async function resetSettingsAction(
+  scope: "all" | keyof SystemSettings = "all"
+): Promise<{ success: boolean; settings?: SystemSettings; error?: string }> {
+  try {
+    const { DEFAULT_SYSTEM_SETTINGS } = await import("@/types/settings");
+    let targetSettings: SystemSettings;
+
+    if (scope === "all") {
+      targetSettings = DEFAULT_SYSTEM_SETTINGS;
+    } else {
+      const current = await getWebsiteSettings();
+      targetSettings = {
+        ...current,
+        [scope]: DEFAULT_SYSTEM_SETTINGS[scope],
+      };
+    }
+
+    const updateRes = await updateSettingsAction(targetSettings);
+    if (!updateRes.success) {
+      return { success: false, error: updateRes.error };
+    }
+
+    return { success: true, settings: targetSettings };
+  } catch (error: unknown) {
+    console.error("resetSettingsAction failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to reset settings.",
+    };
+  }
+}

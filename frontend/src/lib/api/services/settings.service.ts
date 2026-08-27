@@ -1,5 +1,5 @@
 import { SystemSettings, DEFAULT_SYSTEM_SETTINGS } from "@/types/settings";
-import { getSettingsAction, updateSettingsAction } from "@/actions/settings.actions";
+import { getSettingsAction, updateSettingsAction, resetSettingsAction } from "@/actions/settings.actions";
 
 export class SettingsService {
   private cachedSettings: SystemSettings | null = null;
@@ -30,6 +30,22 @@ export class SettingsService {
     } catch (err) {
       console.warn("Failed to update settings:", err);
       return false;
+    }
+  }
+
+  public async reset(
+    scope: "all" | keyof SystemSettings = "all"
+  ): Promise<{ success: boolean; settings?: SystemSettings; error?: string }> {
+    try {
+      const res = await resetSettingsAction(scope);
+      if (res.success && res.settings) {
+        this.cachedSettings = res.settings;
+        this.lastFetchTime = Date.now();
+      }
+      return res;
+    } catch (err) {
+      console.warn("Failed to reset settings:", err);
+      return { success: false, error: err instanceof Error ? err.message : "Failed to reset settings" };
     }
   }
 }

@@ -12,10 +12,54 @@ export async function getWebsiteSettings(): Promise<SystemSettings> {
           ...DEFAULT_SYSTEM_SETTINGS,
           ...parsed,
           general: { ...DEFAULT_SYSTEM_SETTINGS.general, ...(parsed.general || {}) },
-          shipping: { ...DEFAULT_SYSTEM_SETTINGS.shipping, ...(parsed.shipping || {}) },
           branding: { ...DEFAULT_SYSTEM_SETTINGS.branding, ...(parsed.branding || {}) },
           contact: { ...DEFAULT_SYSTEM_SETTINGS.contact, ...(parsed.contact || {}) },
+          shipping: {
+            ...DEFAULT_SYSTEM_SETTINGS.shipping,
+            ...(parsed.shipping || {}),
+            rules:
+              Array.isArray(parsed.shipping?.rules) && parsed.shipping.rules.length > 0
+                ? parsed.shipping.rules
+                : DEFAULT_SYSTEM_SETTINGS.shipping.rules,
+          },
+          socialMedia: {
+            ...DEFAULT_SYSTEM_SETTINGS.socialMedia,
+            ...(parsed.socialMedia || {}),
+            platforms:
+              Array.isArray(parsed.socialMedia?.platforms) && parsed.socialMedia.platforms.length > 0
+                ? parsed.socialMedia.platforms
+                : DEFAULT_SYSTEM_SETTINGS.socialMedia.platforms,
+            sources: { ...DEFAULT_SYSTEM_SETTINGS.socialMedia.sources, ...(parsed.socialMedia?.sources || {}) },
+          },
+          business: { ...DEFAULT_SYSTEM_SETTINGS.business, ...(parsed.business || {}) },
+          seo: { ...DEFAULT_SYSTEM_SETTINGS.seo, ...(parsed.seo || {}) },
+          footer: {
+            ...DEFAULT_SYSTEM_SETTINGS.footer,
+            ...(parsed.footer || {}),
+            footerMenuLinks:
+              Array.isArray(parsed.footer?.footerMenuLinks) && parsed.footer.footerMenuLinks.length > 0
+                ? parsed.footer.footerMenuLinks
+                : DEFAULT_SYSTEM_SETTINGS.footer.footerMenuLinks,
+            paymentMethodsBadges:
+              Array.isArray(parsed.footer?.paymentMethodsBadges) && parsed.footer.paymentMethodsBadges.length > 0
+                ? parsed.footer.paymentMethodsBadges
+                : DEFAULT_SYSTEM_SETTINGS.footer.paymentMethodsBadges,
+            trustBadges:
+              Array.isArray(parsed.footer?.trustBadges) && parsed.footer.trustBadges.length > 0
+                ? parsed.footer.trustBadges
+                : DEFAULT_SYSTEM_SETTINGS.footer.trustBadges,
+          },
+          navigation: {
+            ...DEFAULT_SYSTEM_SETTINGS.navigation,
+            ...(parsed.navigation || {}),
+            headerMenu:
+              Array.isArray(parsed.navigation?.headerMenu) && parsed.navigation.headerMenu.length > 0
+                ? parsed.navigation.headerMenu
+                : DEFAULT_SYSTEM_SETTINGS.navigation.headerMenu,
+          },
           orders: { ...DEFAULT_SYSTEM_SETTINGS.orders, ...(parsed.orders || {}) },
+          notifications: { ...DEFAULT_SYSTEM_SETTINGS.notifications, ...(parsed.notifications || {}) },
+          advanced: { ...DEFAULT_SYSTEM_SETTINGS.advanced, ...(parsed.advanced || {}) },
         };
       } catch {
         /* fallback to columns */
@@ -45,8 +89,8 @@ export async function getWebsiteSettings(): Promise<SystemSettings> {
         shipping: {
           ...DEFAULT_SYSTEM_SETTINGS.shipping,
           rules: [
-            { id: "inside-dhaka", name: "Inside Dhaka", charge: insideRate, estimatedDeliveryTime: "1-3 days", status: "active", displayOrder: 1 },
-            { id: "outside-dhaka", name: "Outside Dhaka", charge: outsideRate, estimatedDeliveryTime: "3-5 days", status: "active", displayOrder: 2 },
+            { id: "inside-dhaka", name: "Inside Dhaka (ঢাকার ভিতরে)", charge: insideRate, estimatedDeliveryTime: "24-48 Hours", status: "active", displayOrder: 1 },
+            { id: "outside-dhaka", name: "Outside Dhaka (ঢাকার বাইরে)", charge: outsideRate, estimatedDeliveryTime: "2-3 Days", status: "active", displayOrder: 2 },
           ],
         },
         seo: {
@@ -58,8 +102,8 @@ export async function getWebsiteSettings(): Promise<SystemSettings> {
         socialMedia: {
           ...DEFAULT_SYSTEM_SETTINGS.socialMedia,
           platforms: [
-            { id: "fb", platform: "Facebook", url: row.facebookUrl || "", iconName: "Facebook", displayOrder: 1, active: !!row.facebookUrl },
-            { id: "insta", platform: "Instagram", url: row.instagramUrl || "", iconName: "Instagram", displayOrder: 2, active: !!row.instagramUrl },
+            { id: "fb", platform: "Facebook", url: row.facebookUrl || "https://facebook.com/arzamart", iconName: "Facebook", displayOrder: 1, active: true },
+            { id: "insta", platform: "Instagram", url: row.instagramUrl || "https://instagram.com/arzamart", iconName: "Instagram", displayOrder: 2, active: true },
             { id: "yt", platform: "YouTube", url: row.youtubeUrl || "", iconName: "Youtube", displayOrder: 3, active: !!row.youtubeUrl },
           ].filter((p) => p.url),
         },

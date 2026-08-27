@@ -29,11 +29,31 @@ import {
   History,
   Check,
   AlertCircle,
+  AlertTriangle,
+  ChevronDown,
   Eye,
   Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { HeroBannersSection } from "@/components/admin/hero-banners-section";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type SettingsCategoryKey = keyof SystemSettings | "auditLogs" | "heroBanners";
 
@@ -69,12 +89,31 @@ export default function AdminSettingsPage() {
     updateSection,
     saveSettings,
     resetDrafts,
+    resetSectionDraft,
+    resetSectionToDefaults,
     resetToFactoryDefaults,
     clearSystemCache,
   } = useSettings();
 
   const [activeTab, setActiveTab] = useState<SettingsCategoryKey>("general");
   const [searchFilter, setSearchFilter] = useState("");
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetScope, setResetScope] = useState<"current" | "all">("current");
+
+  const currentCategory = CATEGORIES.find((c) => c.key === activeTab);
+  const isSystemSettingsTab = activeTab !== "heroBanners" && activeTab !== "auditLogs";
+
+  const handleConfirmReset = async () => {
+    setResetModalOpen(false);
+    if (resetScope === "current") {
+      if (isSystemSettingsTab) {
+        await resetSectionToDefaults(activeTab as keyof SystemSettings, true);
+      }
+    } else {
+      await resetToFactoryDefaults(true);
+    }
+  };
+
   const [newShippingRule, setNewShippingRule] = useState<{ name: string; charge: number; deliveryTime: string }>({
     name: "",
     charge: 60,
@@ -189,21 +228,76 @@ export default function AdminSettingsPage() {
             onClick={() => resetDrafts()}
             disabled={!hasUnsavedChanges || isSaving}
             className="h-9 text-xs"
+            title="Discard unsaved edits in current draft"
           >
             <RotateCcw className="size-3.5 mr-1" />
             Discard
           </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => resetToFactoryDefaults()}
-            disabled={isSaving}
-            className="h-9 text-xs text-destructive hover:bg-destructive/10"
-          >
-            Reset Defaults
-          </Button>
+          {isSystemSettingsTab ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSaving}
+                  className="h-9 text-xs text-destructive border-destructive/30 hover:bg-destructive/10 flex items-center gap-1 cursor-pointer"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span>Reset Defaults</span>
+                  <ChevronDown className="size-3 ml-0.5 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="text-xs font-bold text-foreground">
+                  Reset Settings ({currentCategory?.label})
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => resetSectionToDefaults(activeTab as keyof SystemSettings, false)}
+                  className="text-xs cursor-pointer"
+                >
+                  <RotateCcw className="size-3.5 mr-2 text-primary" />
+                  Reset {currentCategory?.label} (Draft)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setResetScope("current");
+                    setResetModalOpen(true);
+                  }}
+                  className="text-xs cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <AlertTriangle className="size-3.5 mr-2" />
+                  Reset {currentCategory?.label} in Database...
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setResetScope("all");
+                    setResetModalOpen(true);
+                  }}
+                  className="text-xs cursor-pointer text-destructive font-semibold focus:text-destructive"
+                >
+                  <AlertTriangle className="size-3.5 mr-2" />
+                  Full System Reset (All Tabs)...
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setResetScope("all");
+                setResetModalOpen(true);
+              }}
+              disabled={isSaving}
+              className="h-9 text-xs text-destructive hover:bg-destructive/10"
+            >
+              System Reset...
+            </Button>
+          )}
 
           <Button
             type="button"
@@ -1495,6 +1589,48 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
 
+                {/* Danger Zone: Database Reset & Flush */}
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2.5 text-destructive">
+                    <AlertTriangle className="size-5 shrink-0" />
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider">Danger Zone: Database Reset & Flush</h4>
+                      <p className="text-[11px] text-muted-foreground">
+                        Revert configuration to production factory defaults. Reset active section or perform a full system database wipe.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setResetScope("current");
+                        setResetModalOpen(true);
+                      }}
+                      className="h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
+                    >
+                      <RotateCcw className="size-3.5 mr-1" />
+                      Reset Advanced Section Only
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setResetScope("all");
+                        setResetModalOpen(true);
+                      }}
+                      className="h-8 text-xs font-bold"
+                    >
+                      <AlertTriangle className="size-3.5 mr-1" />
+                      Factory Reset All 12 Tabs (Database Flush)
+                    </Button>
+                  </div>
+                </div>
+
                 {/* Audit Logs Table */}
                 <div className="space-y-2 pt-3 border-t border-border/60">
                   <div className="flex items-center justify-between">
@@ -1543,6 +1679,45 @@ export default function AdminSettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Reset Confirmation Modal */}
+      <AlertDialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 text-destructive mb-1">
+              <AlertTriangle className="size-5" />
+              <AlertDialogTitle>
+                {resetScope === "current"
+                  ? `Reset "${currentCategory?.label}" to Factory Defaults?`
+                  : "Flush & Reset Entire System Settings?"}
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-xs leading-relaxed text-muted-foreground">
+              {resetScope === "current" ? (
+                <>
+                  This will immediately restore <strong>{currentCategory?.label}</strong> to production factory default values in the database.
+                  All other 11 sections will remain completely untouched.
+                </>
+              ) : (
+                <>
+                  <strong className="text-destructive font-semibold">Caution:</strong> This will reset <strong>ALL 12 sections</strong> across
+                  the entire platform to production factory defaults and write them directly into the database. Any custom branding,
+                  shipping rates, contact info, and SEO configuration will be restored to system defaults.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-9 text-xs">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReset}
+              className="h-9 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold"
+            >
+              {resetScope === "current" ? `Yes, Reset ${currentCategory?.label}` : "Yes, Flush & Reset All"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
