@@ -91,9 +91,9 @@ export function DashboardSidebar() {
         { title: "Website Orders", url: "/admin/orders?type=website", icon: Globe },
         { title: "Manual Orders", url: "/admin/manual-order", icon: PlusCircle },
         { title: "Pre-Orders", url: "/admin/pre-order", icon: PackagePlus },
+        { title: "Incomplete Orders", url: "/admin/incomplete", icon: ClipboardX, badge: incompleteOrdersCount },
         { title: "Bulk Shipment", url: "/admin/bulk-shipment", icon: PackageCheck },
         { title: "Couriers", url: "/admin/couriers", icon: Truck },
-        { title: "Incomplete Orders", url: "/admin/incomplete", icon: ClipboardX, badge: incompleteOrdersCount },
       ],
     },
     {
