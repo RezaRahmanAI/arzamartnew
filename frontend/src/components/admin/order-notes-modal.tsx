@@ -24,6 +24,8 @@ export type NoteRecord = {
   timestamp: string;
 };
 
+export type NoteAttemptFilter = "all" | "touched" | "untouched" | "1st-attempt" | "2nd-attempt" | "3rd-attempt" | "4th-or-more";
+
 const STORAGE_KEY = "arzamart_order_notes_store_v1";
 
 export const getSavedNotesStore = (): Record<string, NoteRecord[]> => {
@@ -34,6 +36,68 @@ export const getSavedNotesStore = (): Record<string, NoteRecord[]> => {
   } catch {
     return {};
   }
+};
+
+export const getOrderNoteCount = (order: { id: string; note?: string; notesList?: NoteRecord[]; hasNotes?: boolean }): number => {
+  if (!order) return 0;
+  const store = getSavedNotesStore();
+  const listFromStore = store[order.id];
+  if (Array.isArray(listFromStore)) {
+    const validStoreNotes = listFromStore.filter((item) => {
+      const text = typeof item === "string" ? item : item?.text;
+      if (!text || !text.trim()) return false;
+      if (
+        text.startsWith("Source:") ||
+        text.startsWith("Social:") ||
+        text.startsWith("Area:") ||
+        text.startsWith("Expected Dispatch:") ||
+        text === "[PRE-ORDER]"
+      ) {
+        return false;
+      }
+      return true;
+    });
+    return validStoreNotes.length;
+  }
+
+  if (Array.isArray(order.notesList) && order.notesList.length > 0) {
+    const validNotes = order.notesList.filter((item) => {
+      const text = item.text;
+      if (!text || !text.trim()) return false;
+      if (
+        text.startsWith("Source:") ||
+        text.startsWith("Social:") ||
+        text.startsWith("Area:") ||
+        text.startsWith("Expected Dispatch:") ||
+        text === "[PRE-ORDER]"
+      ) {
+        return false;
+      }
+      return true;
+    });
+    return validNotes.length;
+  }
+
+  if (order.note && order.note.trim()) {
+    const parts = order.note.split(" | ");
+    const validParts = parts.filter((part) => {
+      const trimmed = part.trim();
+      if (
+        !trimmed ||
+        trimmed.startsWith("Source:") ||
+        trimmed.startsWith("Social:") ||
+        trimmed.startsWith("Area:") ||
+        trimmed.startsWith("Expected Dispatch:") ||
+        trimmed === "[PRE-ORDER]"
+      ) {
+        return false;
+      }
+      return true;
+    });
+    return validParts.length;
+  }
+
+  return 0;
 };
 
 export const saveNotesStore = (store: Record<string, NoteRecord[]>) => {
