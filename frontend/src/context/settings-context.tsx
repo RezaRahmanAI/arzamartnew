@@ -29,39 +29,30 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { initData, isFreshLoaded, updateInitSettings, refetchInit } = useAppInit();
 
+  // Primary source of truth is initData.settings from AppInitContext
   const [settings, setSettings] = useState<SystemSettings>(() => {
-    if (initData.settings) return initData.settings;
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed && typeof parsed === "object") return parsed;
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-    return DEFAULT_SYSTEM_SETTINGS;
+    return initData.settings || DEFAULT_SYSTEM_SETTINGS;
   });
-  const [draftSettings, setDraftSettings] = useState<SystemSettings>(() => settings);
+  const [draftSettings, setDraftSettings] = useState<SystemSettings>(() => {
+    return initData.settings || DEFAULT_SYSTEM_SETTINGS;
+  });
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(!isFreshLoaded);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Sync settings when consolidated init data updates from server
+  // Sync settings whenever consolidated server init data loads / updates
   useEffect(() => {
     if (initData.settings) {
       setSettings(initData.settings);
       setDraftSettings((prev) => {
-        // If user hasn't made dirty edits, update draft too
-        const isDirty = JSON.stringify(prev) !== JSON.stringify(initData.settings);
+        // If there are unsaved changes currently being typed, don't clobber them; otherwise sync fresh
+        const isDirty = hasUnsavedChanges && JSON.stringify(prev) !== JSON.stringify(settings);
         return isDirty ? prev : initData.settings;
       });
       setIsLoading(false);
     }
-  }, [initData.settings]);
+  }, [initData.settings, hasUnsavedChanges, settings]);
 
   // Sync draft settings comparison
   useEffect(() => {
@@ -91,7 +82,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const success = await settingsService.update(draftSettings, "Super Admin");
       setSettings(draftSettings);
       updateInitSettings(draftSettings);
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(draftSettings));
+      setHasUnsavedChanges(false);
 
       // Trigger background refetch so server cache and app state stay completely aligned
       refetchInit();
@@ -99,11 +90,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if (!options?.silent) {
         if (success) {
           toast.success("Settings Saved Successfully!", {
-            description: "All website configurations have been updated globally in the backend.",
+            description: "All website configurations have been updated globally in the database.",
           });
         } else {
           toast.success("Settings Saved Locally!", {
-            description: "Saved to local cache (backend offline).",
+            description: "Saved to local cache.",
           });
         }
       }
@@ -113,7 +104,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       console.warn("Saving to API failed, applying local persist:", err);
       setSettings(draftSettings);
       updateInitSettings(draftSettings);
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(draftSettings));
+      setHasUnsavedChanges(false);
       if (!options?.silent) {
         toast.success("Settings Saved Locally!", {
           description: "Configuration saved to local cache.",
