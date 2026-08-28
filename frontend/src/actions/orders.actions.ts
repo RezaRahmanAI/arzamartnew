@@ -456,6 +456,34 @@ export async function updateOrderAction(
     });
 
     if (!order) {
+      // Check if it is an incomplete order
+      const incompleteRow = await prisma.incompleteOrder.findFirst({
+        where: { orderId: cleanId },
+      });
+
+      if (incompleteRow) {
+        let currentOrder: Record<string, unknown> = {};
+        try {
+          currentOrder = JSON.parse(incompleteRow.orderJson);
+        } catch {
+          /* fallback */
+        }
+        const updatedIncomplete = {
+          ...currentOrder,
+          ...payload,
+          id: cleanId,
+        };
+        await prisma.incompleteOrder.update({
+          where: { id: incompleteRow.id },
+          data: {
+            orderJson: JSON.stringify(updatedIncomplete),
+            phone: payload.phone || incompleteRow.phone,
+          },
+        });
+        revalidatePath("/admin/incomplete");
+        return { success: true };
+      }
+
       return { success: false, error: "Order not found" };
     }
 

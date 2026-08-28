@@ -183,6 +183,8 @@ export async function getAllOrders(): Promise<{ orders: Order[]; incomplete: Ord
     for (const row of incompleteRows) {
       try {
         const parsed = JSON.parse(row.orderJson);
+        const itemTotal = Number(parsed.total) || 0;
+        const noteText = parsed.note || "";
         incomplete.push({
           id: row.orderId,
           customer: parsed.customer || parsed.name || "Incomplete",
@@ -190,14 +192,20 @@ export async function getAllOrders(): Promise<{ orders: Order[]; incomplete: Ord
           address: parsed.address || "",
           city: parsed.city || "Dhaka",
           area: parsed.area,
-          note: parsed.note || "",
+          note: noteText,
+          hasNotes: !!noteText,
           payment: parsed.payment || "Cash on Delivery",
           items: parsed.items || [],
-          total: parsed.total || 0,
-          delivery: parsed.delivery || 0,
-          status: "pending",
+          total: itemTotal,
+          delivery: Number(parsed.delivery) || 0,
+          paid: Number(parsed.paid) || 0,
+          discount: Number(parsed.discount) || 0,
+          status: (parsed.status as OrderStatus) || "pending",
           date: row.createdAtUtc.toISOString().slice(0, 10),
-          source: "checkout",
+          createdAt: row.createdAtUtc.toISOString(),
+          source: parsed.source || "checkout",
+          sourcePageName: parsed.sourcePageName,
+          socialMediaSourceName: parsed.socialMediaSourceName,
         });
       } catch {
         /* skip invalid JSON */
