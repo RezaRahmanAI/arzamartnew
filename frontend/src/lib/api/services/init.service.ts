@@ -189,14 +189,14 @@ class InitService {
   }
 
   /**
-   * Static fallback data
+   * Static initial empty shell data (prevents flash of fake mock data)
    */
   public getFallbackData(): AppInitData {
     return {
       settings: DEFAULT_SYSTEM_SETTINGS,
-      banners: initialMockSlides,
-      categories: staticCategories,
-      products: staticProducts,
+      banners: [],
+      categories: [],
+      products: [],
       reviews: [],
       timestamp: Date.now(),
     };
@@ -232,23 +232,21 @@ class InitService {
       }
 
       // 2. Map Banners
-      const banners: HeroSlide[] = Array.isArray(raw?.banners) && raw.banners.length > 0
+      const banners: HeroSlide[] = Array.isArray(raw?.banners)
         ? raw.banners.map((b) => this.mapRawBannerToFrontend(b))
-        : initialMockSlides;
+        : [];
 
       // 3. Map Categories
-      const categories: Category[] = Array.isArray(raw?.categories) && raw.categories.length > 0
+      const categories: Category[] = Array.isArray(raw?.categories)
         ? raw.categories.map((c) => this.mapRawCategoryToFrontend(c))
-        : staticCategories;
+        : [];
 
       // 4. Map Products
       let rawProducts: RawApiInitProduct[] = [];
       if (Array.isArray(raw?.products)) {
         rawProducts = raw.products;
       }
-      const products: Product[] = rawProducts.length > 0
-        ? rawProducts.map((p) => this.mapRawProductToFrontend(p))
-        : staticProducts;
+      const products: Product[] = rawProducts.map((p) => this.mapRawProductToFrontend(p));
 
       // 5. Map Reviews
       const reviews: Review[] = Array.isArray(raw?.reviews)

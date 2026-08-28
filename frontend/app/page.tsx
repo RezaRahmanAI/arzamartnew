@@ -5,8 +5,9 @@ import { fetchHomePageData } from "@/lib/api/server/fetch-home-data";
 import { getImageUrl } from "@/lib/utils";
 import { HomePageDeals, HomePageArrivals, HomePageHero } from "@/components/home-page-client-islands";
 
-// ISR: Revalidate every 60 seconds — server renders complete HTML with fresh data
-export const revalidate = 60;
+// Dynamic: Always render with real fresh database data on every request
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 export default async function HomePage() {
   const data = await fetchHomePageData();

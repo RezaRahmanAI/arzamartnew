@@ -40,19 +40,19 @@ export async function fetchHomePageData(): Promise<HomePageData> {
     ]);
 
     const banners: HeroSlide[] =
-      bannersResult.status === "fulfilled" && bannersResult.value.length > 0
+      bannersResult.status === "fulfilled"
         ? bannersResult.value
-        : initialMockSlides;
+        : [];
 
     const categories: Category[] =
-      categoriesResult.status === "fulfilled" && categoriesResult.value.length > 0
+      categoriesResult.status === "fulfilled"
         ? categoriesResult.value
-        : staticCategories;
+        : [];
 
     const products: Product[] =
-      productsResult.status === "fulfilled" && productsResult.value.products.length > 0
+      productsResult.status === "fulfilled"
         ? productsResult.value.products
-        : staticProducts;
+        : [];
 
     const settingsObj = settingsResult.status === "fulfilled" ? settingsResult.value : null;
 
