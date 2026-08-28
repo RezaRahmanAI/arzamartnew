@@ -106,7 +106,9 @@ class InitService {
         : Array.isArray(p.sizes) && p.sizes.length > 0
         ? p.sizes
         : ["M", "L", "XL", "XXL"],
-      description: p.shortDescription || p.fullDescription || p.description || "",
+      description: p.fullDescription || p.description || p.shortDescription || "",
+      shortDescription: p.shortDescription || "",
+      discountNote: p.shortDescription || undefined,
       purchaseRate: p.purchaseRate ?? basePrice * 0.7,
       badge: p.badge,
       isBundle: p.isBundle ?? false,

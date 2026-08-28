@@ -25,6 +25,8 @@ export interface CreateProductInput {
   sizePrices?: Record<string, number>;
   sizeStock?: Record<string, number>;
   description?: string;
+  shortDescription?: string;
+  discountNote?: string;
   badge?: string;
   purchaseRate?: number;
   isBundle?: boolean;
@@ -46,6 +48,8 @@ export interface UpdateProductInput {
   sizePrices?: Record<string, number>;
   sizeStock?: Record<string, number>;
   description?: string;
+  shortDescription?: string;
+  discountNote?: string;
   badge?: string;
   purchaseRate?: number;
   isBundle?: boolean;
@@ -171,6 +175,9 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
       finalBadge = finalBadge ? `${finalBadge}|PREORDER_ENABLED` : "PREORDER_ENABLED";
     }
 
+    const shortDescriptionText = input.discountNote !== undefined ? input.discountNote : (input.shortDescription || "");
+    const fullDescriptionText = input.description !== undefined ? input.description : "";
+
     const created = await prisma.$transaction(async (tx) => {
       const prod = await tx.product.create({
         data: {
@@ -179,8 +186,8 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
           name,
           slug,
           sku,
-          shortDescription: input.description || "",
-          fullDescription: input.description || "",
+          shortDescription: shortDescriptionText,
+          fullDescription: fullDescriptionText,
           basePrice,
           discountPrice,
           purchaseRate,
@@ -284,13 +291,16 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
         : cleanWithoutTag;
     }
 
+    const updatedShortDesc = input.discountNote !== undefined ? input.discountNote : input.shortDescription;
+    const updatedFullDesc = input.description;
+
     await prisma.$transaction(async (tx) => {
       await tx.product.update({
         where: { id: existing.id },
         data: {
           name: input.name ?? existing.name,
-          shortDescription: input.description ?? existing.shortDescription,
-          fullDescription: input.description ?? existing.fullDescription,
+          shortDescription: updatedShortDesc !== undefined ? updatedShortDesc : existing.shortDescription,
+          fullDescription: updatedFullDesc !== undefined ? updatedFullDesc : existing.fullDescription,
           basePrice,
           discountPrice,
           purchaseRate,

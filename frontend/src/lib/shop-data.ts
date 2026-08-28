@@ -41,6 +41,8 @@ export type Product = {
   imageUrl?: string;
   sizes: string[];
   description: string;
+  shortDescription?: string;
+  discountNote?: string;
   badge?: string;
   purchaseRate: number;
   sizePrices?: Record<string, number>;

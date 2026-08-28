@@ -43,6 +43,7 @@ type FormState = {
   purchaseRate: number;
   sizes: string;
   description: string;
+  discountNote: string;
   badge: string;
   sizePrices: Record<string, number>;
   videoUrl: string;
@@ -60,11 +61,12 @@ const emptyForm: FormState = {
   category: "t-shirts",
   subcategory: "",
   image: "",
-  price: 0,
-  compareAt: 0,
-  purchaseRate: 0,
+  price: 790,
+  compareAt: 990,
+  purchaseRate: 450,
   sizes: "M, L, XL, XXL",
   description: "",
+  discountNote: "",
   badge: "",
   sizePrices: {},
   videoUrl: "",
@@ -206,7 +208,8 @@ export default function AdminProducts() {
       compareAt: p.mrp ?? p.compareAt ?? 0,
       purchaseRate: p.purchaseRate,
       sizes: p.sizes.join(", "),
-      description: p.description,
+      description: p.description || "",
+      discountNote: p.discountNote || p.shortDescription || "",
       badge: (p.badge ?? "").replace(/\|?PREORDER_ENABLED/g, "").trim(),
       sizePrices: p.sizePrices ?? {},
       videoUrl: p.videoUrl ?? "",
@@ -255,6 +258,8 @@ export default function AdminProducts() {
       image: form.image || FALLBACK_IMAGE,
       sizes,
       description: form.description || "No description yet.",
+      discountNote: form.discountNote || undefined,
+      shortDescription: form.discountNote || undefined,
       badge: form.badge || undefined,
       purchaseRate: Number(form.purchaseRate) || 0,
       sizePrices: Object.keys(sizePrices).length > 0 ? sizePrices : undefined,
@@ -457,12 +462,23 @@ export default function AdminProducts() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span className="capitalize text-foreground font-medium text-xs">{p.category}</span>
-                      {p.subcategory && (
-                        <span className="text-[10px] text-muted-foreground capitalize">↳ {p.subcategory}</span>
-                      )}
-                    </div>
+                    {(() => {
+                      const parentCat = categories.find((c) => c.slug === p.category || (c.id && String(c.id) === p.category));
+                      const subCat = p.subcategory
+                        ? categories.find((c) => c.slug === p.subcategory || (c.id && String(c.id) === p.subcategory))
+                        : null;
+                      const catDisplayName = parentCat?.name || p.category || "Unassigned";
+                      const subDisplayName = subCat?.name || p.subcategory;
+
+                      return (
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-foreground text-xs">{catDisplayName}</span>
+                          {subDisplayName && (
+                            <span className="text-[10px] text-muted-foreground">↳ {subDisplayName}</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {formatBDT(p.purchaseRate)}
@@ -929,12 +945,27 @@ export default function AdminProducts() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="discountNote">
+                Discount & Offer Banner (প্রোডাক্টের নিচে বিশেষ ছাড়ের অফার/নোট)
+              </Label>
+              <Input
+                id="discountNote"
+                value={form.discountNote}
+                onChange={(e) => update("discountNote", e.target.value)}
+                placeholder="যেমন: ২ পিস নিলে ডেলিভারি ফ্রি অথবা ২ পিস নিলে ২০০ টাকা ছাড়"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                এই লেখাটি ফ্রন্টএন্ডে প্রোডাক্ট প্রাইসের ঠিক নিচে বিশেষ অফার/ডিসকাউন্ট হিসেবে ১/২ লাইনে হাইলাইট থাকবে।
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="description">Full Description (বিস্তারিত বিবরণ)</Label>
               <Textarea
                 id="description"
                 value={form.description}
                 onChange={(e) => update("description", e.target.value)}
-                placeholder="Product description..."
+                placeholder="Product detailed description..."
                 rows={3}
               />
             </div>

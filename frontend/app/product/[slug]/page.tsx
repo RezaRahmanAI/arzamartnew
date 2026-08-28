@@ -258,9 +258,13 @@ export default function ProductPage() {
               </span>
             )}
           </div>
-          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            {product.description}
-          </p>
+          {/* Promotional / Special Discount Box under price */}
+          {(product.discountNote || product.shortDescription) && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3.5 py-2 text-xs font-semibold text-amber-700 dark:text-amber-400">
+              <span className="flex size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <span>{product.discountNote || product.shortDescription}</span>
+            </div>
+          )}
 
           {product.isBundle && product.bundleProducts && (
             <div className="mt-6 border border-border rounded-xl p-4 bg-secondary/10">
