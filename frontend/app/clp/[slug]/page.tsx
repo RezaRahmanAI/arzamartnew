@@ -43,6 +43,7 @@ import {
 } from "@/lib/location-data";
 import { SystemSettings } from "@/types/settings";
 import { type Order } from "@/lib/orders";
+import { calculateQuantityOfferDiscount } from "@/lib/offer-calculator";
 
 interface UnifiedProduct {
   id: string;
@@ -543,16 +544,7 @@ export default function CustomLandingPageRoute({
     setSelectedDeliveryZone(detectedZone);
   };
 
-  const deliveryCharge = useMemo(() => {
-    const freeThreshold = data?.config?.freeShippingThresholdQuantity;
-    const totalQty = selectedProductList.reduce((sum, item) => sum + item.quantity, 0);
-
-    if (freeThreshold && freeThreshold > 0 && totalQty >= freeThreshold) {
-      return 0; // Free delivery threshold reached
-    }
-
-    return DELIVERY_ZONES[selectedDeliveryZone]?.charge ?? 70;
-  }, [selectedDeliveryZone, selectedProductList, data?.config?.freeShippingThresholdQuantity]);
+  const rawZoneCharge = DELIVERY_ZONES[selectedDeliveryZone]?.charge ?? 70;
 
   const subtotal = useMemo(() => {
     return selectedProductList.reduce((sum, item) => {
@@ -561,7 +553,35 @@ export default function CustomLandingPageRoute({
     }, 0);
   }, [selectedProductList, getItemPrice]);
 
-  const grandTotal = subtotal + deliveryCharge;
+  const offerEvaluation = useMemo(() => {
+    return calculateQuantityOfferDiscount({
+      items: selectedProductList.map((item) => ({
+        qty: item.quantity,
+        price: getItemPrice(item.product, item.selectedSize),
+        offerRuleId: undefined, // Evaluated via universal/global rules
+      })),
+      settings,
+      baseDeliveryCharge: rawZoneCharge,
+    });
+  }, [selectedProductList, settings, rawZoneCharge, getItemPrice]);
+
+  const deliveryCharge = useMemo(() => {
+    const freeThreshold = data?.config?.freeShippingThresholdQuantity;
+    const totalQty = selectedProductList.reduce((sum, item) => sum + item.quantity, 0);
+
+    if (freeThreshold && freeThreshold > 0 && totalQty >= freeThreshold) {
+      return 0; // Free delivery threshold reached via CLP config
+    }
+
+    if (offerEvaluation.isFreeDelivery) {
+      return 0; // Free delivery threshold reached via Global Quantity Offer
+    }
+
+    return rawZoneCharge;
+  }, [rawZoneCharge, selectedProductList, data?.config?.freeShippingThresholdQuantity, offerEvaluation.isFreeDelivery]);
+
+  const quantityDiscount = offerEvaluation.discountAmount;
+  const grandTotal = Math.max(0, subtotal - quantityDiscount + deliveryCharge);
 
   const scrollToOrderForm = () => {
     const el = document.getElementById("section-order-form");
@@ -1574,10 +1594,33 @@ export default function CustomLandingPageRoute({
                                   ৳{subtotal.toLocaleString()}
                                 </span>
                               </div>
+
+                              {quantityDiscount > 0 && (
+                                <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                                  <span className="flex items-center gap-1.5 font-bold">
+                                    <span>বিশেষ ছাড় (Discount)</span>
+                                    {offerEvaluation.appliedOfferTitle && (
+                                      <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded font-extrabold">
+                                        {offerEvaluation.appliedOfferTitle}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="font-black">
+                                    - ৳{quantityDiscount.toLocaleString()}
+                                  </span>
+                                </div>
+                              )}
+
                               <div className="flex justify-between text-foreground/80 font-medium">
                                 <span>ডেলিভারি চার্জ</span>
                                 <span className="font-extrabold text-foreground">
-                                  {deliveryCharge === 0 ? "ফ্রি" : `৳${deliveryCharge}`}
+                                  {deliveryCharge === 0 ? (
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                                      ফ্রি {offerEvaluation.isFreeDelivery && "(অফার)"}
+                                    </span>
+                                  ) : (
+                                    `৳${deliveryCharge}`
+                                  )}
                                 </span>
                               </div>
                               <div className="border-t border-border pt-3 flex justify-between text-base font-black text-foreground">

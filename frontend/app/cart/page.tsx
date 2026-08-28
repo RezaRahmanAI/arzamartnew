@@ -15,21 +15,33 @@ import {
 } from "@/components/ui/dialog";
 import { useSettings } from "@/context/settings-context";
 import { getImageUrl, handleImageError } from "@/lib/utils";
+import { calculateQuantityOfferDiscount } from "@/lib/offer-calculator";
 
 
 export default function CartPage() {
   const { detailedLines, subtotal, add, update, setQty, remove } = useCart();
   const { settings } = useSettings();
 
-  // Delivery logic from centralized settings
+  // Delivery logic from centralized settings & quantity offers
   const freeShippingThreshold = settings?.shipping?.freeShippingThreshold ?? 5000;
   const enableFreeShipping = settings?.shipping?.enableFreeShipping ?? true;
   const defaultCharge = settings?.shipping?.rules?.[0]?.charge ?? 70;
-  const delivery = subtotal === 0
-    ? 0
-    : (enableFreeShipping && subtotal >= freeShippingThreshold)
-      ? 0
-      : defaultCharge;
+
+  const offerResult = calculateQuantityOfferDiscount({
+    items: detailedLines.map((l) => ({
+      qty: l.qty,
+      price: getSizePrice(l.product, l.size),
+      product: l.product,
+      offerRuleId: l.product.offerRuleId,
+    })),
+    settings,
+    baseDeliveryCharge: defaultCharge,
+  });
+
+  const isFreeDelivery = offerResult.isFreeDelivery || (enableFreeShipping && subtotal >= freeShippingThreshold);
+  const delivery = subtotal === 0 ? 0 : isFreeDelivery ? 0 : defaultCharge;
+  const quantityDiscount = offerResult.discountAmount;
+  const totalAmount = Math.max(0, subtotal - quantityDiscount + delivery);
 
   // Edit State
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -160,15 +172,36 @@ export default function CartPage() {
                 <dt className="text-muted-foreground">Subtotal</dt>
                 <dd className="font-semibold">{formatBDT(subtotal)}</dd>
               </div>
+
+              {quantityDiscount > 0 && (
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                  <dt className="flex items-center gap-1 font-medium">
+                    <span>Special Discount</span>
+                    {offerResult.appliedOfferTitle && (
+                      <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 px-1 rounded">
+                        {offerResult.appliedOfferTitle}
+                      </span>
+                    )}
+                  </dt>
+                  <dd className="font-bold">- {formatBDT(quantityDiscount)}</dd>
+                </div>
+              )}
+
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Delivery</dt>
                 <dd className="font-semibold">
-                  {delivery === 0 ? "Free" : formatBDT(delivery)}
+                  {delivery === 0 ? (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                      Free {offerResult.isFreeDelivery && "(Offer)"}
+                    </span>
+                  ) : (
+                    formatBDT(delivery)
+                  )}
                 </dd>
               </div>
               <div className="flex justify-between border-t border-border pt-3 text-base">
                 <dt className="font-bold">Total</dt>
-                <dd className="font-bold text-price">{formatBDT(subtotal + delivery)}</dd>
+                <dd className="font-bold text-price">{formatBDT(totalAmount)}</dd>
               </div>
             </dl>
             <Link
