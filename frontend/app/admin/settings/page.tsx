@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useSettings } from "@/context/settings-context";
 import { SystemSettings, ShippingRule } from "@/types/settings";
+import { getSystemAuditLogs } from "@/lib/audit-logger";
 import { Input } from "@/components/ui/input";
 import { ImageUploader } from "@/components/image-uploader";
 import { Label } from "@/components/ui/label";
@@ -2036,42 +2037,100 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
 
-                {/* Audit Logs Table */}
-                <div className="space-y-2 pt-3 border-t border-border/60">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <History className="size-4 text-primary" /> Settings Audit Log History ({auditLogs.length})
-                    </h4>
+                {/* Real-time Comprehensive System & Order Audit Logs Table */}
+                <div className="space-y-3 pt-4 border-t border-border/60">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                        <History className="size-4 text-primary" />
+                        <span>System Audit Trail & Activity Logs (সর্বমোট কার্যক্রমের অপরিবর্তনযোগ্য লগ)</span>
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        অর্ডার প্লেস, স্ট্যাটাস পরিবর্তন, প্রোডাক্ট/ক্যাটাগরি আপডেট, এবং অ্যাডমিন/স্টাফের সকল অ্যাকশনের অপরিবর্তনীয় ও অবিনশ্বর হিস্ট্রি। এই লগ এডিট বা ডিলিট করা অসম্ভব।
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                        <ShieldCheck className="size-3.5" /> Immutable & Read-Only
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="overflow-x-auto border border-border rounded-lg max-h-[350px]">
-                    <table className="w-full text-xs text-left">
-                      <thead className="bg-secondary/40 border-b border-border font-semibold text-muted-foreground sticky top-0">
-                        <tr>
-                          <th className="py-2.5 px-3">Timestamp</th>
-                          <th className="py-2.5 px-3">User</th>
-                          <th className="py-2.5 px-3">Category</th>
-                          <th className="py-2.5 px-3">Details</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/60">
-                        {auditLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-secondary/20">
-                            <td className="py-2 px-3 text-[11px] text-muted-foreground shrink-0 font-mono">
-                              {new Date(log.timestamp).toLocaleString()}
-                            </td>
-                            <td className="py-2 px-3 font-semibold text-foreground">{log.user}</td>
-                            <td className="py-2 px-3">
-                              <span className="uppercase text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                                {log.section}
-                              </span>
-                            </td>
-                            <td className="py-2 px-3 text-muted-foreground text-[11px]">{log.newValue}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  {(() => {
+                    const allLogs = getSystemAuditLogs();
+                    return (
+                      <div className="space-y-3">
+                        <div className="overflow-x-auto border border-border rounded-xl max-h-[480px] shadow-xs">
+                          <table className="w-full text-xs text-left">
+                            <thead className="bg-muted/80 border-b border-border font-bold text-foreground uppercase tracking-wider text-[11px] sticky top-0 backdrop-blur-md z-10">
+                              <tr>
+                                <th className="py-3 px-3.5">Time & Date</th>
+                                <th className="py-3 px-3.5">Actor (Admin/Staff)</th>
+                                <th className="py-3 px-3.5">Action & Category</th>
+                                <th className="py-3 px-3.5">Target</th>
+                                <th className="py-3 px-3.5">Activity Details</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/60 bg-card">
+                              {allLogs.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} className="py-8 text-center text-muted-foreground italic text-xs">
+                                    No audit actions recorded yet. All upcoming store & system activities will appear here automatically.
+                                  </td>
+                                </tr>
+                              ) : (
+                                allLogs.map((log) => {
+                                  const categoryColors: Record<string, string> = {
+                                    ORDER: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/50",
+                                    PRODUCT: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200/50",
+                                    CATEGORY: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/50",
+                                    SETTINGS: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/50",
+                                    COURIER: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200/50",
+                                    STAFF: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200/50",
+                                    SYSTEM: "bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-200/50",
+                                  };
+
+                                  const badgeClass = categoryColors[log.category] || "bg-secondary text-foreground";
+
+                                  return (
+                                    <tr key={log.id} className="hover:bg-secondary/20 transition-colors">
+                                      <td className="py-2.5 px-3.5 text-[11px] text-muted-foreground font-mono whitespace-nowrap">
+                                        {new Date(log.timestamp).toLocaleString("en-US", {
+                                          month: "short",
+                                          day: "numeric",
+                                          year: "numeric",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                          second: "2-digit",
+                                          hour12: true,
+                                        })}
+                                      </td>
+                                      <td className="py-2.5 px-3.5">
+                                        <div className="font-bold text-foreground">{log.actorName}</div>
+                                        <div className="text-[10px] text-muted-foreground font-medium">{log.actorRole}</div>
+                                      </td>
+                                      <td className="py-2.5 px-3.5 whitespace-nowrap">
+                                        <div className="font-semibold text-foreground text-xs">{log.action}</div>
+                                        <span className={`inline-block mt-0.5 uppercase text-[9px] font-extrabold px-1.5 py-0.2 rounded border ${badgeClass}`}>
+                                          {log.category}
+                                        </span>
+                                      </td>
+                                      <td className="py-2.5 px-3.5 font-mono text-[11px] text-foreground font-semibold">
+                                        {log.targetId ? `#${log.targetId}` : "—"}
+                                      </td>
+                                      <td className="py-2.5 px-3.5 text-foreground/90 text-xs leading-relaxed max-w-md">
+                                        {log.details}
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}

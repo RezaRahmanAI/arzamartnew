@@ -12,6 +12,7 @@ import {
 import { type Product } from "./shop-data";
 import { productsService } from "./api/services/products.service";
 import { useAppInit } from "@/context/app-init-context";
+import { logSystemAction } from "@/lib/audit-logger";
 
 type ProductsContextValue = {
   products: Product[];
@@ -52,6 +53,13 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   const addProduct = useCallback(async (product: Product) => {
     setProducts((prev) => [product, ...prev.filter((p) => p.slug !== product.slug)]);
+    logSystemAction({
+      category: "PRODUCT",
+      action: "Product Created",
+      targetId: product.slug,
+      targetName: product.name,
+      details: `Product "${product.name}" created in category "${product.category}" with price ৳${product.price}.`,
+    });
     try {
       await productsService.create(product);
     } catch (error) {
@@ -61,6 +69,13 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   const updateProduct = useCallback(async (slug: string, updated: Product) => {
     setProducts((prev) => prev.map((p) => (p.slug === slug ? updated : p)));
+    logSystemAction({
+      category: "PRODUCT",
+      action: "Product Updated",
+      targetId: slug,
+      targetName: updated.name,
+      details: `Product "${updated.name}" (${slug}) details/pricing updated. Price: ৳${updated.price}`,
+    });
     try {
       await productsService.update(slug, updated);
       // Re-fetch to ensure single source of truth is synced
@@ -75,6 +90,12 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   const deleteProduct = useCallback(async (slug: string) => {
     setProducts((prev) => prev.filter((p) => p.slug !== slug));
+    logSystemAction({
+      category: "PRODUCT",
+      action: "Product Deleted",
+      targetId: slug,
+      details: `Product with slug "${slug}" was deleted from store catalog.`,
+    });
     try {
       await productsService.delete(slug);
     } catch (error) {

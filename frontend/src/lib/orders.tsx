@@ -12,6 +12,7 @@ import {
 import { ordersService } from "./api/services/orders.service";
 
 import { useSettings } from "@/context/settings-context";
+import { logSystemAction } from "@/lib/audit-logger";
 
 export type OrderStatus =
   | "pending"
@@ -143,6 +144,15 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         saveSettings({ silent: true });
       }
 
+      // Record immutable audit log for order creation
+      logSystemAction({
+        category: "ORDER",
+        action: order.source === "manual" ? "Manual Order Created" : "New Order Placed",
+        targetId: finalId,
+        targetName: order.customer,
+        details: `Order #${finalId} created with total ৳${order.total} (${order.items.length} items) for customer ${order.customer} (${order.phone}). Status: ${order.status}`,
+      });
+
       return finalId;
     },
     [settings, updateSection, saveSettings]
@@ -191,24 +201,52 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       if (!target) return;
       await addOrder({ ...target, status: "pending", source: "checkout" });
       await removeIncomplete(id);
+      logSystemAction({
+        category: "ORDER",
+        action: "Incomplete Order Promoted",
+        targetId: id,
+        targetName: target.customer,
+        details: `Incomplete order #${id} was promoted to active pending order for ${target.customer}.`,
+      });
     },
     [incomplete, addOrder, removeIncomplete]
   );
 
   const updateStatus = useCallback(async (id: string, status: OrderStatus) => {
+    const prevOrder = orders.find((o) => o.id === id);
+    const oldStatus = prevOrder?.status || "unknown";
+
     setOrders((prev) =>
       prev.map((o) => (o.id === id ? { ...o, status } : o))
     );
+
+    logSystemAction({
+      category: "ORDER",
+      action: "Order Status Updated",
+      targetId: id,
+      targetName: prevOrder?.customer,
+      details: `Order #${id} status changed from "${oldStatus}" to "${status}"`,
+      changes: { status: { from: oldStatus, to: status } },
+    });
+
     try {
       await ordersService.updateStatus(id, status);
     } catch (err) {
       console.error("Failed to sync order status update with API:", err);
     }
-  }, []);
+  }, [orders]);
 
   const updateOrder = useCallback(async (id: string, payload: Partial<Order>) => {
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...payload, id } : o)));
     setIncomplete((prev) => prev.map((o) => (o.id === id ? { ...o, ...payload, id } : o)));
+
+    logSystemAction({
+      category: "ORDER",
+      action: "Order Details Modified",
+      targetId: id,
+      details: `Order #${id} updated with changes: ${Object.keys(payload).join(", ")}`,
+    });
+
     try {
       await ordersService.updateOrder(id, payload);
     } catch (err) {

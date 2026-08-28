@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { DEFAULT_SYSTEM_SETTINGS, SystemSettings, AuditLogEntry } from "@/types/settings";
 import { settingsService } from "@/lib/api/services/settings.service";
 import { useAppInit } from "@/context/app-init-context";
+import { logSystemAction } from "@/lib/audit-logger";
 import { toast } from "sonner";
 
 interface SettingsContextType {
@@ -86,6 +87,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
       // Trigger background refetch so server cache and app state stay completely aligned
       refetchInit();
+
+      // Immutable audit log
+      logSystemAction({
+        category: "SETTINGS",
+        action: "Settings Updated",
+        details: "Store and website configurations were updated and saved.",
+      });
 
       if (!options?.silent) {
         if (success) {
