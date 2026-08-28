@@ -215,40 +215,61 @@ export default function AdminProducts() {
   };
 
   const openEdit = (p: Product) => {
-    // Resolve proper category and subcategory
-    let selectedMainCat = p.category;
-    let selectedSubCat = p.subcategory || "";
+    // 1. Direct ID based lookup (foolproof)
+    let selectedMainCat = "";
+    let selectedSubCat = "";
 
-    const rawCat = (p.category || "").trim().toLowerCase();
-    const rawSub = (p.subcategory || "").trim().toLowerCase();
+    if (p.categoryId) {
+      const catById = categories.find((c) => c.id === p.categoryId);
+      if (catById) {
+        if (catById.parentSlug || catById.parentCategoryId) {
+          // This category is a subcategory
+          selectedSubCat = catById.slug;
+          const parent = categories.find((c) => c.slug === catById.parentSlug || (catById.parentCategoryId && c.id === catById.parentCategoryId));
+          selectedMainCat = parent?.slug || catById.parentSlug || catById.slug;
+        } else {
+          selectedMainCat = catById.slug;
+        }
+      }
+    }
 
-    // Check if rawCat or rawSub matches any category in store
-    const matchedCategory = categories.find(
-      (c) =>
-        c.slug.toLowerCase() === rawCat ||
-        c.name.toLowerCase() === rawCat ||
-        (c.id && String(c.id) === p.category)
-    );
+    if (p.subcategoryId && !selectedSubCat) {
+      const subById = categories.find((c) => c.id === p.subcategoryId);
+      if (subById) {
+        selectedSubCat = subById.slug;
+        if (!selectedMainCat) {
+          const parent = categories.find((c) => c.slug === subById.parentSlug || (subById.parentCategoryId && c.id === subById.parentCategoryId));
+          selectedMainCat = parent?.slug || subById.parentSlug || "t-shirts";
+        }
+      }
+    }
 
-    if (matchedCategory) {
-      if (matchedCategory.parentSlug) {
-        selectedMainCat = matchedCategory.parentSlug;
-        selectedSubCat = matchedCategory.slug;
-      } else if (matchedCategory.parentCategoryId) {
-        const parent = categories.find((c) => c.id === matchedCategory.parentCategoryId);
-        if (parent) {
-          selectedMainCat = parent.slug;
+    // 2. Fallback to slug / name matching if IDs were not available
+    if (!selectedMainCat) {
+      const rawCat = (p.category || "").trim().toLowerCase();
+      const matchedCategory = categories.find(
+        (c) =>
+          c.slug.toLowerCase() === rawCat ||
+          c.name.toLowerCase() === rawCat ||
+          (c.id && String(c.id) === p.category)
+      );
+
+      if (matchedCategory) {
+        if (matchedCategory.parentSlug) {
+          selectedMainCat = matchedCategory.parentSlug;
+          selectedSubCat = matchedCategory.slug;
+        } else if (matchedCategory.parentCategoryId) {
+          const parent = categories.find((c) => c.id === matchedCategory.parentCategoryId);
+          selectedMainCat = parent ? parent.slug : matchedCategory.slug;
           selectedSubCat = matchedCategory.slug;
         } else {
           selectedMainCat = matchedCategory.slug;
         }
-      } else {
-        selectedMainCat = matchedCategory.slug;
       }
     }
 
-    // Also match subcategory if specified
-    if (rawSub) {
+    if (!selectedSubCat && p.subcategory) {
+      const rawSub = (p.subcategory || "").trim().toLowerCase();
       const matchedSub = categories.find(
         (c) =>
           c.slug.toLowerCase() === rawSub ||
@@ -257,11 +278,8 @@ export default function AdminProducts() {
       );
       if (matchedSub) {
         selectedSubCat = matchedSub.slug;
-        if (matchedSub.parentSlug) {
-          selectedMainCat = matchedSub.parentSlug;
-        } else if (matchedSub.parentCategoryId) {
-          const parent = categories.find((c) => c.id === matchedSub.parentCategoryId);
-          if (parent) selectedMainCat = parent.slug;
+        if (!selectedMainCat) {
+          selectedMainCat = matchedSub.parentSlug || "t-shirts";
         }
       }
     }
@@ -315,11 +333,21 @@ export default function AdminProducts() {
     const firstVal = Object.values(sizePrices)[0] || 0;
     const basePrice = sizes[0] ? (sizePrices[sizes[0]] || firstVal) : firstVal;
 
+    // Resolve exact database IDs from category store
+    const mainCatObj = categories.find((c) => c.slug === form.category || (c.id && String(c.id) === form.category));
+    const subCatObj = form.subcategory
+      ? categories.find((c) => c.slug === form.subcategory || (c.id && String(c.id) === form.subcategory))
+      : null;
+
     const product: Product = {
       slug,
       name: form.name,
       category: form.category,
       subcategory: form.subcategory || undefined,
+      categoryId: mainCatObj?.id,
+      subcategoryId: subCatObj?.id,
+      categoryName: mainCatObj?.name,
+      subcategoryName: subCatObj?.name,
       price: basePrice,
       compareAt: Number(form.compareAt) > 0 ? Number(form.compareAt) : undefined,
       mrp: Number(form.compareAt) > 0 ? Number(form.compareAt) : undefined,
@@ -531,38 +559,66 @@ export default function AdminProducts() {
                   </TableCell>
                   <TableCell>
                     {(() => {
-                      // Match parent/main category
-                      const cleanCat = (p.category || "").trim().toLowerCase();
-                      const parentCat = categories.find(
-                        (c) =>
-                          c.slug.toLowerCase() === cleanCat ||
-                          c.name.toLowerCase() === cleanCat ||
-                          (c.id && String(c.id) === p.category)
-                      );
+                      // 1. Direct ID & Name matching from DB
+                      let displayParent = p.categoryName;
+                      let displaySub = p.subcategoryName;
 
-                      // Match subcategory
-                      const cleanSub = (p.subcategory || "").trim().toLowerCase();
-                      const subCat = cleanSub
-                        ? categories.find(
-                            (c) =>
-                              c.slug.toLowerCase() === cleanSub ||
-                              c.name.toLowerCase() === cleanSub ||
-                              (c.id && String(c.id) === p.subcategory)
-                          )
-                        : null;
+                      if (!displayParent && p.categoryId) {
+                        const matchedCat = categories.find((c) => c.id === p.categoryId);
+                        if (matchedCat) {
+                          if (matchedCat.parentName) {
+                            displayParent = matchedCat.parentName;
+                            displaySub = matchedCat.name;
+                          } else {
+                            displayParent = matchedCat.name;
+                          }
+                        }
+                      }
 
-                      // If p.category happens to match a subcategory with a parent, auto resolve the hierarchy
-                      const displayParent = parentCat?.parentName || (parentCat?.parentSlug ? categories.find(c => c.slug === parentCat.parentSlug)?.name : null) || parentCat?.name || p.category || "Unassigned";
-                      let displaySub = subCat?.name || p.subcategory || (parentCat?.parentSlug || parentCat?.parentCategoryId ? parentCat.name : null);
+                      if (!displaySub && p.subcategoryId) {
+                        const matchedSub = categories.find((c) => c.id === p.subcategoryId);
+                        if (matchedSub) {
+                          displaySub = matchedSub.name;
+                          if (!displayParent && matchedSub.parentName) {
+                            displayParent = matchedSub.parentName;
+                          }
+                        }
+                      }
+
+                      // 2. Fallback matching via slug or string
+                      if (!displayParent) {
+                        const cleanCat = (p.category || "").trim().toLowerCase();
+                        const parentCat = categories.find(
+                          (c) =>
+                            c.slug.toLowerCase() === cleanCat ||
+                            c.name.toLowerCase() === cleanCat ||
+                            (c.id && String(c.id) === p.category)
+                        );
+                        displayParent = parentCat?.parentName || (parentCat?.parentSlug ? categories.find(c => c.slug === parentCat.parentSlug)?.name : null) || parentCat?.name || p.category || "Unassigned";
+                        if (!displaySub && (parentCat?.parentSlug || parentCat?.parentCategoryId)) {
+                          displaySub = parentCat.name;
+                        }
+                      }
+
+                      if (!displaySub && p.subcategory) {
+                        const cleanSub = p.subcategory.trim().toLowerCase();
+                        const subCat = categories.find(
+                          (c) =>
+                            c.slug.toLowerCase() === cleanSub ||
+                            c.name.toLowerCase() === cleanSub ||
+                            (c.id && String(c.id) === p.subcategory)
+                        );
+                        displaySub = subCat?.name || p.subcategory;
+                      }
 
                       // Avoid duplicate display if parent and sub are same
-                      if (displaySub && displaySub.toLowerCase() === displayParent.toLowerCase()) {
-                        displaySub = null;
+                      if (displaySub && displayParent && displaySub.toLowerCase() === displayParent.toLowerCase()) {
+                        displaySub = undefined;
                       }
 
                       return (
                         <div className="flex flex-col">
-                          <span className="font-semibold text-foreground text-xs">{displayParent}</span>
+                          <span className="font-semibold text-foreground text-xs">{displayParent || "Unassigned"}</span>
                           {displaySub && (
                             <span className="text-[10px] text-muted-foreground">↳ {displaySub}</span>
                           )}

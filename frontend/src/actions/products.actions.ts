@@ -16,6 +16,8 @@ export interface CreateProductInput {
   slug?: string;
   category?: string;
   subcategory?: string;
+  categoryId?: number;
+  subcategoryId?: number;
   price: number;
   compareAt?: number;
   mrp?: number;
@@ -39,6 +41,8 @@ export interface UpdateProductInput {
   name?: string;
   category?: string;
   subcategory?: string;
+  categoryId?: number;
+  subcategoryId?: number;
   price?: number;
   compareAt?: number;
   mrp?: number;
@@ -131,47 +135,53 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
       });
     }
 
-    // Resolve category (use subcategory if selected and found, otherwise main category)
+    // Resolve category ID directly if provided, or resolve from database
     let categoryId = 1;
-    const subCatIdentifier = input.subcategory?.trim();
-    const mainCatIdentifier = input.category?.trim();
-
-    let foundCat = null;
-    if (subCatIdentifier) {
-      const subCatSlug = subCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
-      foundCat = await prisma.category.findFirst({
-        where: {
-          OR: [{ slug: subCatSlug }, { name: subCatIdentifier }],
-        },
-      });
-    }
-
-    if (!foundCat && mainCatIdentifier) {
-      const mainCatSlug = mainCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
-      foundCat = await prisma.category.findFirst({
-        where: {
-          OR: [{ slug: mainCatSlug }, { name: mainCatIdentifier }],
-        },
-      });
-    }
-
-    if (foundCat) {
-      categoryId = foundCat.id;
-    } else if (mainCatIdentifier || subCatIdentifier) {
-      const targetName = mainCatIdentifier || subCatIdentifier || "General";
-      const catSlug = targetName.toLowerCase().replace(/[^a-z0-9-]+/g, "-") || `cat-${Date.now()}`;
-      const newCat = await prisma.category.create({
-        data: {
-          name: targetName,
-          slug: catSlug,
-          displayOrder: 1,
-          isActive: true,
-        },
-      });
-      categoryId = newCat.id;
+    if (input.subcategoryId && Number(input.subcategoryId) > 0) {
+      categoryId = Number(input.subcategoryId);
+    } else if (input.categoryId && Number(input.categoryId) > 0) {
+      categoryId = Number(input.categoryId);
     } else {
-      const defaultCat = await prisma.category.findFirst();
-      if (defaultCat) categoryId = defaultCat.id;
+      const subCatIdentifier = input.subcategory?.trim();
+      const mainCatIdentifier = input.category?.trim();
+
+      let foundCat = null;
+      if (subCatIdentifier) {
+        const subCatSlug = subCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+        foundCat = await prisma.category.findFirst({
+          where: {
+            OR: [{ slug: subCatSlug }, { name: subCatIdentifier }],
+          },
+        });
+      }
+
+      if (!foundCat && mainCatIdentifier) {
+        const mainCatSlug = mainCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+        foundCat = await prisma.category.findFirst({
+          where: {
+            OR: [{ slug: mainCatSlug }, { name: mainCatIdentifier }],
+          },
+        });
+      }
+
+      if (foundCat) {
+        categoryId = foundCat.id;
+      } else if (mainCatIdentifier || subCatIdentifier) {
+        const targetName = mainCatIdentifier || subCatIdentifier || "General";
+        const catSlug = targetName.toLowerCase().replace(/[^a-z0-9-]+/g, "-") || `cat-${Date.now()}`;
+        const newCat = await prisma.category.create({
+          data: {
+            name: targetName,
+            slug: catSlug,
+            displayOrder: 1,
+            isActive: true,
+          },
+        });
+        categoryId = newCat.id;
+      } else {
+        const defaultCat = await prisma.category.findFirst();
+        if (defaultCat) categoryId = defaultCat.id;
+      }
     }
 
     const sku = `SKU-${Date.now().toString().slice(-6)}`;
@@ -272,30 +282,36 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
     }
 
     let categoryId = existing.categoryId;
-    const subCatIdentifier = input.subcategory !== undefined ? input.subcategory?.trim() : undefined;
-    const mainCatIdentifier = input.category?.trim();
+    if (input.subcategoryId && Number(input.subcategoryId) > 0) {
+      categoryId = Number(input.subcategoryId);
+    } else if (input.categoryId && Number(input.categoryId) > 0) {
+      categoryId = Number(input.categoryId);
+    } else {
+      const subCatIdentifier = input.subcategory !== undefined ? input.subcategory?.trim() : undefined;
+      const mainCatIdentifier = input.category?.trim();
 
-    let foundCat = null;
-    if (subCatIdentifier) {
-      const subCatSlug = subCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
-      foundCat = await prisma.category.findFirst({
-        where: {
-          OR: [{ slug: subCatSlug }, { name: subCatIdentifier }],
-        },
-      });
-    }
+      let foundCat = null;
+      if (subCatIdentifier) {
+        const subCatSlug = subCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+        foundCat = await prisma.category.findFirst({
+          where: {
+            OR: [{ slug: subCatSlug }, { name: subCatIdentifier }],
+          },
+        });
+      }
 
-    if (!foundCat && mainCatIdentifier) {
-      const mainCatSlug = mainCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
-      foundCat = await prisma.category.findFirst({
-        where: {
-          OR: [{ slug: mainCatSlug }, { name: mainCatIdentifier }],
-        },
-      });
-    }
+      if (!foundCat && mainCatIdentifier) {
+        const mainCatSlug = mainCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+        foundCat = await prisma.category.findFirst({
+          where: {
+            OR: [{ slug: mainCatSlug }, { name: mainCatIdentifier }],
+          },
+        });
+      }
 
-    if (foundCat) {
-      categoryId = foundCat.id;
+      if (foundCat) {
+        categoryId = foundCat.id;
+      }
     }
 
     const basePrice = input.mrp !== undefined ? input.mrp : input.price !== undefined ? input.price : existing.basePrice;

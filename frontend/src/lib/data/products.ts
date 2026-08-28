@@ -68,15 +68,26 @@ export function mapPrismaProduct(p: {
   // Determine main category and subcategory from DB hierarchy
   let mainCategorySlug = "t-shirts";
   let subCategorySlug: string | undefined = undefined;
+  let mainCategoryId: number | undefined = undefined;
+  let subCategoryId: number | undefined = undefined;
+  let mainCategoryName: string | undefined = undefined;
+  let subCategoryName: string | undefined = undefined;
 
   if (p.category) {
     if (p.category.parentCategory) {
-      // Current category is a sub-category!
+      // Current category in DB is a sub-category!
       mainCategorySlug = p.category.parentCategory.slug;
+      mainCategoryId = p.category.parentCategory.id;
+      mainCategoryName = p.category.parentCategory.name;
+
       subCategorySlug = p.category.slug;
+      subCategoryId = p.category.id;
+      subCategoryName = p.category.name;
     } else {
-      // Current category is a main category
+      // Current category in DB is a main category
       mainCategorySlug = p.category.slug;
+      mainCategoryId = p.category.id;
+      mainCategoryName = p.category.name;
     }
   }
 
@@ -86,6 +97,10 @@ export function mapPrismaProduct(p: {
     name: p.name,
     category: mainCategorySlug,
     subcategory: subCategorySlug,
+    categoryId: mainCategoryId,
+    subcategoryId: subCategoryId,
+    categoryName: mainCategoryName,
+    subcategoryName: subCategoryName,
     price: activePrice,
     compareAt: compareAt,
     mrp: basePrice,

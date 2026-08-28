@@ -34,6 +34,10 @@ export type Product = {
   name: string;
   category: string;
   subcategory?: string;
+  categoryId?: number;
+  subcategoryId?: number;
+  categoryName?: string;
+  subcategoryName?: string;
   price: number;
   compareAt?: number;
   mrp?: number;
