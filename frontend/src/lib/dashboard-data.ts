@@ -36,6 +36,7 @@ export type Order = {
   shipmentStatus?: string | null;
   shipmentBatchId?: string | null;
   source?: "checkout" | "manual" | "pre-order";
+  createdAt?: string;
 };
 
 export type Customer = {

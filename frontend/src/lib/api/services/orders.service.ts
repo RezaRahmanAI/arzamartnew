@@ -4,6 +4,7 @@ import {
   getOrderByIdAction,
   createOrderAction,
   updateOrderStatusAction,
+  updateOrderAction,
   saveIncompleteOrderAction,
   removeIncompleteOrderAction,
 } from "@/actions/orders.actions";
@@ -203,6 +204,12 @@ class OrdersService {
     const { orders } = this.getLocalOrders();
     const updated = orders.map((o) => (o.id === id ? { ...o, ...payload, id } : o));
     this.saveLocalOrders(updated);
+
+    try {
+      await updateOrderAction(id, payload);
+    } catch (err) {
+      console.error("Failed to sync order update with API:", err);
+    }
 
     if (payload.status) {
       await updateOrderStatusAction(id, payload.status);

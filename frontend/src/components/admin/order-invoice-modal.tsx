@@ -133,13 +133,11 @@ export function OrderInvoiceModal({
   const totalQty = order.items.reduce((sum, item) => sum + item.qty, 0);
   const subTotal = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
   
-  // Calculate a mock shipping and discount since it's not strictly in the current Order model
-  const shippingCost = order.total > subTotal ? order.total - subTotal : 0;
-  const discount = order.total < subTotal ? subTotal - order.total : 0;
-  
-  // Mock Paid / Due based on status
-  const paidAmount = order.status === "delivered" ? order.total : 0;
-  const dueAmount = order.status === "delivered" ? 0 : order.total;
+  // Real delivery, discount, paid & due from order
+  const shippingCost = order.delivery !== undefined ? order.delivery : (order.total > subTotal ? order.total - subTotal : 0);
+  const discount = order.discount !== undefined ? order.discount : Math.max(0, subTotal + shippingCost - order.total);
+  const paidAmount = Number(order.paid) || 0;
+  const dueAmount = Math.max(0, order.total - paidAmount);
 
   return (
     // Backdrop - hidden on print

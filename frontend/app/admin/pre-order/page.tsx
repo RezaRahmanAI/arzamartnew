@@ -831,7 +831,7 @@ export default function AdminPreOrderPage() {
                 type="submit"
                 className="w-full h-11 bg-foreground text-background hover:bg-foreground/90 font-bold text-sm cursor-pointer mt-2"
               >
-                Submit Pre-order
+                {isEditMode ? "Update Order" : "Submit Pre-order"}
               </Button>
             </div>
           </form>

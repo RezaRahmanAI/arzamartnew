@@ -62,6 +62,7 @@ export type Order = {
   courierTrackingNumber?: string | null;
   shipmentStatus?: string | null;
   shipmentBatchId?: string | null;
+  createdAt?: string;
 };
 
 type OrdersContextValue = {

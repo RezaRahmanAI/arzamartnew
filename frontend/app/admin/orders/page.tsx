@@ -62,6 +62,7 @@ const OrderNotesModal = dynamic(() => import("@/components/admin/order-notes-mod
 const OrderTrackingModal = dynamic(() => import("@/components/admin/order-tracking-modal").then(m => m.OrderTrackingModal), { ssr: false });
 const OrderInvoiceModal = dynamic(() => import("@/components/admin/order-invoice-modal").then(m => m.OrderInvoiceModal), { ssr: false });
 const OrderStockWarningModal = dynamic(() => import("@/components/admin/order-stock-warning-modal").then(m => m.OrderStockWarningModal), { ssr: false });
+const QuickEditOrderModal = dynamic(() => import("@/components/admin/quick-edit-order-modal").then(m => m.QuickEditOrderModal), { ssr: false });
 
 const statusOptions: OrderStatus[] = [
   "pending", "confirmed", "processing", "packed", "shipped", "delivered", 
@@ -87,27 +88,33 @@ const nextStatusLabels: Partial<Record<OrderStatus, string>> = {
 export default function AdminOrders() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialType = searchParams.get("type") === "preorder" ? "preorder" : "all";
+  const rawType = searchParams.get("type");
+  const initialType = rawType === "preorder" ? "preorder" : rawType === "manual" ? "manual" : rawType === "website" ? "website" : "all";
 
   const [orderIdQuery, setOrderIdQuery] = useState("");
   const [phoneQuery, setPhoneQuery] = useState("");
   
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
-  const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "preorder" | "website">(initialType);
+  const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "website" | "manual" | "preorder">(initialType);
   const [sourceFilter, setSourceFilter] = useState<"all" | "facebook" | "instagram">("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const [activeNotesOrder, setActiveNotesOrder] = useState<Order | null>(null);
   const [activeTrackingOrder, setActiveTrackingOrder] = useState<Order | null>(null);
   const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<Order | null>(null);
-  const [activeEditOrder, setActiveEditOrder] = useState<Order | null>(null);
+  const [activeQuickEditOrder, setActiveQuickEditOrder] = useState<Order | null>(null);
+
+  // Quick Payment Popover state
+  const [editingPaymentOrderId, setEditingPaymentOrderId] = useState<string | null>(null);
+  const [editingPaymentPaidValue, setEditingPaymentPaidValue] = useState<string>("");
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
 
   // Stock Checking State
   const [isStockChecking, setIsStockChecking] = useState(false);
   const [stockWarningItems, setStockWarningItems] = useState<OutOfStockItem[]>([]);
   const [pendingConfirmOrder, setPendingConfirmOrder] = useState<Order | null>(null);
 
-  const { orders: contextOrders, updateStatus: contextUpdateStatus } = useOrders();
+  const { orders: contextOrders, updateStatus: contextUpdateStatus, updateOrder: contextUpdateOrder } = useOrders();
   const [page, setPage] = useState(1);
   const pageSize = 10;
   
@@ -153,6 +160,8 @@ export default function AdminOrders() {
       filtered = filtered.filter(o => o.isPreOrder);
     } else if (orderTypeFilter === "website") {
       filtered = filtered.filter(o => !o.isPreOrder && !o.sourcePageName && !o.socialMediaSourceName && o.source !== "manual");
+    } else if (orderTypeFilter === "manual") {
+      filtered = filtered.filter(o => !o.isPreOrder && (o.source === "manual" || !!o.sourcePageName || !!o.socialMediaSourceName));
     }
     if (sourceFilter === "facebook") {
       filtered = filtered.filter(o =>
@@ -242,6 +251,45 @@ export default function AdminOrders() {
       toast.success(`Order ${orderId} marked as ${newStatus}`);
     } catch {
       toast.error(`Failed to update order ${orderId}`);
+    }
+  };
+
+  const handleSavePayment = async (orderId: string, customPaid?: number) => {
+    const targetOrder = data.find(o => o.id === orderId);
+    if (!targetOrder) return;
+
+    const paidVal = customPaid !== undefined ? customPaid : (parseFloat(editingPaymentPaidValue) || 0);
+    const totalAmount = Number(targetOrder.total) || 0;
+    const finalPaid = Math.max(0, paidVal);
+
+    try {
+      setIsSavingPayment(true);
+      setData(prev => prev.map(o => o.id === orderId ? { ...o, paid: finalPaid } : o));
+      await contextUpdateOrder(orderId, {
+        paid: finalPaid,
+        total: totalAmount,
+      });
+      toast.success(`Payment updated for #${orderId.replace(/^ORD-|^INC-/, "")}: Paid ৳${finalPaid}`);
+      setEditingPaymentOrderId(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update payment");
+    } finally {
+      setIsSavingPayment(false);
+    }
+  };
+
+  const handleSaveQuickEdit = async (updatedFields: Partial<Order>) => {
+    if (!activeQuickEditOrder) return;
+    const orderId = activeQuickEditOrder.id;
+
+    try {
+      setData(prev => prev.map(o => o.id === orderId ? { ...o, ...updatedFields } : o));
+      await contextUpdateOrder(orderId, updatedFields);
+      setActiveQuickEditOrder(null);
+    } catch (err) {
+      console.error(err);
+      throw err;
     }
   };
 
@@ -366,11 +414,11 @@ export default function AdminOrders() {
     <div className="space-y-4 relative">
 
       {/* Quick Type Selection Tabs */}
-      <div className="flex items-center gap-2 border-b border-border pb-3">
+      <div className="flex items-center gap-2 border-b border-border pb-3 overflow-x-auto">
         <button
           type="button"
           onClick={() => setOrderTypeFilter("all")}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+          className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
             orderTypeFilter === "all"
               ? "bg-primary text-primary-foreground shadow-xs"
               : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -382,19 +430,31 @@ export default function AdminOrders() {
         <button
           type="button"
           onClick={() => setOrderTypeFilter("website")}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+          className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
             orderTypeFilter === "website"
               ? "bg-primary text-primary-foreground shadow-xs"
               : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary"
           }`}
         >
           <Globe className="size-3.5" />
-          Normal Orders ({data.filter(o => !o.isPreOrder).length})
+          Website Orders ({data.filter(o => !o.isPreOrder && !o.sourcePageName && !o.socialMediaSourceName && o.source !== "manual").length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setOrderTypeFilter("manual")}
+          className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            orderTypeFilter === "manual"
+              ? "bg-amber-600 text-white shadow-xs"
+              : "bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 hover:bg-amber-100"
+          }`}
+        >
+          <Layers className="size-3.5" />
+          Manual Orders ({data.filter(o => !o.isPreOrder && (o.source === "manual" || !!o.sourcePageName || !!o.socialMediaSourceName)).length})
         </button>
         <button
           type="button"
           onClick={() => setOrderTypeFilter("preorder")}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-2 ${
+          className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
             orderTypeFilter === "preorder"
               ? "bg-indigo-600 text-white shadow-xs"
               : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 hover:bg-indigo-100"
@@ -523,12 +583,12 @@ export default function AdminOrders() {
                   <span className="text-xs font-bold text-muted-foreground uppercase">Order Type</span>
                   <span className="text-[11px] font-semibold text-primary capitalize">{orderTypeFilter}</span>
                 </div>
-                <div className="flex gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   <Button
                     variant={orderTypeFilter === "all" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setOrderTypeFilter("all")}
-                    className="flex-1 h-7 text-xs"
+                    className="h-7 text-xs"
                   >
                     All Types
                   </Button>
@@ -536,15 +596,23 @@ export default function AdminOrders() {
                     variant={orderTypeFilter === "website" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setOrderTypeFilter("website")}
-                    className="flex-1 h-7 text-xs"
+                    className="h-7 text-xs"
                   >
                     Website
+                  </Button>
+                  <Button
+                    variant={orderTypeFilter === "manual" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setOrderTypeFilter("manual")}
+                    className="h-7 text-xs"
+                  >
+                    Manual
                   </Button>
                   <Button
                     variant={orderTypeFilter === "preorder" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setOrderTypeFilter("preorder")}
-                    className="flex-1 h-7 text-xs"
+                    className="h-7 text-xs"
                   >
                     Pre-Order
                   </Button>
@@ -655,15 +723,49 @@ export default function AdminOrders() {
               const totalAmount = Number(o.total) || 0;
               const paidAmount = Number(o.paid) || 0;
               const dueAmount = Math.max(0, totalAmount - paidAmount);
+              const cleanId = o.id.replace(/^ORD-|^INC-/, "");
+              
+              // Extract order time
+              let timeDisplay = "";
+              if (o.createdAt) {
+                try {
+                  const dateObj = new Date(o.createdAt);
+                  if (!isNaN(dateObj.getTime())) {
+                    timeDisplay = dateObj.toLocaleTimeString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    });
+                  }
+                } catch {
+                  /* fallback */
+                }
+              }
+
               return (
                 <TableRow key={o.id} className="group">
                   <TableCell>
-                    <div className="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors" onClick={() => copyOrderId(o.id)}>
-                      <span className={`font-mono text-xs ${o.isPreOrder ? "text-indigo-600 font-bold" : ""}`}>#{o.id}</span>
-                      <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100" />
+                    <div
+                      className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors select-none group/id"
+                      onClick={() => copyOrderId(cleanId)}
+                      title={`Click to copy Order ID: ${cleanId}`}
+                    >
+                      <span className={`font-mono text-xs font-semibold ${o.isPreOrder ? "text-indigo-600 font-bold" : ""}`}>
+                        {cleanId}
+                      </span>
+                      <Copy className="h-3 w-3 opacity-0 group-hover/id:opacity-100 text-muted-foreground" />
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{o.date}</TableCell>
+                  <TableCell className="text-xs">
+                    <div className="space-y-0.5">
+                      <span className="text-foreground font-medium block">{o.date}</span>
+                      {timeDisplay && (
+                        <span className="text-[11px] text-muted-foreground block font-mono">
+                          {timeDisplay}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Link
                       href={`/admin/customers/${encodeURIComponent(o.phone)}`}
@@ -739,10 +841,169 @@ export default function AdminOrders() {
                     )}
                   </TableCell>
                   <TableCell className="text-right font-bold text-xs tracking-tight">{formatBDT(totalAmount)}</TableCell>
-                  <TableCell className="text-right font-semibold text-xs text-emerald-600 dark:text-emerald-400">{formatBDT(paidAmount)}</TableCell>
-                  <TableCell className={`text-right font-bold text-xs ${dueAmount > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
-                    {formatBDT(dueAmount)}
+
+                  {/* Paid cell with interactive edit popover */}
+                  <TableCell className="text-right">
+                    <Popover
+                      open={editingPaymentOrderId === o.id}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          setEditingPaymentOrderId(o.id);
+                          setEditingPaymentPaidValue(String(paidAmount));
+                        } else {
+                          setEditingPaymentOrderId(null);
+                        }
+                      }}
+                    >
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="font-semibold text-xs text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer px-1.5 py-0.5 rounded hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                          title="Click to edit Paid amount"
+                        >
+                          {formatBDT(paidAmount)}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-3 space-y-2.5 shadow-lg" align="end">
+                        <div className="flex items-center justify-between border-b pb-1.5">
+                          <span className="text-xs font-bold">Update Payment</span>
+                          <span className="font-mono text-[11px] text-muted-foreground font-semibold">
+                            Total: {formatBDT(totalAmount)}
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-muted-foreground">Paid Amount (৳)</label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editingPaymentPaidValue}
+                            onChange={(e) => setEditingPaymentPaidValue(e.target.value)}
+                            className="h-8 text-xs font-semibold"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleSavePayment(o.id);
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-6 text-[10px] px-1"
+                            onClick={() => handleSavePayment(o.id, totalAmount)}
+                            disabled={isSavingPayment}
+                          >
+                            Full Paid
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-6 text-[10px] px-1 text-destructive"
+                            onClick={() => handleSavePayment(o.id, 0)}
+                            disabled={isSavingPayment}
+                          >
+                            Unpaid
+                          </Button>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full h-7 text-xs font-bold"
+                          onClick={() => handleSavePayment(o.id)}
+                          disabled={isSavingPayment}
+                        >
+                          {isSavingPayment ? "Saving..." : "Save Payment"}
+                        </Button>
+                      </PopoverContent>
+                    </Popover>
                   </TableCell>
+
+                  {/* Due cell with interactive edit popover */}
+                  <TableCell className="text-right">
+                    <Popover
+                      open={editingPaymentOrderId === o.id}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          setEditingPaymentOrderId(o.id);
+                          setEditingPaymentPaidValue(String(paidAmount));
+                        } else {
+                          setEditingPaymentOrderId(null);
+                        }
+                      }}
+                    >
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className={`font-bold text-xs hover:underline cursor-pointer px-1.5 py-0.5 rounded hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors ${
+                            dueAmount > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
+                          }`}
+                          title="Click to edit payment & due amount"
+                        >
+                          {formatBDT(dueAmount)}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-3 space-y-2.5 shadow-lg" align="end">
+                        <div className="flex items-center justify-between border-b pb-1.5">
+                          <span className="text-xs font-bold">Update Payment</span>
+                          <span className="font-mono text-[11px] text-muted-foreground font-semibold">
+                            Total: {formatBDT(totalAmount)}
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-muted-foreground">Paid Amount (৳)</label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editingPaymentPaidValue}
+                            onChange={(e) => setEditingPaymentPaidValue(e.target.value)}
+                            className="h-8 text-xs font-semibold"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleSavePayment(o.id);
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-6 text-[10px] px-1"
+                            onClick={() => handleSavePayment(o.id, totalAmount)}
+                            disabled={isSavingPayment}
+                          >
+                            Full Paid
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-6 text-[10px] px-1 text-destructive"
+                            onClick={() => handleSavePayment(o.id, 0)}
+                            disabled={isSavingPayment}
+                          >
+                            Unpaid
+                          </Button>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full h-7 text-xs font-bold"
+                          onClick={() => handleSavePayment(o.id)}
+                          disabled={isSavingPayment}
+                        >
+                          {isSavingPayment ? "Saving..." : "Save Payment"}
+                        </Button>
+                      </PopoverContent>
+                    </Popover>
+                  </TableCell>
+
                   <TableCell>
                     {sourceInfo.isWebsite ? (
                       <div className="flex items-center gap-1.5 text-xs text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-2 py-1 rounded-md font-medium w-fit">
@@ -764,7 +1025,18 @@ export default function AdminOrders() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex flex-wrap justify-end gap-1.5 min-w-[200px]">
+                    <div className="flex flex-wrap justify-end gap-1.5 min-w-[240px]">
+                      {/* Quick Edit Button */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px] px-2 bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-600 hover:text-white flex items-center gap-1 font-bold"
+                        onClick={() => setActiveQuickEditOrder(o)}
+                        title="Quick edit customer, page, UTM and amounts"
+                      >
+                        <Pencil className="h-3 w-3" /> Quick Edit
+                      </Button>
+
                       {o.status === "pending" && (
                         <Button
                           size="sm"
@@ -778,7 +1050,7 @@ export default function AdminOrders() {
                             }
                           }}
                         >
-                          <Pencil className="h-3 w-3" /> Edit
+                          Edit
                         </Button>
                       )}
 
@@ -850,6 +1122,12 @@ export default function AdminOrders() {
       <OrderNotesModal isOpen={!!activeNotesOrder} order={activeNotesOrder} onClose={() => setActiveNotesOrder(null)} />
       <OrderTrackingModal isOpen={!!activeTrackingOrder} order={activeTrackingOrder} onClose={() => setActiveTrackingOrder(null)} />
       <OrderInvoiceModal isOpen={!!activeInvoiceOrder} order={activeInvoiceOrder} onClose={() => setActiveInvoiceOrder(null)} />
+      <QuickEditOrderModal
+        isOpen={!!activeQuickEditOrder}
+        order={activeQuickEditOrder}
+        onClose={() => setActiveQuickEditOrder(null)}
+        onSave={handleSaveQuickEdit}
+      />
       
       <OrderStockWarningModal 
         isOpen={stockWarningItems.length > 0} 

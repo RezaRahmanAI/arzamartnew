@@ -855,7 +855,7 @@ export default function AdminManualOrder() {
                 type="submit"
                 className="w-full h-11 bg-foreground text-background hover:bg-foreground/90 font-bold text-sm cursor-pointer mt-2"
               >
-                Create Order
+                {isEditMode ? "Update Order" : "Create Order"}
               </Button>
             </div>
           </form>

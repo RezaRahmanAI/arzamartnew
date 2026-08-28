@@ -439,6 +439,109 @@ export async function updateOrderStatusAction(
   }
 }
 
+export async function updateOrderAction(
+  orderIdentifier: string,
+  payload: Partial<Order>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const cleanId = orderIdentifier.trim();
+    const whereCondition =
+      cleanId.length === 36 && cleanId.includes("-")
+        ? { id: cleanId }
+        : { orderNumber: cleanId };
+
+    const order = await prisma.order.findFirst({
+      where: whereCondition,
+      include: { customer: true },
+    });
+
+    if (!order) {
+      return { success: false, error: "Order not found" };
+    }
+
+    const updateData: Record<string, unknown> = {};
+
+    if (payload.status) {
+      updateData.orderStatus = STATUS_MAP_STR_TO_INT[payload.status.toLowerCase()] ?? order.orderStatus;
+    }
+
+    if (payload.delivery !== undefined) {
+      updateData.shippingFee = payload.delivery;
+    }
+
+    if (payload.discount !== undefined) {
+      updateData.discountAmount = payload.discount;
+    }
+
+    if (payload.total !== undefined) {
+      updateData.totalAmount = payload.total;
+    }
+
+    if (payload.paid !== undefined) {
+      const total = payload.total !== undefined ? payload.total : Number(order.totalAmount);
+      // 2 = Paid, 1 = Partial / Unpaid
+      updateData.paymentStatus = payload.paid >= total && total > 0 ? 2 : 1;
+    }
+
+    let existingMeta: Record<string, unknown> = {};
+    try {
+      if (order.shippingAddressJson) {
+        existingMeta = JSON.parse(order.shippingAddressJson);
+      }
+    } catch {
+      /* fallback */
+    }
+
+    const updatedMeta = {
+      ...existingMeta,
+      address: payload.address !== undefined ? payload.address : existingMeta.address || order.customer.defaultAddress,
+      city: payload.city !== undefined ? payload.city : existingMeta.city || order.customer.district,
+      area: payload.area !== undefined ? payload.area : existingMeta.area,
+      note: payload.note !== undefined ? payload.note : existingMeta.note,
+      source: payload.source !== undefined ? payload.source : existingMeta.source,
+      sourcePageName: payload.sourcePageName !== undefined ? payload.sourcePageName : existingMeta.sourcePageName,
+      socialMediaSourceName: payload.socialMediaSourceName !== undefined ? payload.socialMediaSourceName : existingMeta.socialMediaSourceName,
+      isPreOrder: payload.isPreOrder !== undefined ? payload.isPreOrder : existingMeta.isPreOrder,
+      paid: payload.paid !== undefined ? payload.paid : existingMeta.paid,
+      discount: payload.discount !== undefined ? payload.discount : existingMeta.discount,
+      delivery: payload.delivery !== undefined ? payload.delivery : existingMeta.delivery,
+    };
+
+    updateData.shippingAddressJson = JSON.stringify(updatedMeta);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: order.id },
+        data: updateData,
+      });
+
+      if (payload.customer || payload.phone || payload.address || payload.city) {
+        await tx.customer.update({
+          where: { id: order.customerId },
+          data: {
+            fullName: payload.customer || order.customer.fullName,
+            phone: payload.phone || order.customer.phone,
+            defaultAddress: payload.address || order.customer.defaultAddress,
+            district: payload.city || order.customer.district,
+          },
+        });
+      }
+    });
+
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/customers");
+    revalidatePath(`/order-confirmation/${order.orderNumber}`);
+
+    return { success: true };
+  } catch (error) {
+    console.error("updateOrderAction failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update order",
+    };
+  }
+}
+
 export async function saveIncompleteOrderAction(order: Order): Promise<{ success: boolean }> {
   try {
     const orderId = (order.id || `INC-${Date.now()}`).trim();
