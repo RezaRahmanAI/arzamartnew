@@ -131,31 +131,44 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
       });
     }
 
-    // Resolve category (prefer subcategory if selected, otherwise main category)
+    // Resolve category (use subcategory if selected and found, otherwise main category)
     let categoryId = 1;
-    const targetCatIdentifier = input.subcategory?.trim() || input.category?.trim();
+    const subCatIdentifier = input.subcategory?.trim();
+    const mainCatIdentifier = input.category?.trim();
 
-    if (targetCatIdentifier) {
-      const catSlug = targetCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
-      const foundCat = await prisma.category.findFirst({
+    let foundCat = null;
+    if (subCatIdentifier) {
+      const subCatSlug = subCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+      foundCat = await prisma.category.findFirst({
         where: {
-          OR: [{ slug: catSlug }, { name: targetCatIdentifier }],
+          OR: [{ slug: subCatSlug }, { name: subCatIdentifier }],
         },
       });
+    }
 
-      if (foundCat) {
-        categoryId = foundCat.id;
-      } else {
-        const newCat = await prisma.category.create({
-          data: {
-            name: targetCatIdentifier,
-            slug: catSlug || `cat-${Date.now()}`,
-            displayOrder: 1,
-            isActive: true,
-          },
-        });
-        categoryId = newCat.id;
-      }
+    if (!foundCat && mainCatIdentifier) {
+      const mainCatSlug = mainCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+      foundCat = await prisma.category.findFirst({
+        where: {
+          OR: [{ slug: mainCatSlug }, { name: mainCatIdentifier }],
+        },
+      });
+    }
+
+    if (foundCat) {
+      categoryId = foundCat.id;
+    } else if (mainCatIdentifier || subCatIdentifier) {
+      const targetName = mainCatIdentifier || subCatIdentifier || "General";
+      const catSlug = targetName.toLowerCase().replace(/[^a-z0-9-]+/g, "-") || `cat-${Date.now()}`;
+      const newCat = await prisma.category.create({
+        data: {
+          name: targetName,
+          slug: catSlug,
+          displayOrder: 1,
+          isActive: true,
+        },
+      });
+      categoryId = newCat.id;
     } else {
       const defaultCat = await prisma.category.findFirst();
       if (defaultCat) categoryId = defaultCat.id;
@@ -259,20 +272,30 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
     }
 
     let categoryId = existing.categoryId;
-    const targetCatIdentifier = input.subcategory !== undefined
-      ? (input.subcategory?.trim() || input.category?.trim())
-      : input.category?.trim();
+    const subCatIdentifier = input.subcategory !== undefined ? input.subcategory?.trim() : undefined;
+    const mainCatIdentifier = input.category?.trim();
 
-    if (targetCatIdentifier) {
-      const catSlug = targetCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
-      const foundCat = await prisma.category.findFirst({
+    let foundCat = null;
+    if (subCatIdentifier) {
+      const subCatSlug = subCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+      foundCat = await prisma.category.findFirst({
         where: {
-          OR: [{ slug: catSlug }, { name: targetCatIdentifier }],
+          OR: [{ slug: subCatSlug }, { name: subCatIdentifier }],
         },
       });
-      if (foundCat) {
-        categoryId = foundCat.id;
-      }
+    }
+
+    if (!foundCat && mainCatIdentifier) {
+      const mainCatSlug = mainCatIdentifier.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+      foundCat = await prisma.category.findFirst({
+        where: {
+          OR: [{ slug: mainCatSlug }, { name: mainCatIdentifier }],
+        },
+      });
+    }
+
+    if (foundCat) {
+      categoryId = foundCat.id;
     }
 
     const basePrice = input.mrp !== undefined ? input.mrp : input.price !== undefined ? input.price : existing.basePrice;

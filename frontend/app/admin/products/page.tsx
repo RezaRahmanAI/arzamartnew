@@ -198,11 +198,30 @@ export default function AdminProducts() {
   };
 
   const openEdit = (p: Product) => {
+    // Resolve proper category and subcategory
+    let selectedMainCat = p.category;
+    let selectedSubCat = p.subcategory || "";
+
+    // If p.category is actually a subcategory or not a main category, check hierarchy
+    const matchedCategory = categories.find((c) => c.slug === p.category || (c.id && String(c.id) === p.category));
+    if (matchedCategory) {
+      if (matchedCategory.parentSlug) {
+        selectedMainCat = matchedCategory.parentSlug;
+        selectedSubCat = matchedCategory.slug;
+      } else if (matchedCategory.parentCategoryId) {
+        const parent = categories.find((c) => c.id === matchedCategory.parentCategoryId);
+        if (parent) {
+          selectedMainCat = parent.slug;
+          selectedSubCat = matchedCategory.slug;
+        }
+      }
+    }
+
     setForm({
       slug: p.slug,
       name: p.name,
-      category: p.category,
-      subcategory: p.subcategory || "",
+      category: selectedMainCat || "t-shirts",
+      subcategory: selectedSubCat || "",
       image: p.image,
       price: p.price,
       compareAt: p.mrp ?? p.compareAt ?? 0,
@@ -250,7 +269,7 @@ export default function AdminProducts() {
     const product: Product = {
       slug,
       name: form.name,
-      category: form.subcategory || form.category,
+      category: form.category,
       subcategory: form.subcategory || undefined,
       price: basePrice,
       compareAt: Number(form.compareAt) > 0 ? Number(form.compareAt) : undefined,
@@ -463,18 +482,40 @@ export default function AdminProducts() {
                   </TableCell>
                   <TableCell>
                     {(() => {
-                      const parentCat = categories.find((c) => c.slug === p.category || (c.id && String(c.id) === p.category));
-                      const subCat = p.subcategory
-                        ? categories.find((c) => c.slug === p.subcategory || (c.id && String(c.id) === p.subcategory))
+                      // Match parent/main category
+                      const cleanCat = (p.category || "").trim().toLowerCase();
+                      const parentCat = categories.find(
+                        (c) =>
+                          c.slug.toLowerCase() === cleanCat ||
+                          c.name.toLowerCase() === cleanCat ||
+                          (c.id && String(c.id) === p.category)
+                      );
+
+                      // Match subcategory
+                      const cleanSub = (p.subcategory || "").trim().toLowerCase();
+                      const subCat = cleanSub
+                        ? categories.find(
+                            (c) =>
+                              c.slug.toLowerCase() === cleanSub ||
+                              c.name.toLowerCase() === cleanSub ||
+                              (c.id && String(c.id) === p.subcategory)
+                          )
                         : null;
-                      const catDisplayName = parentCat?.name || p.category || "Unassigned";
-                      const subDisplayName = subCat?.name || p.subcategory;
+
+                      // If p.category happens to match a subcategory with a parent, auto resolve the hierarchy
+                      const displayParent = parentCat?.parentName || (parentCat?.parentSlug ? categories.find(c => c.slug === parentCat.parentSlug)?.name : null) || parentCat?.name || p.category || "Unassigned";
+                      let displaySub = subCat?.name || p.subcategory || (parentCat?.parentSlug || parentCat?.parentCategoryId ? parentCat.name : null);
+
+                      // Avoid duplicate display if parent and sub are same
+                      if (displaySub && displaySub.toLowerCase() === displayParent.toLowerCase()) {
+                        displaySub = null;
+                      }
 
                       return (
                         <div className="flex flex-col">
-                          <span className="font-semibold text-foreground text-xs">{catDisplayName}</span>
-                          {subDisplayName && (
-                            <span className="text-[10px] text-muted-foreground">↳ {subDisplayName}</span>
+                          <span className="font-semibold text-foreground text-xs">{displayParent}</span>
+                          {displaySub && (
+                            <span className="text-[10px] text-muted-foreground">↳ {displaySub}</span>
                           )}
                         </div>
                       );
