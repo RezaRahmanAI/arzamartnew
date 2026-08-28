@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import {
   ChartBar as BarChart3,
@@ -88,11 +88,12 @@ export function DashboardSidebar() {
       icon: ShoppingBag,
       items: [
         { title: "All Orders", url: "/admin/orders", icon: ShoppingBag, badge: pendingOrdersCount },
-        { title: "Create Order (POS)", url: "/admin/manual-order", icon: PlusCircle },
+        { title: "Website Orders", url: "/admin/orders?type=website", icon: Globe },
+        { title: "Manual Orders", url: "/admin/manual-order", icon: PlusCircle },
+        { title: "Pre-Orders", url: "/admin/pre-order", icon: PackagePlus },
         { title: "Bulk Shipment", url: "/admin/bulk-shipment", icon: PackageCheck },
         { title: "Couriers", url: "/admin/couriers", icon: Truck },
         { title: "Incomplete Orders", url: "/admin/incomplete", icon: ClipboardX, badge: incompleteOrdersCount },
-        { title: "Pre-Orders", url: "/admin/pre-order", icon: PackagePlus },
       ],
     },
     {
@@ -125,12 +126,23 @@ export function DashboardSidebar() {
     },
   ];
 
+  const searchParams = useSearchParams();
+
   const isSubActive = useCallback(
     (url: string) => {
       if (url === "/admin") return pathname === "/admin";
+      if (url.includes("?")) {
+        const [targetPath, targetQuery] = url.split("?");
+        const currentType = searchParams.get("type");
+        const targetType = new URLSearchParams(targetQuery).get("type");
+        return pathname === targetPath && currentType === targetType;
+      }
+      if (url === "/admin/orders" && searchParams.get("type")) {
+        return false;
+      }
       return pathname === url || pathname.startsWith(url + "/");
     },
-    [pathname]
+    [pathname, searchParams]
   );
 
   const isGroupActive = useCallback(

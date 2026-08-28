@@ -93,11 +93,17 @@ export default function AdminOrders() {
 
   const [orderIdQuery, setOrderIdQuery] = useState("");
   const [phoneQuery, setPhoneQuery] = useState("");
-  
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "website" | "manual" | "preorder">(initialType);
   const [sourceFilter, setSourceFilter] = useState<"all" | "facebook" | "instagram">("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  useEffect(() => {
+    if (rawType === "preorder" || rawType === "manual" || rawType === "website" || rawType === "all") {
+      setOrderTypeFilter(rawType);
+      setPage(1);
+    }
+  }, [rawType]);
 
   const [activeNotesOrder, setActiveNotesOrder] = useState<Order | null>(null);
   const [activeTrackingOrder, setActiveTrackingOrder] = useState<Order | null>(null);
