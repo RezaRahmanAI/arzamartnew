@@ -47,6 +47,11 @@ export type Product = {
   description: string;
   shortDescription?: string;
   discountNote?: string;
+  offerRuleId?: string;
+  offerTitle?: string;
+  offerType?: "free_delivery" | "fixed_discount" | "percentage_discount";
+  offerMinQty?: number;
+  offerDiscount?: number;
   badge?: string;
   purchaseRate: number;
   sizePrices?: Record<string, number>;

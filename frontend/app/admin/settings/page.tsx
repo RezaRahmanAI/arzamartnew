@@ -1085,6 +1085,161 @@ export default function AdminSettingsPage() {
                     </Button>
                   </div>
                 )}
+
+                {/* ─── Global Quantity-Based Offers & Discount Rules ─── */}
+                <div className="pt-5 border-t border-border/60 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                        <span>Quantity Offers & Discount Config (কোয়ান্টিটি অফার ও ডিসকাউন্ট)</span>
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Create global discount/free delivery offers based on quantity (e.g. 2 pcs free delivery, 2 pcs 200 tk discount). Products can select these offers.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        const currentOffers = draftSettings.shipping.quantityOffers || [];
+                        const newOffer = {
+                          id: `offer_${Date.now()}`,
+                          minQty: 2,
+                          offerType: "free_delivery" as const,
+                          discountAmount: 0,
+                          title: "২ পিস নিলে ডেলিভারি চার্জ ফ্রি!",
+                          active: true,
+                        };
+                        updateSection("shipping", { quantityOffers: [...currentOffers, newOffer] });
+                        toast.success("New offer rule added!");
+                      }}
+                      className="h-8 text-xs font-semibold shrink-0"
+                    >
+                      <Plus className="size-3.5 mr-1" /> Add Offer Rule
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {(!draftSettings.shipping.quantityOffers || draftSettings.shipping.quantityOffers.length === 0) && (
+                      <p className="text-xs text-muted-foreground italic bg-secondary/20 p-3 rounded-lg border border-border">
+                        No quantity offers created yet. Click "+ Add Offer Rule" to create one.
+                      </p>
+                    )}
+                    {(draftSettings.shipping.quantityOffers || []).map((offer, idx) => (
+                      <div
+                        key={offer.id}
+                        className="p-3 bg-secondary/20 rounded-xl border border-border space-y-3 hover:border-border/80 transition-colors"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="flex size-2 rounded-full bg-emerald-500 shrink-0" />
+                            <span className="text-xs font-bold text-foreground">Rule #{idx + 1}: {offer.title || "Untitled Offer"}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5">
+                              <Label className="text-[11px] text-muted-foreground font-medium">Active</Label>
+                              <Switch
+                                checked={offer.active}
+                                onCheckedChange={(checked) => {
+                                  const updated = [...(draftSettings.shipping.quantityOffers || [])];
+                                  updated[idx] = { ...offer, active: checked };
+                                  updateSection("shipping", { quantityOffers: updated });
+                                }}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = (draftSettings.shipping.quantityOffers || []).filter((_, i) => i !== idx);
+                                updateSection("shipping", { quantityOffers: updated });
+                                toast.info("Offer rule removed");
+                              }}
+                              className="size-7 inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded cursor-pointer transition-colors"
+                              title="Delete offer rule"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                          <div className="space-y-1">
+                            <Label className="text-[11px] font-semibold text-muted-foreground">Offer Title (ব্যানার টেক্সট)</Label>
+                            <Input
+                              value={offer.title}
+                              onChange={(e) => {
+                                const updated = [...(draftSettings.shipping.quantityOffers || [])];
+                                updated[idx] = { ...offer, title: e.target.value };
+                                updateSection("shipping", { quantityOffers: updated });
+                              }}
+                              placeholder="e.g. ২ পিস নিলে চার্জ ফ্রি!"
+                              className="h-8 text-xs font-semibold"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label className="text-[11px] font-semibold text-muted-foreground">Min Quantity (ন্যূনতম পিস)</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={offer.minQty}
+                              onChange={(e) => {
+                                const updated = [...(draftSettings.shipping.quantityOffers || [])];
+                                updated[idx] = { ...offer, minQty: Math.max(1, parseInt(e.target.value) || 1) };
+                                updateSection("shipping", { quantityOffers: updated });
+                              }}
+                              className="h-8 text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label className="text-[11px] font-semibold text-muted-foreground">Offer Type (অফারের ধরন)</Label>
+                            <select
+                              value={offer.offerType}
+                              onChange={(e) => {
+                                const newType = e.target.value as "free_delivery" | "fixed_discount" | "percentage_discount";
+                                const updated = [...(draftSettings.shipping.quantityOffers || [])];
+                                updated[idx] = {
+                                  ...offer,
+                                  offerType: newType,
+                                  discountAmount: newType === "free_delivery" ? 0 : (offer.discountAmount || 200),
+                                  title: newType === "free_delivery"
+                                    ? `${offer.minQty} পিস নিলে ডেলিভারি চার্জ ফ্রি!`
+                                    : `${offer.minQty} পিস নিলে ${offer.discountAmount || 200} টাকা ছাড়!`,
+                                };
+                                updateSection("shipping", { quantityOffers: updated });
+                              }}
+                              className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs font-medium"
+                            >
+                              <option value="free_delivery">Free Delivery (ডেলিভারি চার্জ ফ্রি)</option>
+                              <option value="fixed_discount">Fixed Discount ৳ (নির্দিষ্ট টাকা ছাড়)</option>
+                              <option value="percentage_discount">Percentage Discount % (শতাংশ ছাড়)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label className="text-[11px] font-semibold text-muted-foreground">
+                              {offer.offerType === "percentage_discount" ? "Discount (%)" : "Discount Amount (৳)"}
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              disabled={offer.offerType === "free_delivery"}
+                              value={offer.offerType === "free_delivery" ? 0 : (offer.discountAmount ?? 0)}
+                              onChange={(e) => {
+                                const val = Number(e.target.value) || 0;
+                                const updated = [...(draftSettings.shipping.quantityOffers || [])];
+                                updated[idx] = { ...offer, discountAmount: val };
+                                updateSection("shipping", { quantityOffers: updated });
+                              }}
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 

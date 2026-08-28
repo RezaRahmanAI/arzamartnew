@@ -52,12 +52,22 @@ export interface ShippingRule {
   displayOrder: number;
 }
 
+export interface QuantityOfferRule {
+  id: string;
+  minQty: number;
+  offerType: "free_delivery" | "fixed_discount" | "percentage_discount";
+  discountAmount?: number;
+  title: string;
+  active: boolean;
+}
+
 export interface ShippingSettings {
   rules: ShippingRule[];
   defaultShippingMethodId: string;
   freeShippingThreshold: number;
   enableFreeShipping: boolean;
   cashOnDeliveryAvailable: boolean;
+  quantityOffers?: QuantityOfferRule[];
 }
 
 export interface SocialPlatformLink {
@@ -241,6 +251,11 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     freeShippingThreshold: 2000,
     enableFreeShipping: true,
     cashOnDeliveryAvailable: true,
+    quantityOffers: [
+      { id: "free-delivery-2", minQty: 2, offerType: "free_delivery", title: "২ পিস নিলে ডেলিভারি চার্জ ফ্রি!", active: true },
+      { id: "discount-200-2", minQty: 2, offerType: "fixed_discount", discountAmount: 200, title: "২ পিস নিলে ২০০ টাকা ছাড়!", active: true },
+      { id: "discount-300-3", minQty: 3, offerType: "fixed_discount", discountAmount: 300, title: "৩ পিস নিলে ৩০০ টাকা ছাড়!", active: true },
+    ],
   },
   socialMedia: {
     platforms: [

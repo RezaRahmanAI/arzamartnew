@@ -28,6 +28,7 @@ import { formatBDT } from "@/lib/dashboard-data";
 import { type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { useCategories } from "@/lib/categories-store";
+import { useSettings } from "@/context/settings-context";
 import { ImageUploader, getImageUrl, handleImageError, FALLBACK_IMAGE } from "@/components/image-uploader";
 import { apiClient } from "@/lib/api/client";
 
@@ -44,6 +45,7 @@ type FormState = {
   sizes: string;
   description: string;
   discountNote: string;
+  offerRuleId: string;
   badge: string;
   sizePrices: Record<string, number>;
   videoUrl: string;
@@ -67,6 +69,7 @@ const emptyForm: FormState = {
   sizes: "M, L, XL, XXL",
   description: "",
   discountNote: "",
+  offerRuleId: "",
   badge: "",
   sizePrices: {},
   videoUrl: "",
@@ -90,6 +93,11 @@ function slugify(s: string) {
 export default function AdminProducts() {
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
   const { categories } = useCategories();
+  const { settings } = useSettings();
+  const quantityOffers = useMemo(() => {
+    return (settings?.shipping?.quantityOffers || []).filter(o => o.active);
+  }, [settings?.shipping?.quantityOffers]);
+
   const [open, setOpen] = useState(false);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -296,6 +304,7 @@ export default function AdminProducts() {
       sizes: p.sizes.join(", "),
       description: p.description || "",
       discountNote: p.discountNote || p.shortDescription || "",
+      offerRuleId: p.offerRuleId || "",
       badge: (p.badge ?? "").replace(/\|?PREORDER_ENABLED/g, "").trim(),
       sizePrices: p.sizePrices ?? {},
       videoUrl: p.videoUrl ?? "",
@@ -339,6 +348,13 @@ export default function AdminProducts() {
       ? categories.find((c) => c.slug === form.subcategory || (c.id && String(c.id) === form.subcategory))
       : null;
 
+    // Resolve offer rule if selected
+    const selectedOffer = form.offerRuleId
+      ? quantityOffers.find(o => o.id === form.offerRuleId)
+      : null;
+
+    const discountNoteFinal = form.discountNote || selectedOffer?.title || undefined;
+
     const product: Product = {
       slug,
       name: form.name,
@@ -354,8 +370,13 @@ export default function AdminProducts() {
       image: form.image || FALLBACK_IMAGE,
       sizes,
       description: form.description || "No description yet.",
-      discountNote: form.discountNote || undefined,
-      shortDescription: form.discountNote || undefined,
+      discountNote: discountNoteFinal,
+      shortDescription: discountNoteFinal,
+      offerRuleId: form.offerRuleId || undefined,
+      offerTitle: selectedOffer?.title || undefined,
+      offerType: selectedOffer?.offerType || undefined,
+      offerMinQty: selectedOffer?.minQty || undefined,
+      offerDiscount: selectedOffer?.discountAmount || undefined,
       badge: form.badge || undefined,
       purchaseRate: Number(form.purchaseRate) || 0,
       sizePrices: Object.keys(sizePrices).length > 0 ? sizePrices : undefined,
@@ -1096,19 +1117,54 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="discountNote">
-                Discount & Offer Banner (প্রোডাক্টের নিচে বিশেষ ছাড়ের অফার/নোট)
-              </Label>
-              <Input
-                id="discountNote"
-                value={form.discountNote}
-                onChange={(e) => update("discountNote", e.target.value)}
-                placeholder="যেমন: ২ পিস নিলে ডেলিভারি ফ্রি অথবা ২ পিস নিলে ২০০ টাকা ছাড়"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                এই লেখাটি ফ্রন্টএন্ডে প্রোডাক্ট প্রাইসের ঠিক নিচে বিশেষ অফার/ডিসকাউন্ট হিসেবে ১/২ লাইনে হাইলাইট থাকবে।
-              </p>
+            {/* Quantity-Based Offer Selector & Custom Banner */}
+            <div className="rounded-xl border border-border/70 bg-primary/5 p-3.5 space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="offerRule" className="text-xs font-bold text-foreground">
+                  Quantity Offer Rule (কোয়ান্টিটি অফার নির্বাচন করুন)
+                </Label>
+                <select
+                  id="offerRule"
+                  value={form.offerRuleId}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    update("offerRuleId", selectedId);
+                    if (selectedId) {
+                      const found = quantityOffers.find((o) => o.id === selectedId);
+                      if (found) {
+                        update("discountNote", found.title);
+                      }
+                    }
+                  }}
+                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium"
+                >
+                  <option value="">-- No Offer Selected (কোনো অফার নেই) --</option>
+                  {quantityOffers.map((offer) => (
+                    <option key={offer.id} value={offer.id}>
+                      {offer.title} ({offer.minQty} pcs - {offer.offerType === "free_delivery" ? "Free Delivery" : `৳${offer.discountAmount} Off`})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground">
+                  সেটিংস এ কনফিগার করা গ্লোবাল অফার ড্রপডাউন থেকে সিলেক্ট করুন (বা নিচের ঘরে নিজের মতো লিখেও দিতে পারেন)।
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="discountNote" className="text-xs font-bold">
+                  Discount & Offer Banner Text (প্রোডাক্টের নিচে প্রদর্শিত অফার লেখা)
+                </Label>
+                <Input
+                  id="discountNote"
+                  value={form.discountNote}
+                  onChange={(e) => update("discountNote", e.target.value)}
+                  placeholder="যেমন: ২ পিস নিলে চার্জ ফ্রি অথবা ২ পিস নিলে ২০০ টাকা ছাড়"
+                  className="bg-background"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  এই অফার/ডিসকাউন্ট লেখাটি ওয়েবসাইট ফ্রন্টএন্ডে প্রোডাক্ট পেজে প্রাইসের নিচে হাইলাইট হয়ে দেখাবে।
+                </p>
+              </div>
             </div>
 
             <div className="space-y-1.5">

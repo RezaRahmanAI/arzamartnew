@@ -10,6 +10,7 @@ import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
 import { useReviews } from "@/lib/reviews";
 import { useProducts } from "@/lib/products-store";
+import { useSettings } from "@/context/settings-context";
 import { formatBDT, getSizePrice, getSizeStock, products as staticProducts } from "@/lib/shop-data";
 import { getImageUrl, handleImageError, FALLBACK_IMAGE } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ export default function ProductPage() {
   const router = useRouter();
   const slug = params.slug as string;
   const { getProduct, products } = useProducts();
+  const { settings } = useSettings();
   const product = getProduct(slug);
 
   if (!product) {
@@ -259,12 +261,23 @@ export default function ProductPage() {
             )}
           </div>
           {/* Promotional / Special Discount Box under price */}
-          {(product.discountNote || product.shortDescription) && (
-            <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3.5 py-2 text-xs font-semibold text-amber-700 dark:text-amber-400">
-              <span className="flex size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              <span>{product.discountNote || product.shortDescription}</span>
-            </div>
-          )}
+          {(() => {
+            // Check global settings for matching offer rule or product custom discount note
+            const globalOffer = product.offerRuleId
+              ? settings?.shipping?.quantityOffers?.find((o) => o.id === product.offerRuleId && o.active)
+              : null;
+
+            const offerText = globalOffer?.title || product.discountNote || product.offerTitle;
+
+            if (!offerText) return null;
+
+            return (
+              <div className="mt-3.5 inline-flex items-center gap-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 px-3.5 py-2 text-xs font-bold text-amber-800 dark:text-amber-300 shadow-xs">
+                <span className="flex size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                <span className="leading-snug">{offerText}</span>
+              </div>
+            );
+          })()}
 
           {product.isBundle && product.bundleProducts && (
             <div className="mt-6 border border-border rounded-xl p-4 bg-secondary/10">
