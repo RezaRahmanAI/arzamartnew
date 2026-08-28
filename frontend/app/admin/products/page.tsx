@@ -112,20 +112,37 @@ export default function AdminProducts() {
 
   // Subcategories available for selected category in form
   const availableSubCategories = useMemo(() => {
-    const parent = categories.find((c) => c.slug === form.category);
+    if (!form.category) return [];
+    const targetSlug = form.category.trim().toLowerCase();
+    const parent = categories.find(
+      (c) =>
+        c.slug.toLowerCase() === targetSlug ||
+        c.name.toLowerCase() === targetSlug ||
+        (c.id && String(c.id) === form.category)
+    );
     if (!parent) return [];
     return categories.filter(
-      (c) => c.parentSlug === parent.slug || (parent.id && c.parentCategoryId === parent.id)
+      (c) =>
+        (c.parentSlug && c.parentSlug.toLowerCase() === parent.slug.toLowerCase()) ||
+        (parent.id && c.parentCategoryId === parent.id)
     );
   }, [categories, form.category]);
 
   // Subcategories available for category filter
   const filterAvailableSubCategories = useMemo(() => {
     if (selectedCategory === "ALL") return [];
-    const parent = categories.find((c) => c.slug === selectedCategory);
+    const targetSlug = selectedCategory.trim().toLowerCase();
+    const parent = categories.find(
+      (c) =>
+        c.slug.toLowerCase() === targetSlug ||
+        c.name.toLowerCase() === targetSlug ||
+        (c.id && String(c.id) === selectedCategory)
+    );
     if (!parent) return [];
     return categories.filter(
-      (c) => c.parentSlug === parent.slug || (parent.id && c.parentCategoryId === parent.id)
+      (c) =>
+        (c.parentSlug && c.parentSlug.toLowerCase() === parent.slug.toLowerCase()) ||
+        (parent.id && c.parentCategoryId === parent.id)
     );
   }, [categories, selectedCategory]);
 
@@ -202,8 +219,17 @@ export default function AdminProducts() {
     let selectedMainCat = p.category;
     let selectedSubCat = p.subcategory || "";
 
-    // If p.category is actually a subcategory or not a main category, check hierarchy
-    const matchedCategory = categories.find((c) => c.slug === p.category || (c.id && String(c.id) === p.category));
+    const rawCat = (p.category || "").trim().toLowerCase();
+    const rawSub = (p.subcategory || "").trim().toLowerCase();
+
+    // Check if rawCat or rawSub matches any category in store
+    const matchedCategory = categories.find(
+      (c) =>
+        c.slug.toLowerCase() === rawCat ||
+        c.name.toLowerCase() === rawCat ||
+        (c.id && String(c.id) === p.category)
+    );
+
     if (matchedCategory) {
       if (matchedCategory.parentSlug) {
         selectedMainCat = matchedCategory.parentSlug;
@@ -213,6 +239,29 @@ export default function AdminProducts() {
         if (parent) {
           selectedMainCat = parent.slug;
           selectedSubCat = matchedCategory.slug;
+        } else {
+          selectedMainCat = matchedCategory.slug;
+        }
+      } else {
+        selectedMainCat = matchedCategory.slug;
+      }
+    }
+
+    // Also match subcategory if specified
+    if (rawSub) {
+      const matchedSub = categories.find(
+        (c) =>
+          c.slug.toLowerCase() === rawSub ||
+          c.name.toLowerCase() === rawSub ||
+          (c.id && String(c.id) === p.subcategory)
+      );
+      if (matchedSub) {
+        selectedSubCat = matchedSub.slug;
+        if (matchedSub.parentSlug) {
+          selectedMainCat = matchedSub.parentSlug;
+        } else if (matchedSub.parentCategoryId) {
+          const parent = categories.find((c) => c.id === matchedSub.parentCategoryId);
+          if (parent) selectedMainCat = parent.slug;
         }
       }
     }
@@ -801,12 +850,18 @@ export default function AdminProducts() {
                   ))}
                   {/* Also allow top-level categories if any */}
                   {categories
-                    .filter((c) => !parentCategories.some((p) => p.slug === c.slug) && !c.parentSlug)
+                    .filter((c) => !parentCategories.some((p) => p.slug.toLowerCase() === c.slug.toLowerCase()) && !c.parentSlug && !c.parentCategoryId)
                     .map((c) => (
                       <option key={c.slug} value={c.slug}>
                         {c.name}
                       </option>
                     ))}
+                  {/* If form.category is not among the options, add it as option to prevent defaulting */}
+                  {form.category && !parentCategories.some(c => c.slug.toLowerCase() === form.category.toLowerCase()) && !categories.some(c => c.slug.toLowerCase() === form.category.toLowerCase() && !c.parentSlug && !c.parentCategoryId) && (
+                    <option value={form.category}>
+                      {categories.find(c => c.slug.toLowerCase() === form.category.toLowerCase())?.name || form.category}
+                    </option>
+                  )}
                 </select>
               </div>
 
