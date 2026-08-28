@@ -14,7 +14,7 @@ export function ThemeApplier() {
     <style id="dynamic-theme-styles" dangerouslySetInnerHTML={{
       __html: `
         :root {
-          ${primaryColor ? `--primary: ${primaryColor};` : ""}
+          ${primaryColor ? `--primary: ${primaryColor}; --ring: ${primaryColor}; --price: ${primaryColor};` : ""}
           ${secondaryColor ? `--secondary: ${secondaryColor};` : ""}
           ${accentColor ? `--accent: ${accentColor};` : ""}
           --radius: ${radius};

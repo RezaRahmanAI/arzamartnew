@@ -22,7 +22,7 @@ interface SettingsContextType {
   clearSystemCache: () => Promise<void>;
 }
 
-const SETTINGS_STORAGE_KEY = "arzamart_system_settings_v1";
+const SETTINGS_STORAGE_KEY = "arzamart_system_settings_v2";
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
