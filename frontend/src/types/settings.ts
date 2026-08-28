@@ -26,6 +26,9 @@ export interface BrandingSettings {
   buttonColor: string;
   borderRadius: string;
   fontFamily: string;
+  toastSuccessColor?: string;
+  toastErrorColor?: string;
+  toastInfoColor?: string;
 }
 
 export interface ContactSettings {
@@ -214,6 +217,9 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     buttonColor: "#c23a22",
     borderRadius: "0.75rem",
     fontFamily: "Inter, sans-serif",
+    toastSuccessColor: "#10b981",
+    toastErrorColor: "#ef4444",
+    toastInfoColor: "#3b82f6",
   },
   contact: {
     companyName: "ARZA Fashion",

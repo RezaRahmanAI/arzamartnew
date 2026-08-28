@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useCategories } from "@/lib/categories-store";
 import { useSettings } from "@/context/settings-context";
 import { DEFAULT_SYSTEM_SETTINGS } from "@/types/settings";
+import { getImageUrl } from "@/lib/utils";
 
 export function SiteFooter() {
   const pathname = usePathname();
@@ -29,7 +30,26 @@ export function SiteFooter() {
     <footer className="mt-20 bg-ink text-ink-foreground">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="font-display text-2xl font-extrabold uppercase">{general?.websiteName || "ARZA"}</p>
+          {safeSettings.branding?.footerLogo || safeSettings.branding?.darkLogo ? (
+            <img
+              src={getImageUrl(safeSettings.branding.footerLogo || safeSettings.branding.darkLogo)}
+              alt={general?.websiteName || "ARZA"}
+              className="h-10 w-auto max-w-[160px] object-contain mb-3"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                if (fallback) fallback.style.display = "block";
+              }}
+            />
+          ) : null}
+          <p
+            className="font-display text-2xl font-extrabold uppercase"
+            style={{
+              display: safeSettings.branding?.footerLogo || safeSettings.branding?.darkLogo ? "none" : "block",
+            }}
+          >
+            {general?.websiteName || "ARZA"}
+          </p>
           <p className="mt-3 max-w-xs text-sm text-ink-foreground/70">
             {footer?.footerDescription || general?.description || "Everyday fashion made in Bangladesh."}
           </p>

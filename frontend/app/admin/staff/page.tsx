@@ -37,6 +37,7 @@ type FormState = Omit<StaffMember, "id" | "createdAt" | "lastLogin">;
 const emptyForm: FormState = {
   name: "",
   email: "",
+  password: "",
   role: "Viewer",
   status: "Active",
   permissions: { ...defaultPermissions },
@@ -46,11 +47,13 @@ export default function AdminStaff() {
   const { staffList, addStaff, updateStaff, deleteStaff } = useStaffStore();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
 
   const openCreate = () => {
     setForm({ ...emptyForm });
     setEditingId(null);
+    setShowPassword(false);
     setOpen(true);
   };
 
@@ -58,11 +61,13 @@ export default function AdminStaff() {
     setForm({
       name: staff.name,
       email: staff.email,
+      password: staff.password || "",
       role: staff.role,
       status: staff.status,
       permissions: { ...staff.permissions },
     });
     setEditingId(staff.id);
+    setShowPassword(false);
     setOpen(true);
   };
 
@@ -231,6 +236,28 @@ export default function AdminStaff() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Login Password {editingId ? "(Leave empty to keep existing)" : "*"}</Label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-[11px] text-primary hover:underline cursor-pointer font-medium"
+                >
+                  {showPassword ? "Hide Password" : "Show Password"}
+                </button>
+              </div>
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={form.password || ""}
+                onChange={(e) => updateField("password", e.target.value)}
+                placeholder={editingId ? "•••••••• (Keep unchanged)" : "Enter staff password"}
+                required={!editingId}
+                autoComplete="new-password"
+              />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

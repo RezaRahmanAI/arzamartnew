@@ -25,6 +25,7 @@ import {
   Save,
   Trash2,
   Plus,
+  Pencil,
   RefreshCw,
   History,
   Check,
@@ -117,11 +118,14 @@ export default function AdminSettingsPage() {
     deliveryTime: "2-3 Days",
   });
   const [showShippingModal, setShowShippingModal] = useState(false);
+  const [editingShippingRule, setEditingShippingRule] = useState<ShippingRule | null>(null);
 
   // ─── Source Pages & Social Pages CRUD state ───
   const [showSourceModal, setShowSourceModal] = useState(false);
   const [newSourceName, setNewSourceName] = useState("");
   const [expandedSource, setExpandedSource] = useState<string | null>(null);
+  const [editingSourceOrigName, setEditingSourceOrigName] = useState<string | null>(null);
+  const [editingSourceNewName, setEditingSourceNewName] = useState<string>("");
   const [newPageInputs, setNewPageInputs] = useState<Record<string, string>>({});
 
   const handleAddSource = () => {
@@ -328,6 +332,8 @@ export default function AdminSettingsPage() {
                 onChange={(e) => setSearchFilter(e.target.value)}
                 placeholder="Search settings category..."
                 className="h-9 pl-8 text-xs"
+                autoComplete="off"
+                name="settings_search_query_no_autofill"
               />
             </div>
 
@@ -596,6 +602,69 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
 
+                {/* Notification & Toast Colors */}
+                <div className="pt-2 border-t border-border/60 space-y-3">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notification & Alert Toast Colors</h4>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Customize popup alert colors for completed actions, success states, and failed/error states.</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Success / Completed Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={draftSettings.branding.toastSuccessColor || "#10b981"}
+                          onChange={(e) => updateSection("branding", { toastSuccessColor: e.target.value })}
+                          className="size-8 rounded border border-border cursor-pointer shrink-0"
+                        />
+                        <Input
+                          value={draftSettings.branding.toastSuccessColor || "#10b981"}
+                          onChange={(e) => updateSection("branding", { toastSuccessColor: e.target.value })}
+                          className="h-8 text-xs uppercase"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Used when actions/orders complete successfully</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold text-rose-600 dark:text-rose-400">Error / Didn&apos;t Work Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={draftSettings.branding.toastErrorColor || "#ef4444"}
+                          onChange={(e) => updateSection("branding", { toastErrorColor: e.target.value })}
+                          className="size-8 rounded border border-border cursor-pointer shrink-0"
+                        />
+                        <Input
+                          value={draftSettings.branding.toastErrorColor || "#ef4444"}
+                          onChange={(e) => updateSection("branding", { toastErrorColor: e.target.value })}
+                          className="h-8 text-xs uppercase"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Used when an error occurs or action fails</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold text-blue-600 dark:text-blue-400">Info / Notice Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={draftSettings.branding.toastInfoColor || "#3b82f6"}
+                          onChange={(e) => updateSection("branding", { toastInfoColor: e.target.value })}
+                          className="size-8 rounded border border-border cursor-pointer shrink-0"
+                        />
+                        <Input
+                          value={draftSettings.branding.toastInfoColor || "#3b82f6"}
+                          onChange={(e) => updateSection("branding", { toastInfoColor: e.target.value })}
+                          className="h-8 text-xs uppercase"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Used for neutral info alerts & reminders</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div className="space-y-1">
                     <Label className="text-xs font-semibold">Border Radius</Label>
@@ -825,26 +894,48 @@ export default function AdminSettingsPage() {
                             <td className="py-2.5 px-2 font-semibold">৳{rule.charge}</td>
                             <td className="py-2.5 px-2 text-muted-foreground">{rule.estimatedDeliveryTime}</td>
                             <td className="py-2.5 px-2">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  rule.status === "active" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
-                                }`}
-                              >
-                                {rule.status.toUpperCase()}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-2 text-right">
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const updated = draftSettings.shipping.rules.filter((r) => r.id !== rule.id);
+                                  const nextStatus: "active" | "inactive" = rule.status === "active" ? "inactive" : "active";
+                                  const updated: ShippingRule[] = draftSettings.shipping.rules.map((r) =>
+                                    r.id === rule.id ? { ...r, status: nextStatus } : r
+                                  );
                                   updateSection("shipping", { rules: updated });
-                                  toast.info(`Removed ${rule.name}`);
+                                  toast.info(`${rule.name} is now ${nextStatus}`);
                                 }}
-                                className="size-6 inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded cursor-pointer"
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
+                                  rule.status === "active"
+                                    ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25"
+                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                }`}
                               >
-                                <Trash2 className="size-3.5" />
+                                {rule.status.toUpperCase()}
                               </button>
+                            </td>
+                            <td className="py-2.5 px-2 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingShippingRule({ ...rule })}
+                                  className="size-6 inline-flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded cursor-pointer transition-colors"
+                                  title={`Edit ${rule.name}`}
+                                >
+                                  <Pencil className="size-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = draftSettings.shipping.rules.filter((r) => r.id !== rule.id);
+                                    updateSection("shipping", { rules: updated });
+                                    toast.info(`Removed ${rule.name}`);
+                                  }}
+                                  className="size-6 inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded cursor-pointer transition-colors"
+                                  title={`Delete ${rule.name}`}
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -852,6 +943,90 @@ export default function AdminSettingsPage() {
                     </table>
                   </div>
                 </div>
+
+                {/* Edit Shipping Rule Modal / Quick Form */}
+                {editingShippingRule && (
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-3">
+                    <h4 className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center justify-between">
+                      <span>Edit Shipping Rule: {editingShippingRule.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditingShippingRule(null)}
+                        className="text-muted-foreground text-xs hover:underline cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold">Method Name</Label>
+                        <Input
+                          value={editingShippingRule.name}
+                          onChange={(e) => setEditingShippingRule({ ...editingShippingRule, name: e.target.value })}
+                          className="h-8 text-xs font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold">Charge (৳)</Label>
+                        <Input
+                          type="number"
+                          value={editingShippingRule.charge}
+                          onChange={(e) => setEditingShippingRule({ ...editingShippingRule, charge: Number(e.target.value) })}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold">Delivery Time</Label>
+                        <Input
+                          value={editingShippingRule.estimatedDeliveryTime}
+                          onChange={(e) => setEditingShippingRule({ ...editingShippingRule, estimatedDeliveryTime: e.target.value })}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-semibold">Status</Label>
+                        <select
+                          value={editingShippingRule.status}
+                          onChange={(e) => setEditingShippingRule({ ...editingShippingRule, status: e.target.value as "active" | "inactive" })}
+                          className="h-8 w-full rounded border border-border bg-background px-2 text-xs font-semibold"
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingShippingRule(null)}
+                        className="h-7 text-xs"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          if (!editingShippingRule.name.trim()) {
+                            toast.error("Please enter a method name");
+                            return;
+                          }
+                          const updated = draftSettings.shipping.rules.map((r) =>
+                            r.id === editingShippingRule.id ? editingShippingRule : r
+                          );
+                          updateSection("shipping", { rules: updated });
+                          setEditingShippingRule(null);
+                          toast.success("Shipping Rule Updated!");
+                        }}
+                        className="h-7 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white"
+                      >
+                        Update Rule
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Add Custom Shipping Rule Modal / Quick Form */}
                 {showShippingModal && (
@@ -1020,9 +1195,77 @@ export default function AdminSettingsPage() {
                           className="flex items-center justify-between gap-2 px-3 py-2.5 bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors"
                           onClick={() => setExpandedSource(expandedSource === sourceName ? null : sourceName)}
                         >
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
                             <Share2 className="size-3.5 text-primary shrink-0" />
-                            <span className="text-xs font-bold text-foreground truncate">{sourceName}</span>
+                            {editingSourceOrigName === sourceName ? (
+                              <div className="flex items-center gap-1.5 flex-1 max-w-xs" onClick={(e) => e.stopPropagation()}>
+                                <Input
+                                  value={editingSourceNewName}
+                                  onChange={(e) => setEditingSourceNewName(e.target.value)}
+                                  className="h-7 text-xs font-bold"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      const newName = editingSourceNewName.trim();
+                                      if (!newName) {
+                                        toast.error("Source name cannot be empty");
+                                        return;
+                                      }
+                                      const existing = { ...(draftSettings.socialMedia.sources || {}) };
+                                      if (newName !== sourceName) {
+                                        existing[newName] = existing[sourceName] || [];
+                                        delete existing[sourceName];
+                                        updateSection("socialMedia", { sources: existing });
+                                        if (expandedSource === sourceName) setExpandedSource(newName);
+                                        toast.success(`Renamed to "${newName}"`);
+                                      }
+                                      setEditingSourceOrigName(null);
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="h-7 text-[10px] px-2"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const newName = editingSourceNewName.trim();
+                                    if (!newName) {
+                                      toast.error("Source name cannot be empty");
+                                      return;
+                                    }
+                                    const existing = { ...(draftSettings.socialMedia.sources || {}) };
+                                    if (newName !== sourceName) {
+                                      existing[newName] = existing[sourceName] || [];
+                                      delete existing[sourceName];
+                                      updateSection("socialMedia", { sources: existing });
+                                      if (expandedSource === sourceName) setExpandedSource(newName);
+                                      toast.success(`Renamed to "${newName}"`);
+                                    }
+                                    setEditingSourceOrigName(null);
+                                  }}
+                                >
+                                  Save
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="text-xs font-bold text-foreground truncate">{sourceName}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingSourceOrigName(sourceName);
+                                    setEditingSourceNewName(sourceName);
+                                  }}
+                                  className="text-muted-foreground hover:text-primary p-0.5 rounded cursor-pointer"
+                                  title="Rename source"
+                                >
+                                  <Pencil className="size-3" />
+                                </button>
+                              </>
+                            )}
                             <span className="text-[10px] font-semibold text-muted-foreground bg-secondary/60 px-1.5 py-0.5 rounded shrink-0">
                               {pages.length} page{pages.length !== 1 ? "s" : ""}
                             </span>
@@ -1066,7 +1309,7 @@ export default function AdminSettingsPage() {
                                       updated[sourceName][pageIdx] = e.target.value;
                                       updateSection("socialMedia", { sources: updated });
                                     }}
-                                    className="h-6 text-xs border-0 bg-transparent px-0 focus-visible:ring-0 shadow-none"
+                                    className="h-6 text-xs border-0 bg-transparent px-0 focus-visible:ring-0 shadow-none font-medium"
                                   />
                                 </div>
                                 <button
@@ -1505,6 +1748,8 @@ export default function AdminSettingsPage() {
                         value={draftSettings.notifications.smtpHost}
                         onChange={(e) => updateSection("notifications", { smtpHost: e.target.value })}
                         className="h-8 text-xs"
+                        autoComplete="off"
+                        name="custom_smtp_host_field"
                       />
                     </div>
                     <div className="space-y-1">
@@ -1514,14 +1759,19 @@ export default function AdminSettingsPage() {
                         value={draftSettings.notifications.smtpPort}
                         onChange={(e) => updateSection("notifications", { smtpPort: Number(e.target.value) })}
                         className="h-8 text-xs"
+                        autoComplete="off"
+                        name="custom_smtp_port_field"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">SMTP Username</Label>
+                      <Label className="text-xs">SMTP Username / Email</Label>
                       <Input
                         value={draftSettings.notifications.smtpUsername}
                         onChange={(e) => updateSection("notifications", { smtpUsername: e.target.value })}
                         className="h-8 text-xs"
+                        autoComplete="new-password"
+                        name="custom_smtp_user_field"
+                        placeholder="e.g. alerts@yourdomain.com"
                       />
                     </div>
                     <div className="space-y-1">
@@ -1530,6 +1780,9 @@ export default function AdminSettingsPage() {
                         value={draftSettings.notifications.smtpSenderName}
                         onChange={(e) => updateSection("notifications", { smtpSenderName: e.target.value })}
                         className="h-8 text-xs"
+                        autoComplete="off"
+                        name="custom_smtp_sender_field"
+                        placeholder="e.g. ARZA Notifications"
                       />
                     </div>
                   </div>

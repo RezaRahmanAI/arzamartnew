@@ -300,3 +300,157 @@ export async function getCustomerActivityAction(
     return { cart: [], wishlist: [] };
   }
 }
+
+export async function checkFraudStatusAction(params: {
+  phone?: string;
+  ip?: string;
+}): Promise<{ isBlocked: boolean; isDeactivated: boolean; reason?: string }> {
+  try {
+    const cleanPhone = (params.phone || "").trim();
+    const cleanIp = (params.ip || "").trim();
+
+    if (!cleanPhone && !cleanIp) {
+      return { isBlocked: false, isDeactivated: false };
+    }
+
+    if (cleanPhone) {
+      const customer = await prisma.customer.findUnique({
+        where: { phone: cleanPhone },
+      });
+
+      if (customer?.defaultNote) {
+        try {
+          const meta = JSON.parse(customer.defaultNote);
+          if (meta.isBlocked || meta.isFraud || meta.isDeactivated) {
+            return {
+              isBlocked: !!(meta.isBlocked || meta.isFraud),
+              isDeactivated: !!meta.isDeactivated,
+              reason: meta.fraudReason || meta.blockReason || "Customer account has been restricted.",
+            };
+          }
+        } catch {
+          /* ignore non-json */
+        }
+      }
+    }
+
+    const settingsRow = await prisma.websiteSettings.findFirst();
+
+    if (settingsRow?.settingsJson) {
+      try {
+        const sys = JSON.parse(settingsRow.settingsJson);
+        const blockedPhones: string[] = Array.isArray(sys.security?.blockedPhones) ? sys.security.blockedPhones : [];
+        const blockedIps: string[] = Array.isArray(sys.security?.blockedIps) ? sys.security.blockedIps : [];
+
+        if (cleanPhone && blockedPhones.includes(cleanPhone)) {
+          return {
+            isBlocked: true,
+            isDeactivated: true,
+            reason: "This phone number is restricted from placing orders.",
+          };
+        }
+
+        if (cleanIp && blockedIps.includes(cleanIp)) {
+          return {
+            isBlocked: true,
+            isDeactivated: true,
+            reason: "Your IP address is restricted from placing orders.",
+          };
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return { isBlocked: false, isDeactivated: false };
+  } catch (error) {
+    console.error("checkFraudStatusAction error:", error);
+    return { isBlocked: false, isDeactivated: false };
+  }
+}
+
+export async function toggleCustomerFraudAction(params: {
+  phone: string;
+  isBlocked: boolean;
+  isDeactivated?: boolean;
+  reason?: string;
+  ip?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const cleanPhone = params.phone.trim();
+    if (!cleanPhone) return { success: false, error: "Phone number required" };
+
+    const customer = await prisma.customer.findUnique({
+      where: { phone: cleanPhone },
+    });
+
+    if (customer) {
+      let meta: Record<string, unknown> = {};
+      if (customer.defaultNote) {
+        try {
+          meta = JSON.parse(customer.defaultNote);
+        } catch {
+          meta = { note: customer.defaultNote };
+        }
+      }
+
+      meta.isBlocked = params.isBlocked;
+      meta.isFraud = params.isBlocked;
+      meta.isDeactivated = params.isDeactivated !== undefined ? params.isDeactivated : params.isBlocked;
+      meta.fraudReason = params.reason || (params.isBlocked ? "Marked as Fraud by Admin" : "");
+      meta.blockedAt = params.isBlocked ? new Date().toISOString() : null;
+      if (params.ip) meta.blockedIp = params.ip;
+
+      await prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+          defaultNote: JSON.stringify(meta),
+        },
+      });
+    }
+
+    const settingsRow = await prisma.websiteSettings.findFirst();
+
+    let currentSettings: Record<string, unknown> = {};
+    if (settingsRow?.settingsJson) {
+      try {
+        currentSettings = JSON.parse(settingsRow.settingsJson);
+      } catch {
+        currentSettings = {};
+      }
+    }
+
+    const security = (currentSettings.security as Record<string, unknown>) || {};
+    let blockedPhones: string[] = Array.isArray(security.blockedPhones) ? (security.blockedPhones as string[]) : [];
+    let blockedIps: string[] = Array.isArray(security.blockedIps) ? (security.blockedIps as string[]) : [];
+
+    if (params.isBlocked) {
+      if (!blockedPhones.includes(cleanPhone)) blockedPhones.push(cleanPhone);
+      if (params.ip && !blockedIps.includes(params.ip)) blockedIps.push(params.ip);
+    } else {
+      blockedPhones = blockedPhones.filter((p) => p !== cleanPhone);
+      if (params.ip) blockedIps = blockedIps.filter((i) => i !== params.ip);
+    }
+
+    currentSettings.security = {
+      ...security,
+      blockedPhones,
+      blockedIps,
+    };
+
+    if (settingsRow) {
+      await prisma.websiteSettings.update({
+        where: { id: settingsRow.id },
+        data: { settingsJson: JSON.stringify(currentSettings) },
+      });
+    }
+
+    revalidatePath("/admin/customers");
+    revalidatePath(`/admin/customers/${encodeURIComponent(cleanPhone)}`);
+
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("toggleCustomerFraudAction error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to update fraud status" };
+  }
+}

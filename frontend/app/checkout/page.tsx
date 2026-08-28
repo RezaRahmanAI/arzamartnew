@@ -164,12 +164,27 @@ export default function CheckoutPage() {
     );
   }
 
-  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const name = String(formData.get("name") ?? "");
     const phone = String(formData.get("phone") ?? "");
     const address = String(formData.get("address") ?? "");
+
+    // Fraud and IP / Account restriction check
+    try {
+      const { checkFraudStatusAction } = await import("@/actions/customers.actions");
+      const fraudRes = await checkFraudStatusAction({ phone });
+      if (fraudRes.isBlocked || fraudRes.isDeactivated) {
+        toast.error("Order Restriction", {
+          description: fraudRes.reason || "Your account or phone number is restricted from placing orders.",
+          duration: 6000,
+        });
+        return;
+      }
+    } catch {
+      /* ignore check failure and continue gracefully */
+    }
 
     const zoneLabel = DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে";
     const customerMaster = findOrCreateByPhone(phone, {

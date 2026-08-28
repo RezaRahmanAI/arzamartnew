@@ -162,11 +162,29 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 relative">
-        <Link href="/" className="shrink-0">
-          <span className="font-display text-2xl font-extrabold tracking-tight text-foreground">
+        <Link href="/" className="shrink-0 flex items-center gap-2">
+          {settings?.branding?.headerLogo || settings?.branding?.lightLogo ? (
+            <img
+              src={getImageUrl(settings.branding.headerLogo || settings.branding.lightLogo)}
+              alt={brandName}
+              className="h-9 w-auto max-w-[150px] object-contain"
+              onError={(e) => {
+                // If logo image fails, hide image and show text
+                e.currentTarget.style.display = "none";
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                if (fallback) fallback.style.display = "inline";
+              }}
+            />
+          ) : null}
+          <span
+            className="font-display text-2xl font-extrabold tracking-tight text-foreground"
+            style={{
+              display: settings?.branding?.headerLogo || settings?.branding?.lightLogo ? "none" : "inline",
+            }}
+          >
             {brandName.toUpperCase()}
+            <span className="ml-0.5 text-primary">.</span>
           </span>
-          <span className="ml-1 text-primary">.</span>
         </Link>
 
         <nav className="hidden items-center justify-center gap-6 text-sm font-medium md:flex flex-1 max-w-fit mx-auto">

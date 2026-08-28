@@ -93,6 +93,8 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
   const { orders, updateStatus: contextUpdateStatus } = useOrders();
   const { findCustomerByPhone } = useCustomers();
   const [apiCustomers, setApiCustomers] = useState<ApiCustomer[]>([]);
+  const [isFraudBlocked, setIsFraudBlocked] = useState(false);
+  const [isTogglingFraud, setIsTogglingFraud] = useState(false);
   const [customerActivity, setCustomerActivity] = useState<{
     cart: Array<{ slug: string; name?: string; size: string; qty: number; price?: number }>;
     wishlist: string[];
@@ -101,7 +103,11 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
   useEffect(() => {
     customersService.getAll().then(setApiCustomers);
 
-    import("@/actions/customers.actions").then(({ getCustomerActivityAction }) => {
+    import("@/actions/customers.actions").then(({ checkFraudStatusAction, getCustomerActivityAction }) => {
+      checkFraudStatusAction({ phone }).then((res) => {
+        setIsFraudBlocked(res.isBlocked || res.isDeactivated);
+      });
+
       getCustomerActivityAction(phone).then((act) => {
         if (act && (act.cart?.length > 0 || act.wishlist?.length > 0)) {
           setCustomerActivity(act);
@@ -120,6 +126,34 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
       });
     });
   }, [phone]);
+
+  const handleToggleFraud = async () => {
+    setIsTogglingFraud(true);
+    try {
+      const { toggleCustomerFraudAction } = await import("@/actions/customers.actions");
+      const nextBlocked = !isFraudBlocked;
+      const res = await toggleCustomerFraudAction({
+        phone,
+        isBlocked: nextBlocked,
+        isDeactivated: nextBlocked,
+        reason: nextBlocked ? "Flagged as Fraudulent account by Admin" : "",
+      });
+      if (res.success) {
+        setIsFraudBlocked(nextBlocked);
+        toast.success(
+          nextBlocked
+            ? "Customer marked as Fraud & Blocked"
+            : "Customer reactivated successfully"
+        );
+      } else {
+        toast.error(res.error || "Failed to update status");
+      }
+    } catch {
+      toast.error("Failed to communicate with server");
+    } finally {
+      setIsTogglingFraud(false);
+    }
+  };
 
   const customerInfo = useMemo(() => {
     const fromApi = apiCustomers.find((c) => c.phone === phone);
@@ -342,6 +376,40 @@ export default function CustomerHistoryPage({ params }: CustomerHistoryProps) {
               <span className="font-medium">Email:</span> {customerInfo.email}
             </div>
           ) : null}
+
+          {/* Fraud & Account Restrictions */}
+          <div className="mt-4 pt-4 border-t border-border/80 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <span>Account & Fraud Status:</span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                    isFraudBlocked
+                      ? "bg-rose-500/15 text-rose-700 dark:text-rose-400"
+                      : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                  }`}
+                >
+                  {isFraudBlocked ? "Restricted / Fraud Flagged" : "Active / Verified"}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {isFraudBlocked
+                  ? "Customer is blocked from placing orders via website checkout."
+                  : "Customer is in good standing and can place orders freely."}
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              variant={isFraudBlocked ? "outline" : "destructive"}
+              size="sm"
+              onClick={handleToggleFraud}
+              disabled={isTogglingFraud}
+              className="h-8 text-xs font-bold"
+            >
+              {isFraudBlocked ? "Unblock / Reactivate Customer" : "Mark as Fraud & Block"}
+            </Button>
+          </div>
         </div>
 
         <div className="bg-card border border-border p-8 rounded-xl shadow-sm relative overflow-hidden group">

@@ -29,7 +29,7 @@ export async function getWebsiteSettings(): Promise<SystemSettings> {
               Array.isArray(parsed.socialMedia?.platforms) && parsed.socialMedia.platforms.length > 0
                 ? parsed.socialMedia.platforms
                 : DEFAULT_SYSTEM_SETTINGS.socialMedia.platforms,
-            sources: { ...DEFAULT_SYSTEM_SETTINGS.socialMedia.sources, ...(parsed.socialMedia?.sources || {}) },
+            sources: parsed.socialMedia?.sources !== undefined ? parsed.socialMedia.sources : DEFAULT_SYSTEM_SETTINGS.socialMedia.sources,
           },
           business: { ...DEFAULT_SYSTEM_SETTINGS.business, ...(parsed.business || {}) },
           seo: { ...DEFAULT_SYSTEM_SETTINGS.seo, ...(parsed.seo || {}) },
