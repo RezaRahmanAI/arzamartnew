@@ -23,6 +23,7 @@ export async function GET() {
       categories,
       products: productsResult.products,
       reviews,
+      timestamp: Date.now(),
     });
   } catch (error) {
     console.error("GET /api/init error:", error);

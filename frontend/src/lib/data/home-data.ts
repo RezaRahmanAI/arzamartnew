@@ -96,9 +96,9 @@ export async function fetchHomePageData(): Promise<HomePageData> {
   } catch (error) {
     console.error("fetchHomePageData direct DB query failed:", error);
     return {
-      banners: initialMockSlides,
-      categories: staticCategories,
-      products: staticProducts,
+      banners: [],
+      categories: [],
+      products: [],
       settings: {
         brandName: "Arza",
         currencySymbol: "৳",
@@ -114,5 +114,28 @@ export async function fetchHomePageData(): Promise<HomePageData> {
         eyebrow: "Limited time",
       },
     };
+  }
+}
+
+export async function getInitialAppData() {
+  try {
+    const [banners, categories, productsResult, settings] = await Promise.all([
+      getBanners(),
+      getCategories(),
+      getProducts({ limit: 50 }),
+      getWebsiteSettings(),
+    ]);
+
+    return {
+      settings,
+      banners,
+      categories,
+      products: productsResult.products,
+      reviews: [],
+      timestamp: Date.now(),
+    };
+  } catch (error) {
+    console.error("getInitialAppData error:", error);
+    return null;
   }
 }

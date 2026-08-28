@@ -15,7 +15,15 @@ import { AuthProvider } from "@/context/auth-context";
 import { BannersProvider } from "@/lib/banners-store";
 import { ThemeApplier } from "@/components/theme-applier";
 
-export function Providers({ children }: { children: ReactNode }) {
+import { AppInitData } from "@/lib/api/services/init.service";
+
+export function Providers({
+  children,
+  initialData,
+}: {
+  children: ReactNode;
+  initialData?: AppInitData;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -29,7 +37,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppInitProvider>
+      <AppInitProvider initialData={initialData}>
         <SettingsProvider>
           <CustomersProvider>
             <AuthProvider>

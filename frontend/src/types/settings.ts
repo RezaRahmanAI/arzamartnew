@@ -191,8 +191,8 @@ export interface AuditLogEntry {
 
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   general: {
-    websiteName: "ARZA",
-    websiteShortName: "ARZA",
+    websiteName: "ARZAMART",
+    websiteShortName: "ARZAMART",
     tagline: "Everyday Fashion in Bangladesh",
     description: "Cotton tees, linen shirts, panjabi and more. Cash on delivery nationwide.",
     websiteStatus: "live",
@@ -291,12 +291,7 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     enableNewsletterToggle: true,
   },
   navigation: {
-    headerMenu: [
-      { id: "1", label: "T-Shirts", url: "/category/t-shirts", type: "category", target: "_self", active: true, displayOrder: 1 },
-      { id: "2", label: "Shirts", url: "/category/shirts", type: "category", target: "_self", active: true, displayOrder: 2 },
-      { id: "3", label: "Panjabi", url: "/category/panjabi", type: "category", target: "_self", active: true, displayOrder: 3 },
-      { id: "4", label: "Hoodies", url: "/category/hoodies", type: "category", target: "_self", active: true, displayOrder: 4 },
-    ],
+    headerMenu: [],
   },
   orders: {
     minimumOrderAmount: 0,

@@ -12,10 +12,17 @@ interface AppInitContextType {
 
 const AppInitContext = createContext<AppInitContextType | undefined>(undefined);
 
-export function AppInitProvider({ children }: { children: React.ReactNode }) {
-  // Always initialize with static fallback on first render for 100% SSR Hydration consistency (prevents error #418)
-  const [initData, setInitData] = useState<AppInitData>(() => initService.getFallbackData());
-  const [isFreshLoaded, setIsFreshLoaded] = useState<boolean>(false);
+export function AppInitProvider({
+  children,
+  initialData,
+}: {
+  children: React.ReactNode;
+  initialData?: AppInitData;
+}) {
+  const [initData, setInitData] = useState<AppInitData>(
+    () => initialData || initService.getCachedData() || initService.getFallbackData()
+  );
+  const [isFreshLoaded, setIsFreshLoaded] = useState<boolean>(!!initialData);
 
   // Background SWR (Stale-While-Revalidate): Single Consolidated Network Request to /api/init
   const refetchInit = useCallback(async () => {

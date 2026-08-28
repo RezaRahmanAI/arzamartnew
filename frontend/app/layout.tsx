@@ -39,15 +39,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+import { getInitialAppData } from "@/lib/data/home-data";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialData = await getInitialAppData();
+
   return (
     <html lang="en" className={`${bricolage.variable} ${dmSans.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <Providers>
+        <Providers initialData={initialData ?? undefined}>
           <div className="flex min-h-screen flex-col">
             <SiteHeader />
             <main className="flex-1">{children}</main>
