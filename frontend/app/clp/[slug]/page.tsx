@@ -1424,8 +1424,8 @@ export default function CustomLandingPageRoute({
                                 type="tel"
                                 required
                                 value={customerPhone}
-                                onChange={(e) => setCustomerPhone(e.target.value)}
-                                onBlur={(e) => saveIncompleteDraft(undefined, e.target.value)}
+                                onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ""))}
+                                onBlur={(e) => saveIncompleteDraft(undefined, e.target.value.replace(/\D/g, ""))}
                                 placeholder="01XXXXXXXXX"
                                 className="w-full h-12 px-4 bg-background border border-border rounded-xl text-sm sm:text-base font-semibold text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                               />

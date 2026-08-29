@@ -79,7 +79,7 @@ export function CustomerSearchInput({
         type="tel"
         value={value}
         onChange={(e) => {
-          onChange(e.target.value);
+          onChange(e.target.value.replace(/\D/g, ""));
           setHighlighted(-1);
         }}
         onFocus={() => setFocused(true)}

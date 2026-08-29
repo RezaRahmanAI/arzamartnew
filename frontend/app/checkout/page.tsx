@@ -283,8 +283,8 @@ export default function CheckoutPage() {
               pattern="01[0-9]{9}"
               required
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              onBlur={(e) => saveIncompleteDraft(undefined, e.target.value)}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+              onBlur={(e) => saveIncompleteDraft(undefined, e.target.value.replace(/\D/g, ""))}
             />
             <label className="text-sm sm:col-span-2">
               <span className="font-semibold text-foreground">Address</span>

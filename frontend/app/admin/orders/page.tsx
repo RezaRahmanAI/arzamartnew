@@ -1230,9 +1230,21 @@ export default function AdminOrders() {
                         </Button>
                       )}
 
+                      {/* PDF Invoice Button */}
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-600 hover:text-white" onClick={() => setActiveInvoiceOrder(o)}>PDF</Button>
 
-                      {/* Contact Dropdown Option (WhatsApp, Reminder, History) */}
+                      {/* Tracking / History Action Button */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px] px-2 bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-700 hover:text-white flex items-center gap-1 font-semibold"
+                        onClick={() => setActiveTrackingOrder(o)}
+                        title="View Live Tracking & Status History"
+                      >
+                        <Truck className="size-3 text-slate-600" /> Tracking
+                      </Button>
+
+                      {/* Contact Dropdown Option (WhatsApp, Reminder) */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -1268,7 +1280,7 @@ export default function AdminOrders() {
                             onClick={() => setActiveTrackingOrder(o)}
                           >
                             <History className="size-3.5 text-slate-600" />
-                            Order History
+                            Tracking & History
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
