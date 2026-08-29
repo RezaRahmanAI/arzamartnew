@@ -14,7 +14,7 @@ import { Order } from "@/lib/dashboard-data";
 import { useAuth } from "@/context/auth-context";
 import { ordersService } from "@/lib/api/services/orders.service";
 import { toast } from "sonner";
-import { User, Clock, ShieldAlert, Truck } from "lucide-react";
+import { User, Clock, ShieldAlert, Truck, Trash2 } from "lucide-react";
 
 export type NoteRecord = {
   id: string;
@@ -259,6 +259,19 @@ export function OrderNotesModal({
     toast.success(`${selectedType} saved successfully!`);
   };
 
+  const handleDeleteNote = (noteId: string) => {
+    const updatedNotes = notesList.filter((n) => n.id !== noteId);
+    setNotesList(updatedNotes);
+    order.notesList = updatedNotes;
+    order.hasNotes = updatedNotes.length > 0;
+
+    const store = getSavedNotesStore();
+    store[order.id] = updatedNotes;
+    saveNotesStore(store);
+
+    toast.success("Note deleted successfully!");
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
@@ -274,14 +287,24 @@ export function OrderNotesModal({
             {notesList.length > 0 ? (
               <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                 {notesList.map((n) => (
-                  <div key={n.id} className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1.5">
+                  <div key={n.id} className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1.5 group">
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground border-b pb-1">
                       <span className="font-semibold text-primary flex items-center gap-1">
                         <User className="h-3 w-3" /> {n.author}
                       </span>
-                      <span className="flex items-center gap-1 text-[10px]">
-                        <Clock className="h-3 w-3" /> {n.timestamp}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 text-[10px]">
+                          <Clock className="h-3 w-3" /> {n.timestamp}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNote(n.id)}
+                          className="text-muted-foreground hover:text-destructive p-0.5 rounded transition-colors cursor-pointer"
+                          title="Delete this note"
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-foreground whitespace-pre-wrap font-medium flex-1">{n.text}</p>
@@ -328,13 +351,20 @@ export function OrderNotesModal({
               rows={3}
               placeholder={
                 selectedType === "Customer / Delivery Note"
-                  ? "Type customer or delivery instruction (shows on Invoice PDF & Delivery)..."
-                  : "Type internal private note here..."
+                  ? "Type customer/delivery instruction and press Enter to save..."
+                  : "Type internal private note and press Enter to save..."
               }
               value={note}
               onChange={(e) => setNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSaveNote();
+                }
+              }}
               className="text-xs"
             />
+            <p className="text-[10px] text-muted-foreground">Tip: Press <kbd className="px-1 py-0.5 bg-muted border rounded font-mono text-[9px]">Enter</kbd> to add note immediately, <kbd className="px-1 py-0.5 bg-muted border rounded font-mono text-[9px]">Shift+Enter</kbd> for new line.</p>
           </div>
 
           <Button className="w-full font-bold" onClick={handleSaveNote}>

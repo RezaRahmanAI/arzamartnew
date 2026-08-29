@@ -88,13 +88,14 @@ function SearchableSelect({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          type="button"
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full h-9 justify-between font-normal text-xs bg-background hover:bg-background/80"
+          className="w-full h-9 justify-between font-normal text-xs bg-background text-foreground hover:bg-muted hover:text-foreground border-input"
         >
-          <span className="truncate">{value || placeholder}</span>
-          <ChevronsUpDown className="size-3.5 opacity-50 shrink-0 ml-1" />
+          <span className="truncate text-foreground font-medium">{value || placeholder}</span>
+          <ChevronsUpDown className="size-3.5 text-muted-foreground opacity-70 shrink-0 ml-1" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[240px] p-2 bg-popover shadow-md border border-border" align="start">
@@ -810,7 +811,13 @@ export default function AdminManualOrder() {
                     else if (zone === "dhaka_sub_area") setDeliveryCharge(120);
                     else setDeliveryCharge(150);
                   }}
-                  placeholder="House, road, landmark address"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleCreateOrder(e);
+                    }
+                  }}
+                  placeholder="House, road, landmark address (Enter to submit)"
                   rows={2}
                   className="text-xs"
                 />
@@ -872,7 +879,13 @@ export default function AdminManualOrder() {
                   id="m-note"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Write a note..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleCreateOrder(e);
+                    }
+                  }}
+                  placeholder="Write a note (Press Enter to submit order, Shift+Enter for new line)..."
                   rows={2}
                   className="text-xs mt-1"
                 />

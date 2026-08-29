@@ -59,6 +59,10 @@ import {
   Truck,
   FileText,
   Trash2,
+  MessageCircle,
+  Bell,
+  History,
+  PhoneCall,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { getSavedNotesStore, getOrderNoteCount } from "@/components/admin/order-notes-modal";
@@ -1203,12 +1207,6 @@ export default function AdminOrders() {
                           Edit
                         </Button>
                       )}
-
-                      {nextStatusLabels[o.status] && (
-                        <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-600 hover:text-white" onClick={() => progressStatus(o)}>
-                          {nextStatusLabels[o.status]}
-                        </Button>
-                      )}
                       
                       {o.isPreOrder && (
                         <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-600 hover:text-white" onClick={() => transferToMainOrder(o.id)}>
@@ -1231,9 +1229,49 @@ export default function AdminOrders() {
                           )}
                         </Button>
                       )}
+
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-600 hover:text-white" onClick={() => setActiveInvoiceOrder(o)}>PDF</Button>
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-600 hover:text-white" onClick={() => setActiveTrackingOrder(o)}>History</Button>
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-green-50 text-green-600 border-green-200 hover:bg-green-600 hover:text-white" onClick={() => window.open(`https://wa.me/${o.phone.replace(/\D/g, "")}`, "_blank")}>WA</Button>
+
+                      {/* Contact Dropdown Option (WhatsApp, Reminder, History) */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[10px] px-2 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-600 hover:text-white flex items-center gap-1 font-semibold"
+                          >
+                            <PhoneCall className="size-3 text-emerald-600" />
+                            Contact
+                            <ChevronDown className="size-3 opacity-60 ml-0.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44 p-1 text-xs">
+                          <DropdownMenuItem
+                            className="cursor-pointer flex items-center gap-2 py-1.5 text-xs text-green-700 focus:text-green-800 focus:bg-green-50"
+                            onClick={() => window.open(`https://wa.me/${o.phone.replace(/\D/g, "")}`, "_blank")}
+                          >
+                            <MessageCircle className="size-3.5 text-green-600" />
+                            WhatsApp Chat
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer flex items-center gap-2 py-1.5 text-xs text-amber-700 focus:text-amber-800 focus:bg-amber-50"
+                            onClick={() => {
+                              const message = encodeURIComponent(`Dear ${o.customer}, your order #${o.id} is pending with Arza Fashion. Total: ৳${o.total}.`);
+                              window.open(`https://wa.me/${o.phone.replace(/\D/g, "")}?text=${message}`, "_blank");
+                            }}
+                          >
+                            <Bell className="size-3.5 text-amber-600" />
+                            Send Reminder
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer flex items-center gap-2 py-1.5 text-xs text-slate-700 focus:text-slate-800 focus:bg-slate-50"
+                            onClick={() => setActiveTrackingOrder(o)}
+                          >
+                            <History className="size-3.5 text-slate-600" />
+                            Order History
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
 
                       {/* Delete Order Button */}
                       <Button
