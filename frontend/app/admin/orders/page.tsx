@@ -35,6 +35,8 @@ import {
 import { formatBDT, orders, inventory, statusStyles, OrderStatus, Order } from "@/lib/dashboard-data";
 import { ordersService } from "@/lib/api/services/orders.service";
 import { useOrders } from "@/lib/orders";
+import { useStaffStore } from "@/lib/staff-store";
+import { useSettings } from "@/context/settings-context";
 import { products, getSizeStock } from "@/lib/shop-data";
 import {
   Hash,
@@ -55,6 +57,7 @@ import {
   Pencil,
   ExternalLink,
   X,
+  XCircle,
   RotateCcw,
   Truck,
   FileText,
@@ -115,6 +118,11 @@ export default function AdminOrders() {
   const [orderTypeFilter, setOrderTypeFilter] = useState<"all" | "website" | "manual" | "preorder">(initialType);
   const [sourceFilter, setSourceFilter] = useState<"all" | "facebook" | "instagram">("all");
   const [noteFilter, setNoteFilter] = useState<NoteAttemptFilter>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
+  const [salesExecutiveFilter, setSalesExecutiveFilter] = useState<string>("all");
+  const [courierFilter, setCourierFilter] = useState<string>("all");
+  const [pageFilter, setPageFilter] = useState<string>("all");
+  const [utmSourceFilter, setUtmSourceFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   useEffect(() => {
@@ -143,7 +151,12 @@ export default function AdminOrders() {
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeletingOrder, setIsDeletingOrder] = useState(false);
 
+  // Cancel Order Confirmation Modal State
+  const [orderToCancel, setOrderToCancel] = useState<{ order: Order; targetStatus: OrderStatus } | null>(null);
+
   const { orders: contextOrders, updateStatus: contextUpdateStatus, updateOrder: contextUpdateOrder, deleteOrder } = useOrders();
+  const { staffList } = useStaffStore();
+  const { settings } = useSettings();
   const [page, setPage] = useState(1);
   const pageSize = 10;
   
@@ -237,8 +250,59 @@ export default function AdminOrders() {
       });
     }
 
+    if (productFilter !== "all") {
+      filtered = filtered.filter(o =>
+        (o.items || []).some(it =>
+          it.slug?.toLowerCase() === productFilter.toLowerCase() ||
+          it.name?.toLowerCase().includes(productFilter.toLowerCase())
+        )
+      );
+    }
+
+    if (courierFilter !== "all") {
+      filtered = filtered.filter(o =>
+        (o.courierName || "").toLowerCase().includes(courierFilter.toLowerCase())
+      );
+    }
+
+    if (pageFilter !== "all") {
+      filtered = filtered.filter(o =>
+        (o.sourcePageName || "").toLowerCase().includes(pageFilter.toLowerCase())
+      );
+    }
+
+    if (utmSourceFilter !== "all") {
+      filtered = filtered.filter(o =>
+        (o.socialMediaSourceName || "").toLowerCase().includes(utmSourceFilter.toLowerCase())
+      );
+    }
+
+    if (salesExecutiveFilter !== "all") {
+      filtered = filtered.filter(o => {
+        const targetStaff = salesExecutiveFilter.toLowerCase();
+        return (
+          (o.note && o.note.toLowerCase().includes(targetStaff)) ||
+          (o.source && o.source.toLowerCase().includes(targetStaff))
+        );
+      });
+    }
+
     return filtered;
-  }, [data, orderIdQuery, phoneQuery, statusFilter, orderTypeFilter, sourceFilter, noteFilter, dateRange]);
+  }, [
+    data,
+    orderIdQuery,
+    phoneQuery,
+    statusFilter,
+    orderTypeFilter,
+    sourceFilter,
+    noteFilter,
+    productFilter,
+    salesExecutiveFilter,
+    courierFilter,
+    pageFilter,
+    utmSourceFilter,
+    dateRange,
+  ]);
 
   const totalPages = Math.ceil(filteredOrders.length / pageSize) || 1;
   const paginatedOrders = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
@@ -248,6 +312,11 @@ export default function AdminOrders() {
     (orderTypeFilter !== "all" ? 1 : 0) +
     (sourceFilter !== "all" ? 1 : 0) +
     (noteFilter !== "all" ? 1 : 0) +
+    (productFilter !== "all" ? 1 : 0) +
+    (salesExecutiveFilter !== "all" ? 1 : 0) +
+    (courierFilter !== "all" ? 1 : 0) +
+    (pageFilter !== "all" ? 1 : 0) +
+    (utmSourceFilter !== "all" ? 1 : 0) +
     (dateRange?.from ? 1 : 0) +
     (orderIdQuery.trim() ? 1 : 0) +
     (phoneQuery.trim() ? 1 : 0);
@@ -259,6 +328,11 @@ export default function AdminOrders() {
     setOrderTypeFilter("all");
     setSourceFilter("all");
     setNoteFilter("all");
+    setProductFilter("all");
+    setSalesExecutiveFilter("all");
+    setCourierFilter("all");
+    setPageFilter("all");
+    setUtmSourceFilter("all");
     setDateRange(undefined);
     setPage(1);
     toast.info("All filters cleared (সব ফিল্টার ক্লিয়ার করা হয়েছে)");
@@ -269,7 +343,58 @@ export default function AdminOrders() {
     setOrderTypeFilter("all");
     setSourceFilter("all");
     setNoteFilter("all");
+    setProductFilter("all");
+    setSalesExecutiveFilter("all");
+    setCourierFilter("all");
+    setPageFilter("all");
+    setUtmSourceFilter("all");
   };
+
+  // Derive unique filter options from data and configuration
+  const availableCouriers = useMemo(() => {
+    const defaultCouriers = ["Steadfast", "Pathao", "RedX", "Paperfly", "Sundarban", "SA Paribahan", "eCourier", "Standard Courier"];
+    const found = new Set(defaultCouriers);
+    data.forEach((o) => {
+      if (o.courierName && o.courierName.trim()) found.add(o.courierName.trim());
+    });
+    return Array.from(found);
+  }, [data]);
+
+  const availablePages = useMemo(() => {
+    const found = new Set<string>();
+    if (settings?.socialMedia?.sources) {
+      Object.keys(settings.socialMedia.sources).forEach((p) => found.add(p));
+    }
+    found.add("Facebook Page");
+    found.add("Instagram");
+    found.add("Website / Direct");
+    data.forEach((o) => {
+      if (o.sourcePageName && o.sourcePageName.trim()) found.add(o.sourcePageName.trim());
+    });
+    return Array.from(found);
+  }, [data, settings]);
+
+  const availableUtmSources = useMemo(() => {
+    const found = new Set<string>();
+    if (settings?.socialMedia?.sources) {
+      Object.values(settings.socialMedia.sources).flat().forEach((s) => found.add(s));
+    }
+    data.forEach((o) => {
+      if (o.socialMediaSourceName && o.socialMediaSourceName.trim()) found.add(o.socialMediaSourceName.trim());
+    });
+    return Array.from(found);
+  }, [data, settings]);
+
+  const availableProductsList = useMemo(() => {
+    const map = new Map<string, string>();
+    products.forEach((p) => map.set(p.slug, p.name));
+    data.forEach((o) => {
+      (o.items || []).forEach((it) => {
+        if (it.slug && !map.has(it.slug)) map.set(it.slug, it.name || it.slug);
+      });
+    });
+    return Array.from(map.entries()).map(([slug, name]) => ({ slug, name }));
+  }, [data]);
 
   const isTodayActive = useMemo(() => {
     if (!dateRange?.from) return false;
@@ -420,10 +545,23 @@ export default function AdminOrders() {
   };
 
   const handleManualStatusChange = (order: Order, newStatus: OrderStatus) => {
+    if (newStatus === "cancelled") {
+      setOrderToCancel({ order, targetStatus: newStatus });
+      return;
+    }
+
     if (order.status === "pending" && newStatus === "confirmed") {
       checkStockBeforeConfirm(order);
     } else {
       updateStatus(order.id, newStatus);
+    }
+  };
+
+  const confirmCancelOrder = () => {
+    if (orderToCancel) {
+      updateStatus(orderToCancel.order.id, orderToCancel.targetStatus);
+      toast.info(`Order #${orderToCancel.order.id.replace(/^ORD-/, "")} has been cancelled.`);
+      setOrderToCancel(null);
     }
   };
 
@@ -829,6 +967,142 @@ export default function AdminOrders() {
             </Button>
           </div>
         </div>
+
+        {/* Dedicated Advanced Filter Toolbar (Note & Attempt, Product, Sales Executive, Courier, Page, UTM Source) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 bg-card p-2.5 rounded-xl border shadow-xs text-xs">
+          {/* Note & Attempt Filter */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+              Note & Attempt
+            </label>
+            <select
+              value={noteFilter}
+              onChange={(e) => {
+                setNoteFilter(e.target.value as NoteAttemptFilter);
+                setPage(1);
+              }}
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="all">All Notes (সব)</option>
+              <option value="touched">Touch (নোট আছে)</option>
+              <option value="untouched">Untouch (নোট ছাড়া)</option>
+              <option value="1st-attempt">1st Attempt (১ বার)</option>
+              <option value="2nd-attempt">2nd Attempt (২ বার)</option>
+              <option value="3rd-attempt">3rd Attempt (৩ বার)</option>
+              <option value="4th-or-more">4+ Attempts (৪ বার+)</option>
+            </select>
+          </div>
+
+          {/* Product Filter */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-muted-foreground uppercase">
+              Product Filter
+            </label>
+            <select
+              value={productFilter}
+              onChange={(e) => {
+                setProductFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="all">All Products (সব পণ্য)</option>
+              {availableProductsList.map((p) => (
+                <option key={p.slug} value={p.slug}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sales Executive Filter */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-muted-foreground uppercase">
+              Sales Executive
+            </label>
+            <select
+              value={salesExecutiveFilter}
+              onChange={(e) => {
+                setSalesExecutiveFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="all">All Staff / Executives</option>
+              {staffList.map((s) => (
+                <option key={s.id} value={s.name}>
+                  {s.name} ({s.role})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Courier Filter */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-muted-foreground uppercase">
+              Courier Filter
+            </label>
+            <select
+              value={courierFilter}
+              onChange={(e) => {
+                setCourierFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="all">All Couriers (সব কুরিয়ার)</option>
+              {availableCouriers.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Page Filter */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-muted-foreground uppercase">
+              Page Filter
+            </label>
+            <select
+              value={pageFilter}
+              onChange={(e) => {
+                setPageFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="all">All Source Pages (সব পেজ)</option>
+              {availablePages.map((pg) => (
+                <option key={pg} value={pg}>
+                  {pg}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* UTM Source Filter */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-muted-foreground uppercase">
+              UTM Source
+            </label>
+            <select
+              value={utmSourceFilter}
+              onChange={(e) => {
+                setUtmSourceFilter(e.target.value);
+                setPage(1);
+              }}
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="all">All UTM Sources</option>
+              {availableUtmSources.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Orders Table */}
@@ -1112,7 +1386,9 @@ export default function AdminOrders() {
                           <Input
                             type="number"
                             min="0"
-                            value={editingPaymentPaidValue}
+                            value={editingPaymentPaidValue === "0" ? "" : editingPaymentPaidValue}
+                            onFocus={(e) => e.target.select()}
+                            placeholder="0"
                             onChange={(e) => setEditingPaymentPaidValue(e.target.value)}
                             className="h-8 text-xs font-semibold"
                             autoFocus
@@ -1356,6 +1632,35 @@ export default function AdminOrders() {
         onCancel={cancelStockWarning} 
         onConfirmAnyway={confirmWithStockIssue} 
       />
+
+      {/* Cancel Order Confirmation Popup */}
+      <AlertDialog open={!!orderToCancel} onOpenChange={(open) => !open && setOrderToCancel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 text-rose-600 mb-1">
+              <XCircle className="size-5" />
+              <AlertDialogTitle>Cancel Order #{orderToCancel?.order?.id?.replace(/^ORD-/, "")}?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-xs leading-relaxed text-muted-foreground space-y-1">
+              <p>
+                Are you sure you want to cancel this order for <strong>{orderToCancel?.order?.customer}</strong> ({orderToCancel?.order?.phone})?
+              </p>
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                Order Value: ৳{orderToCancel?.order?.total}. Status will be changed to <strong>CANCELLED</strong>.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-9 text-xs">Keep Order</AlertDialogCancel>
+            <AlertDialogAction
+              className="h-9 text-xs bg-rose-600 text-white hover:bg-rose-700 font-bold"
+              onClick={confirmCancelOrder}
+            >
+              Yes, Cancel Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Order Confirmation Popup */}
       <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>

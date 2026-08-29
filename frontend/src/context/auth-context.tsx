@@ -330,17 +330,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginAdmin = useCallback(
     (email: string, pass: string): boolean => {
-      if (!email || !pass) {
+      const cleanEmail = (email || "").trim().toLowerCase();
+      const cleanPass = (pass || "").trim();
+
+      if (!cleanEmail || !cleanPass) {
         toast.error("Email and password are required");
         return false;
       }
 
       const foundStaff = staffList.find(
-        (s) => s.email.toLowerCase() === email.toLowerCase() && (s.password === pass || pass === "admin123")
+        (s) =>
+          (s.email.toLowerCase().trim() === cleanEmail || s.name.toLowerCase().trim() === cleanEmail) &&
+          (s.password === cleanPass || s.password === pass || cleanPass === "admin123")
       );
 
       if (!foundStaff) {
-        toast.error("Invalid Admin Credentials", { description: "Check your email and password" });
+        toast.error("Invalid Staff Credentials", { description: "Check your staff email and password" });
         return false;
       }
 
@@ -359,7 +364,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       saveUserSession(adminUser);
-      toast.success("Logged into Admin Panel", { description: `Role: ${foundStaff.role}` });
+      toast.success("Logged into Admin Panel", { description: `Welcome back, ${foundStaff.name} (${foundStaff.role})` });
       return true;
     },
     [staffList, saveUserSession]

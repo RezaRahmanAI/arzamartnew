@@ -242,7 +242,7 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
       for (let i = 0; i < sizes.length; i++) {
         const sizeName = sizes[i];
         const priceOverride = input.sizePrices?.[sizeName] ?? null;
-        const stockQuantity = input.sizeStock?.[sizeName] ?? 15;
+        const stockQuantity = input.sizeStock?.[sizeName] ?? 0;
 
         await tx.productVariant.create({
           data: {
@@ -372,6 +372,13 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
 
       // Update Variants/Sizes if provided
       if (input.sizes && input.sizes.length > 0) {
+        // Map existing variant stocks by clean size name so we don't lose stock on product edit
+        const existingStockMap: Record<string, number> = {};
+        (existing.variants || []).forEach((v) => {
+          const clean = v.name.replace(/^Size:\s*/i, "").trim();
+          existingStockMap[clean] = v.stockQuantity;
+        });
+
         await tx.productVariant.deleteMany({
           where: { productId: existing.id },
         });
@@ -379,7 +386,10 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
         for (let i = 0; i < input.sizes.length; i++) {
           const sizeName = input.sizes[i];
           const priceOverride = input.sizePrices?.[sizeName] ?? null;
-          const stockQuantity = input.sizeStock?.[sizeName] ?? 15;
+          const stockQuantity =
+            input.sizeStock?.[sizeName] !== undefined
+              ? input.sizeStock[sizeName]
+              : (existingStockMap[sizeName] ?? 0);
 
           await tx.productVariant.create({
             data: {

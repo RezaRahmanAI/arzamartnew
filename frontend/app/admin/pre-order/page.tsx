@@ -167,8 +167,9 @@ export default function AdminPreOrderPage() {
   const [address, setAddress] = useState("");
   const [division, setDivision] = useState(BANGLADESH_DIVISIONS[0] || "Dhaka (ঢাকা)");
   const [district, setDistrict] = useState("Dhaka");
-  const [sourcePage, setSourcePage] = useState("Facebook Page");
-  const [socialSource, setSocialSource] = useState(socialPageMapBySource["Facebook Page"]?.[0] || "");
+  const [sourcePage, setSourcePage] = useState("");
+  const [socialSource, setSocialSource] = useState("");
+  const [courierName, setCourierName] = useState("");
   const [deliveryCharge, setDeliveryCharge] = useState(70);
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
@@ -467,6 +468,7 @@ export default function AdminPreOrderPage() {
       source: "pre-order",
       sourcePageName: sourcePage || undefined,
       socialMediaSourceName: socialSource || undefined,
+      courierName: courierName || undefined,
       hasNotes: !!note.trim(),
     };
 
@@ -615,8 +617,10 @@ export default function AdminPreOrderPage() {
                           <td className="py-2.5 px-1 text-right align-middle">
                             <input
                               type="number"
-                              value={l.price}
-                              onChange={(e) => updateLinePrice(l.key, Number(e.target.value))}
+                              value={l.price === 0 ? "" : l.price}
+                              onFocus={(e) => e.target.select()}
+                              placeholder="0"
+                              onChange={(e) => updateLinePrice(l.key, e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                               className="h-7 w-[72px] text-right rounded border border-border bg-background px-1 text-xs font-medium ml-auto"
                             />
                           </td>
@@ -663,8 +667,9 @@ export default function AdminPreOrderPage() {
                       <Input
                         type="number"
                         min="0"
-                        value={discount || ""}
-                        onChange={(e) => setDiscount(Number(e.target.value))}
+                        value={discount === 0 ? "" : discount}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setDiscount(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                         className="h-6 text-right px-1 text-xs"
                         placeholder="0"
                       />
@@ -674,8 +679,9 @@ export default function AdminPreOrderPage() {
                       <Input
                         type="number"
                         min="0"
-                        value={paid || ""}
-                        onChange={(e) => setPaid(Number(e.target.value))}
+                        value={paid === 0 ? "" : paid}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setPaid(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                         className="h-6 text-right px-1 text-xs"
                         placeholder="0"
                       />
@@ -780,6 +786,7 @@ export default function AdminPreOrderPage() {
                     onChange={(e) => handleSourcePageChange(e.target.value)}
                     className="h-9 w-full rounded border border-border bg-background px-2 text-xs font-medium"
                   >
+                    <option value="">-- Select Source Channel / Page --</option>
                     {sourcePages.map((sp) => (
                       <option key={sp} value={sp}>
                         {sp}
@@ -788,28 +795,49 @@ export default function AdminPreOrderPage() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Social Page / Source</Label>
+                  <Label className="text-xs font-semibold">Social Page / UTM Source</Label>
                   <SearchableSelect
                     options={currentSocialPageOptions}
                     value={socialSource}
                     onChange={setSocialSource}
-                    placeholder="Search & select page..."
+                    placeholder="-- Select UTM / Social Source --"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Delivery Charge Preset</Label>
-                <select
-                  value={deliveryCharge}
-                  onChange={(e) => setDeliveryCharge(Number(e.target.value))}
-                  className="h-9 w-full rounded border border-border bg-background px-2 text-xs font-semibold"
-                >
-                  <option value={70}>ঢাকার ভিতরে — ৳৭০</option>
-                  <option value={120}>ঢাকার সাব-এরিয়া — ৳১২০</option>
-                  <option value={150}>ঢাকার বাইরে — ৳১৫০</option>
-                  <option value={0}>ফ্রি ডেলিভারি — ৳০</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold">Delivery Company (Courier)</Label>
+                  <select
+                    value={courierName}
+                    onChange={(e) => setCourierName(e.target.value)}
+                    className="h-9 w-full rounded border border-border bg-background px-2 text-xs font-semibold text-foreground"
+                  >
+                    <option value="">-- Select Courier / Delivery Partner --</option>
+                    <option value="Steadfast">Steadfast Courier</option>
+                    <option value="Pathao">Pathao Courier</option>
+                    <option value="RedX">RedX Delivery</option>
+                    <option value="Paperfly">Paperfly Courier</option>
+                    <option value="Sundarban">Sundarban Courier</option>
+                    <option value="SA Paribahan">SA Paribahan</option>
+                    <option value="eCourier">eCourier</option>
+                    <option value="Standard Courier">Standard Delivery</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold">Delivery Charge Preset</Label>
+                  <select
+                    value={deliveryCharge}
+                    onChange={(e) => setDeliveryCharge(Number(e.target.value))}
+                    className="h-9 w-full rounded border border-border bg-background px-2 text-xs font-semibold"
+                  >
+                    <option value={70}>ঢাকার ভিতরে — ৳৭০</option>
+                    <option value={120}>ঢাকার সাব-এরিয়া — ৳১২০</option>
+                    <option value={150}>ঢাকার বাইরে — ৳১৫০</option>
+                    <option value={0}>ফ্রি ডেলিভারি — ৳০</option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-1 pt-1">

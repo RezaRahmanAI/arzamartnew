@@ -36,6 +36,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -81,6 +91,8 @@ export default function AdminIncomplete() {
 
   const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<Order | null>(null);
   const [activeNotesOrder, setActiveNotesOrder] = useState<Order | null>(null);
+  const [orderToCancel, setOrderToCancel] = useState<{ id: string; targetStatus: string } | null>(null);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
 
   const [data, setData] = useState<Order[]>(contextIncomplete);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -112,6 +124,14 @@ export default function AdminIncomplete() {
   };
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
+    if (newStatus === "cancelled") {
+      setOrderToCancel({ id: orderId, targetStatus: newStatus });
+      return;
+    }
+    await executeStatusChange(orderId, newStatus);
+  };
+
+  const executeStatusChange = async (orderId: string, newStatus: string) => {
     try {
       setData((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, status: newStatus as OrderStatus } : o))
@@ -120,6 +140,21 @@ export default function AdminIncomplete() {
       toast.success(`Incomplete order status updated to ${newStatus}`);
     } catch {
       toast.error("Failed to update status");
+    }
+  };
+
+  const confirmCancelIncomplete = async () => {
+    if (orderToCancel) {
+      await executeStatusChange(orderToCancel.id, orderToCancel.targetStatus);
+      setOrderToCancel(null);
+    }
+  };
+
+  const confirmDeleteIncomplete = () => {
+    if (orderToDelete) {
+      removeIncomplete(orderToDelete.id);
+      toast.info(`Deleted incomplete order #${orderToDelete.id.replace(/^INC-|^ORD-/, "")}`);
+      setOrderToDelete(null);
     }
   };
 
@@ -619,14 +654,11 @@ export default function AdminIncomplete() {
                         PDF
                       </Button>
 
-                      {/* Delete */}
+                      {/* Delete with Confirmation */}
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          removeIncomplete(o.id);
-                          toast.info(`Deleted incomplete order #${cleanId}`);
-                        }}
+                        onClick={() => setOrderToDelete(o)}
                         className="h-7 text-[10px] px-2 text-destructive border-destructive/30 hover:bg-destructive/10"
                         title="Delete incomplete order"
                       >
@@ -705,6 +737,54 @@ export default function AdminIncomplete() {
           </div>
         </div>
       )}
+
+      {/* Cancel Incomplete Order Confirmation Modal */}
+      <AlertDialog open={!!orderToCancel} onOpenChange={(open) => !open && setOrderToCancel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 text-rose-600 mb-1">
+              <Trash2 className="size-5" />
+              <AlertDialogTitle>Cancel Incomplete Order #{orderToCancel?.id?.replace(/^INC-|^ORD-/, "")}?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-xs text-muted-foreground">
+              Are you sure you want to mark this incomplete order as <strong>CANCELLED</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-9 text-xs">Keep Incomplete</AlertDialogCancel>
+            <AlertDialogAction
+              className="h-9 text-xs bg-rose-600 text-white hover:bg-rose-700 font-bold"
+              onClick={confirmCancelIncomplete}
+            >
+              Yes, Cancel Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Incomplete Order Confirmation Modal */}
+      <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 text-destructive mb-1">
+              <Trash2 className="size-5" />
+              <AlertDialogTitle>Delete Incomplete Order #{orderToDelete?.id?.replace(/^INC-|^ORD-/, "")}?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-xs text-muted-foreground">
+              Are you sure you want to permanently delete this incomplete draft order? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-9 text-xs">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="h-9 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold"
+              onClick={confirmDeleteIncomplete}
+            >
+              Yes, Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Modals */}
       <OrderInvoiceModal

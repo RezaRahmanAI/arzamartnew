@@ -326,15 +326,21 @@ export default function AdminSettingsPage() {
         {/* LEFT COLUMN: Categories Submenu & Search (4 Cols) */}
         <div className="lg:col-span-4 space-y-3">
           <div className="rounded-xl border border-border bg-card p-3 shadow-card space-y-3">
+            {/* Decoy inputs to absorb browser password autofill */}
+            <input type="text" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" readOnly />
+            <input type="password" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" readOnly />
+
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
+                type="search"
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 placeholder="Search settings category..."
                 className="h-9 pl-8 text-xs"
-                autoComplete="off"
-                name="settings_search_query_no_autofill"
+                autoComplete="new-search-filter-none"
+                name="settings_search_query_no_autofill_unique"
+                id="settings-search-box-field"
               />
             </div>
 

@@ -22,7 +22,9 @@ export interface StaffMember {
   createdAt: string;
 }
 
-let staffListState: StaffMember[] = [
+const STORAGE_KEY = "arzamart_staff_members_v1";
+
+const defaultStaffList: StaffMember[] = [
   {
     id: "st-100",
     name: "Admin User",
@@ -80,7 +82,7 @@ let staffListState: StaffMember[] = [
     email: "editor@arzamart.com",
     password: "editor123",
     role: "Editor",
-    status: "Inactive",
+    status: "Active",
     permissions: {
       orders: false,
       products: true,
@@ -93,16 +95,54 @@ let staffListState: StaffMember[] = [
   }
 ];
 
+function getStoredStaffList(): StaffMember[] {
+  if (typeof window === "undefined") return defaultStaffList;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultStaffList;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
+    }
+    return defaultStaffList;
+  } catch {
+    return defaultStaffList;
+  }
+}
+
+function persistStaffList(list: StaffMember[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch (err) {
+    console.error("Failed to persist staff list:", err);
+  }
+}
+
+let staffListState: StaffMember[] = defaultStaffList;
+let isInitialized = false;
+
+function ensureInitialized() {
+  if (!isInitialized && typeof window !== "undefined") {
+    staffListState = getStoredStaffList();
+    isInitialized = true;
+  }
+}
+
 const listeners = new Set<() => void>();
 
 function notify() {
+  persistStaffList(staffListState);
   listeners.forEach((l) => l());
 }
 
 export function useStaffStore() {
+  ensureInitialized();
   const [list, setList] = useState<StaffMember[]>(staffListState);
 
   useEffect(() => {
+    ensureInitialized();
+    setList([...staffListState]);
     const handler = () => setList([...staffListState]);
     listeners.add(handler);
     return () => {
@@ -113,6 +153,7 @@ export function useStaffStore() {
   return {
     staffList: list,
     addStaff: (staff: Omit<StaffMember, "id" | "createdAt">) => {
+      ensureInitialized();
       const newStaff: StaffMember = {
         ...staff,
         password: staff.password || "123456",
@@ -123,14 +164,17 @@ export function useStaffStore() {
       notify();
     },
     updateStaff: (id: string, updatedData: Partial<StaffMember>) => {
+      ensureInitialized();
       staffListState = staffListState.map((staff) =>
         staff.id === id ? { ...staff, ...updatedData } : staff
       );
       notify();
     },
     deleteStaff: (id: string) => {
+      ensureInitialized();
       staffListState = staffListState.filter((staff) => staff.id !== id);
       notify();
     },
   };
 }
+

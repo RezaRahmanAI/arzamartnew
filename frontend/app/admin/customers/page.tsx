@@ -36,30 +36,59 @@ export default function AdminCustomers() {
   }, [orders]);
 
   const rows = useMemo(() => {
-    const source =
-      apiCustomers.length > 0
-        ? apiCustomers.map((c) => ({
-            id: c.id,
-            fullName: c.fullName,
-            phone: c.phone,
-            district: c.district || "Dhaka",
-            createdAtUtc: c.createdAt || c.createdAtUtc,
-          }))
-        : localCustomers.map((c) => ({
-            id: c.customerId,
-            fullName: c.fullName,
-            phone: c.mobileNumber,
-            district: c.district || c.area || "Dhaka",
-            createdAtUtc: c.createdAt,
-          }));
+    // Merge both localCustomers and apiCustomers into a single unified map by normalized phone
+    const customerMap = new Map<
+      string,
+      { id: string; fullName: string; phone: string; district: string; createdAtUtc?: string }
+    >();
 
-    return source
-      .map((c) => {
-        const stats = orderStatsByPhone.get(normalizePhone(c.phone)) || { count: 0, total: 0 };
-        return { ...c, orderCount: stats.count, totalSpent: stats.total };
-      })
-      .filter((c) => (c.fullName && c.fullName.trim()) || c.orderCount > 0);
-  }, [apiCustomers, localCustomers, orderStatsByPhone]);
+    // 1. First seed with local customers
+    for (const c of localCustomers) {
+      const key = normalizePhone(c.mobileNumber);
+      if (!key) continue;
+      customerMap.set(key, {
+        id: c.customerId,
+        fullName: c.fullName || "Customer",
+        phone: c.mobileNumber,
+        district: c.district || c.area || "Dhaka",
+        createdAtUtc: c.createdAt,
+      });
+    }
+
+    // 2. Then merge/enrich with API customers (never reduce or drop local ones)
+    for (const c of apiCustomers) {
+      const key = normalizePhone(c.phone);
+      if (!key) continue;
+      const existing = customerMap.get(key);
+      customerMap.set(key, {
+        id: c.id || existing?.id || key,
+        fullName: c.fullName || existing?.fullName || "Customer",
+        phone: c.phone,
+        district: c.district || existing?.district || "Dhaka",
+        createdAtUtc: c.createdAt || c.createdAtUtc || existing?.createdAtUtc,
+      });
+    }
+
+    // 3. Also include any distinct customers who placed orders but might not have a profile yet
+    for (const o of orders) {
+      const key = normalizePhone(o.phone);
+      if (!key) continue;
+      if (!customerMap.has(key)) {
+        customerMap.set(key, {
+          id: `cust-${key}`,
+          fullName: o.customer || "Customer",
+          phone: o.phone,
+          district: o.city || "Dhaka",
+          createdAtUtc: o.date,
+        });
+      }
+    }
+
+    return Array.from(customerMap.values()).map((c) => {
+      const stats = orderStatsByPhone.get(normalizePhone(c.phone)) || { count: 0, total: 0 };
+      return { ...c, orderCount: stats.count, totalSpent: stats.total };
+    });
+  }, [apiCustomers, localCustomers, orders, orderStatsByPhone]);
 
   return (
     <div className="space-y-5">

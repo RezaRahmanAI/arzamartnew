@@ -141,8 +141,9 @@ export function QuickEditOrderModal({
   const [customer, setCustomer] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [sourcePage, setSourcePage] = useState("Facebook Page");
+  const [sourcePage, setSourcePage] = useState("");
   const [utmSource, setUtmSource] = useState("");
+  const [courierName, setCourierName] = useState("");
   const [discount, setDiscount] = useState(0);
   const [delivery, setDelivery] = useState(70);
   const [paid, setPaid] = useState(0);
@@ -154,9 +155,9 @@ export function QuickEditOrderModal({
       setPhone(order.phone || "");
       setAddress(order.address || "");
 
-      const detectedPage = order.sourcePageName || sourcePages[0] || "Facebook Page";
-      setSourcePage(detectedPage);
+      setSourcePage(order.sourcePageName || "");
       setUtmSource(order.socialMediaSourceName || "");
+      setCourierName(order.courierName || "");
       setDiscount(Number(order.discount) || 0);
       setDelivery(order.delivery !== undefined ? Number(order.delivery) : 70);
       setPaid(Number(order.paid) || 0);
@@ -165,7 +166,7 @@ export function QuickEditOrderModal({
 
   if (!order) return null;
 
-  const currentSocialOptions = socialPageMapBySource[sourcePage] || [];
+  const currentSocialOptions = sourcePage ? (socialPageMapBySource[sourcePage] || []) : [];
 
   const subTotal = (order.items || []).reduce((acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0);
   const calculatedTotal = Math.max(0, subTotal + Number(delivery || 0) - Number(discount || 0));
@@ -173,8 +174,7 @@ export function QuickEditOrderModal({
 
   const handleSourcePageChange = (page: string) => {
     setSourcePage(page);
-    const options = socialPageMapBySource[page] || [];
-    setUtmSource(options[0] || "");
+    setUtmSource("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -200,6 +200,7 @@ export function QuickEditOrderModal({
         address: address.trim(),
         sourcePageName: sourcePage.trim() || undefined,
         socialMediaSourceName: utmSource.trim() || undefined,
+        courierName: courierName.trim() || undefined,
         discount: Number(discount) || 0,
         delivery: Number(delivery) || 0,
         paid: Number(paid) || 0,
@@ -262,14 +263,15 @@ export function QuickEditOrderModal({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs font-semibold">Page *</Label>
+              <Label className="text-xs font-semibold">Page</Label>
               <select
                 value={sourcePage}
                 onChange={(e) => handleSourcePageChange(e.target.value)}
                 className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
+                <option value="">-- Select Page --</option>
                 {sourcePages.map((p) => (
                   <option key={p} value={p}>
                     {p}
@@ -279,13 +281,32 @@ export function QuickEditOrderModal({
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold">UTM Source *</Label>
+              <Label className="text-xs font-semibold">UTM Source</Label>
               <SearchableSelect
                 options={currentSocialOptions}
                 value={utmSource}
                 onChange={setUtmSource}
-                placeholder="Select or enter UTM Source..."
+                placeholder="-- Select UTM Source --"
               />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Delivery Courier</Label>
+              <select
+                value={courierName}
+                onChange={(e) => setCourierName(e.target.value)}
+                className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">-- Select Courier --</option>
+                <option value="Steadfast">Steadfast Courier</option>
+                <option value="Pathao">Pathao Courier</option>
+                <option value="RedX">RedX Delivery</option>
+                <option value="Paperfly">Paperfly Courier</option>
+                <option value="Sundarban">Sundarban Courier</option>
+                <option value="SA Paribahan">SA Paribahan</option>
+                <option value="eCourier">eCourier</option>
+                <option value="Standard Courier">Standard Delivery</option>
+              </select>
             </div>
           </div>
 
@@ -295,8 +316,10 @@ export function QuickEditOrderModal({
               <Input
                 type="number"
                 min="0"
-                value={discount}
-                onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                value={discount === 0 ? "" : discount}
+                onFocus={(e) => e.target.select()}
+                placeholder="0"
+                onChange={(e) => setDiscount(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                 className="h-8 text-xs font-semibold"
               />
             </div>
@@ -306,8 +329,10 @@ export function QuickEditOrderModal({
               <Input
                 type="number"
                 min="0"
-                value={delivery}
-                onChange={(e) => setDelivery(Number(e.target.value) || 0)}
+                value={delivery === 0 ? "" : delivery}
+                onFocus={(e) => e.target.select()}
+                placeholder="0"
+                onChange={(e) => setDelivery(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                 className="h-8 text-xs font-semibold"
               />
             </div>
@@ -317,8 +342,10 @@ export function QuickEditOrderModal({
               <Input
                 type="number"
                 min="0"
-                value={paid}
-                onChange={(e) => setPaid(Number(e.target.value) || 0)}
+                value={paid === 0 ? "" : paid}
+                onFocus={(e) => e.target.select()}
+                placeholder="0"
+                onChange={(e) => setPaid(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                 className="h-8 text-xs font-semibold text-emerald-600 dark:text-emerald-400"
               />
             </div>

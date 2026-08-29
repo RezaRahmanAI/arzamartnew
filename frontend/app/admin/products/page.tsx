@@ -190,7 +190,7 @@ export default function AdminProducts() {
     setStockModalProduct(p);
     const initialStock: Record<string, number> = {};
     p.sizes.forEach((s) => {
-      initialStock[s] = p.sizeStock?.[s] ?? 15;
+      initialStock[s] = p.sizeStock?.[s] ?? 0;
     });
     setStockForm(initialStock);
   };
@@ -559,7 +559,7 @@ export default function AdminProducts() {
 
               // Calculate total stock
               const totalStock = p.sizes.reduce((acc, s) => {
-                return acc + (p.sizeStock?.[s] ?? 15);
+                return acc + (p.sizeStock?.[s] ?? 0);
               }, 0);
 
               return (
