@@ -1,5 +1,5 @@
 import type { Review } from "@/lib/reviews";
-import { getReviewsAction, submitReviewAction } from "@/actions/reviews.actions";
+import { getReviewsAction, submitReviewAction, deleteReviewAction } from "@/actions/reviews.actions";
 
 const REVIEWS_KEY = "arza-reviews-v1";
 const initialMockReviews: Review[] = [];
@@ -67,6 +67,12 @@ class ReviewsService {
     const reviews = this.getLocalReviews();
     const updated = reviews.filter((r) => r.id !== id);
     this.saveLocalReviews(updated);
+
+    try {
+      await deleteReviewAction(id);
+    } catch {
+      /* ignore */
+    }
   }
 }
 

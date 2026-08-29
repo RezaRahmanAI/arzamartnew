@@ -93,3 +93,50 @@ export async function submitReviewAction(input: SubmitReviewInput): Promise<{ su
     return { success: false, error: error instanceof Error ? error.message : "Failed to submit review." };
   }
 }
+
+export async function deleteReviewAction(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const numericId = parseInt(id.replace(/\D/g, ""), 10);
+
+    let review = null;
+    if (!isNaN(numericId) && numericId > 0) {
+      review = await prisma.review.findFirst({
+        where: { id: numericId },
+      });
+    }
+
+    if (!review) {
+      review = await prisma.review.findFirst({
+        where: { comment: { contains: id } },
+      });
+    }
+
+    if (review) {
+      await prisma.review.delete({
+        where: { id: review.id },
+      });
+
+      // Update product rating and review count
+      const stats = await prisma.review.aggregate({
+        where: { productId: review.productId, isApproved: true },
+        _avg: { rating: true },
+        _count: { id: true },
+      });
+
+      await prisma.product.update({
+        where: { id: review.productId },
+        data: {
+          averageRating: stats._avg.rating || 5.0,
+          reviewCount: stats._count.id || 0,
+        },
+      });
+    }
+
+    revalidatePath("/admin/reviews");
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("deleteReviewAction error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to delete review." };
+  }
+}
+

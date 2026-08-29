@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrders, type Order, type OrderItem } from "@/lib/orders";
+import { ordersService } from "@/lib/api/services/orders.service";
 import { getSizePrice, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { CustomerSearchInput } from "@/components/admin/customer-search-input";
@@ -184,9 +185,44 @@ export default function AdminManualOrder() {
 
   // Load existing order for editing if ?edit=ORD-xxx query is present, or reset if no edit ID
   useEffect(() => {
-    if (editOrderId && orders && orders.length > 0) {
-      const existing = orders.find((o) => o.id === editOrderId || o.id === `ORD-${editOrderId}`);
-      if (existing) {
+    let isMounted = true;
+
+    async function loadOrder() {
+      if (!editOrderId) {
+        // Clean form reset when navigating to fresh Manual Order (no edit query param)
+        setLines([]);
+        setCustomer("");
+        setPhone("");
+        setAddress("");
+        setDivision("Dhaka (ঢাকা)");
+        setDistrict("Dhaka");
+        setDeliveryCharge(70);
+        setDiscount(0);
+        setPaid(0);
+        setNote("");
+        setNoteType("Internal");
+        setExistingStatus("pending");
+        return;
+      }
+
+      const cleanTargetId = editOrderId.trim();
+      let existing = (orders || []).find(
+        (o) =>
+          o.id === cleanTargetId ||
+          o.id === `ORD-${cleanTargetId}` ||
+          o.id.replace(/^ORD-/, "") === cleanTargetId.replace(/^ORD-/, "")
+      );
+
+      if (!existing) {
+        try {
+          const fetched = await ordersService.getById(cleanTargetId);
+          if (fetched) existing = fetched;
+        } catch {
+          /* ignore */
+        }
+      }
+
+      if (existing && isMounted) {
         let targetAddress = existing.address || "";
         let targetCity = existing.city || "Dhaka";
         let targetArea = existing.area || "Dhaka (ঢাকা)";
@@ -255,21 +291,13 @@ export default function AdminManualOrder() {
         }
         toast.info(`Editing Order #${existing.id}`);
       }
-    } else if (!editOrderId) {
-      // Clean form reset when navigating to fresh Manual Order (no edit query param)
-      setLines([]);
-      setCustomer("");
-      setPhone("");
-      setAddress("");
-      setDivision("Dhaka (ঢাকা)");
-      setDistrict("Dhaka");
-      setDeliveryCharge(70);
-      setDiscount(0);
-      setPaid(0);
-      setNote("");
-      setNoteType("Internal");
-      setExistingStatus("pending");
     }
+
+    loadOrder();
+
+    return () => {
+      isMounted = false;
+    };
   }, [editOrderId, orders, products]);
 
   // Source Page change handler -> automatically update Social Page dropdown options & default selected page

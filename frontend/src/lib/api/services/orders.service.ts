@@ -6,7 +6,7 @@ import {
   updateOrderStatusAction,
   updateOrderAction,
   saveIncompleteOrderAction,
-  removeIncompleteOrderAction,
+  deleteOrderAction,
 } from "@/actions/orders.actions";
 
 const ORDERS_KEY = "arza-orders-v1";
@@ -247,9 +247,22 @@ class OrdersService {
     this.saveLocalIncomplete(updated);
 
     try {
-      await removeIncompleteOrderAction(id);
+      await deleteOrderAction(id);
     } catch {
       /* fallback */
+    }
+  }
+
+  public async deleteOrder(id: string): Promise<boolean> {
+    const { orders } = this.getLocalOrders();
+    const updated = orders.filter((o) => o.id !== id);
+    this.saveLocalOrders(updated);
+
+    try {
+      const res = await deleteOrderAction(id);
+      return res.success;
+    } catch {
+      return false;
     }
   }
 }

@@ -78,6 +78,7 @@ type OrdersContextValue = {
   promoteIncomplete: (id: string) => Promise<void>;
   updateStatus: (id: string, status: OrderStatus) => Promise<void>;
   updateOrder: (id: string, payload: Partial<Order>) => Promise<void>;
+  deleteOrder: (id: string) => Promise<void>;
 };
 
 const OrdersContext = createContext<OrdersContextValue | null>(null);
@@ -254,6 +255,26 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const deleteOrder = useCallback(async (id: string) => {
+    const targetOrder = orders.find((o) => o.id === id);
+    setOrders((prev) => prev.filter((o) => o.id !== id));
+    setIncomplete((prev) => prev.filter((o) => o.id !== id));
+
+    logSystemAction({
+      category: "ORDER",
+      action: "Order Deleted",
+      targetId: id,
+      targetName: targetOrder?.customer,
+      details: `Order #${id} (Customer: ${targetOrder?.customer || "Unknown"}, Total: ৳${targetOrder?.total || 0}) was permanently deleted by admin/staff.`,
+    });
+
+    try {
+      await ordersService.deleteOrder(id);
+    } catch (err) {
+      console.error("Failed to sync order deletion with API:", err);
+    }
+  }, [orders]);
+
   const value = useMemo<OrdersContextValue>(
     () => ({
       orders,
@@ -267,6 +288,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       promoteIncomplete,
       updateStatus,
       updateOrder,
+      deleteOrder,
     }),
     [
       orders,
@@ -280,6 +302,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       promoteIncomplete,
       updateStatus,
       updateOrder,
+      deleteOrder,
     ]
   );
 

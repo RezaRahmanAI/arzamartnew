@@ -608,23 +608,43 @@ export async function saveIncompleteOrderAction(order: Order): Promise<{ success
   }
 }
 
-export async function removeIncompleteOrderAction(orderId: string): Promise<{ success: boolean }> {
+export async function deleteOrderAction(orderIdentifier: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const cleanId = orderId.trim();
-    const deleteConditions: Array<{ orderId?: string; id?: string }> = [{ orderId: cleanId }];
-    if (cleanId.length === 36 && cleanId.includes("-")) {
-      deleteConditions.push({ id: cleanId });
+    const cleanId = orderIdentifier.trim();
+    const isUuid = cleanId.length === 36 && cleanId.includes("-");
+
+    const order = await prisma.order.findFirst({
+      where: isUuid ? { id: cleanId } : { orderNumber: cleanId },
+    });
+
+    if (order) {
+      // 1. Delete associated order items
+      await prisma.orderItem.deleteMany({
+        where: { orderId: order.id },
+      });
+
+      // 2. Delete the order
+      await prisma.order.delete({
+        where: { id: order.id },
+      });
     }
 
+    // Also clean from incomplete orders if it was an incomplete id
     await prisma.incompleteOrder.deleteMany({
-      where: {
-        OR: deleteConditions,
-      },
+      where: { orderId: cleanId },
     });
+
+    revalidatePath("/admin/orders");
     revalidatePath("/admin/incomplete");
+    revalidatePath("/admin/customers");
+
     return { success: true };
   } catch (error) {
-    console.error("removeIncompleteOrderAction failed:", error);
-    return { success: false };
+    console.error("deleteOrderAction failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete order",
+    };
   }
 }
+

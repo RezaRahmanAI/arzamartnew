@@ -22,6 +22,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatBDT, orders, inventory, statusStyles, OrderStatus, Order } from "@/lib/dashboard-data";
 import { ordersService } from "@/lib/api/services/orders.service";
 import { useOrders } from "@/lib/orders";
@@ -48,6 +58,7 @@ import {
   RotateCcw,
   Truck,
   FileText,
+  Trash2,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { getSavedNotesStore, getOrderNoteCount } from "@/components/admin/order-notes-modal";
@@ -124,7 +135,11 @@ export default function AdminOrders() {
   const [stockWarningItems, setStockWarningItems] = useState<OutOfStockItem[]>([]);
   const [pendingConfirmOrder, setPendingConfirmOrder] = useState<Order | null>(null);
 
-  const { orders: contextOrders, updateStatus: contextUpdateStatus, updateOrder: contextUpdateOrder } = useOrders();
+  // Delete Order Confirmation Modal State
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false);
+
+  const { orders: contextOrders, updateStatus: contextUpdateStatus, updateOrder: contextUpdateOrder, deleteOrder } = useOrders();
   const [page, setPage] = useState(1);
   const pageSize = 10;
   
@@ -1219,6 +1234,17 @@ export default function AdminOrders() {
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-600 hover:text-white" onClick={() => setActiveInvoiceOrder(o)}>PDF</Button>
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-600 hover:text-white" onClick={() => setActiveTrackingOrder(o)}>History</Button>
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-green-50 text-green-600 border-green-200 hover:bg-green-600 hover:text-white" onClick={() => window.open(`https://wa.me/${o.phone.replace(/\D/g, "")}`, "_blank")}>WA</Button>
+
+                      {/* Delete Order Button */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px] px-2 bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-600 hover:text-white flex items-center gap-1 font-bold"
+                        onClick={() => setOrderToDelete(o)}
+                        title="Delete this order"
+                      >
+                        <Trash2 className="size-3" /> Delete
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1280,6 +1306,49 @@ export default function AdminOrders() {
         onCancel={cancelStockWarning} 
         onConfirmAnyway={confirmWithStockIssue} 
       />
+
+      {/* Delete Order Confirmation Popup */}
+      <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 text-destructive mb-1">
+              <Trash2 className="size-5" />
+              <AlertDialogTitle>Delete Order #{orderToDelete?.id}?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-xs leading-relaxed text-muted-foreground space-y-1">
+              <p>
+                Are you sure you want to permanently delete this order for <strong>{orderToDelete?.customer}</strong> ({orderToDelete?.phone})?
+              </p>
+              <p className="text-[11px] text-destructive/90 font-medium">
+                Total: ৳{orderToDelete?.total} ({orderToDelete?.items?.length || 0} items). This action cannot be undone.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-9 text-xs" disabled={isDeletingOrder}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="h-9 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold"
+              disabled={isDeletingOrder}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!orderToDelete) return;
+                try {
+                  setIsDeletingOrder(true);
+                  await deleteOrder(orderToDelete.id);
+                  toast.success(`Order #${orderToDelete.id} deleted successfully`);
+                  setOrderToDelete(null);
+                } catch {
+                  toast.error("Failed to delete order");
+                } finally {
+                  setIsDeletingOrder(false);
+                }
+              }}
+            >
+              {isDeletingOrder ? "Deleting..." : "Yes, Delete Order"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
