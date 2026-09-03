@@ -105,7 +105,6 @@ model Product {
   bundleProducts   String?   @map("BundleProducts") @db.NVarChar(2000)
   averageRating    Decimal   @default(0) @map("AverageRating") @db.Decimal(3, 2)
   reviewCount      Int       @default(0) @map("ReviewCount")
-  purchaseRate     Decimal   @default(0) @map("PurchaseRate") @db.Decimal(18, 4)
   badge            String?   @map("Badge") @db.NVarChar(100)
   createdAtUtc     DateTime  @default(now()) @map("CreatedAtUtc")
   updatedAtUtc     DateTime? @updatedAt @map("UpdatedAtUtc")

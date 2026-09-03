@@ -30,7 +30,6 @@ export interface CreateProductInput {
   shortDescription?: string;
   discountNote?: string;
   badge?: string;
-  purchaseRate?: number;
   isBundle?: boolean;
   bundleProducts?: string[];
   isActive?: boolean;
@@ -55,7 +54,6 @@ export interface UpdateProductInput {
   shortDescription?: string;
   discountNote?: string;
   badge?: string;
-  purchaseRate?: number;
   isBundle?: boolean;
   bundleProducts?: string[];
   isActive?: boolean;
@@ -187,7 +185,6 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
     const sku = `SKU-${Date.now().toString().slice(-6)}`;
     const basePrice = input.mrp || input.price || 0;
     const discountPrice = input.compareAt && input.compareAt > input.price ? input.price : null;
-    const purchaseRate = input.purchaseRate || basePrice * 0.7;
 
     const bundleJson = input.bundleProducts && input.bundleProducts.length > 0
       ? JSON.stringify(input.bundleProducts)
@@ -213,7 +210,6 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
           fullDescription: fullDescriptionText,
           basePrice,
           discountPrice,
-          purchaseRate,
           badge: finalBadge || null,
           isBundle: input.isBundle ?? false,
           bundleProducts: bundleJson,
@@ -316,7 +312,6 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
 
     const basePrice = input.mrp !== undefined ? input.mrp : input.price !== undefined ? input.price : existing.basePrice;
     const discountPrice = input.compareAt && input.price && input.compareAt > input.price ? input.price : null;
-    const purchaseRate = input.purchaseRate !== undefined ? input.purchaseRate : existing.purchaseRate;
 
     const bundleJson = input.bundleProducts !== undefined
       ? JSON.stringify(input.bundleProducts)
@@ -342,7 +337,6 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
           fullDescription: updatedFullDesc !== undefined ? updatedFullDesc : existing.fullDescription,
           basePrice,
           discountPrice,
-          purchaseRate,
           badge: updatedBadge || null,
           isBundle: input.isBundle !== undefined ? input.isBundle : existing.isBundle,
           bundleProducts: bundleJson,

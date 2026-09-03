@@ -41,7 +41,6 @@ type FormState = {
   image: string;
   price: number;
   compareAt: number;
-  purchaseRate: number;
   sizes: string;
   description: string;
   discountNote: string;
@@ -65,7 +64,6 @@ const emptyForm: FormState = {
   image: "",
   price: 790,
   compareAt: 990,
-  purchaseRate: 450,
   sizes: "M, L, XL, XXL",
   description: "",
   discountNote: "",
@@ -300,7 +298,6 @@ export default function AdminProducts() {
       image: p.image,
       price: p.price,
       compareAt: p.mrp ?? p.compareAt ?? 0,
-      purchaseRate: p.purchaseRate,
       sizes: p.sizes.join(", "),
       description: p.description || "",
       discountNote: p.discountNote || p.shortDescription || "",
@@ -378,7 +375,6 @@ export default function AdminProducts() {
       offerMinQty: selectedOffer?.minQty || undefined,
       offerDiscount: selectedOffer?.discountAmount || undefined,
       badge: form.badge || undefined,
-      purchaseRate: Number(form.purchaseRate) || 0,
       sizePrices: Object.keys(sizePrices).length > 0 ? sizePrices : undefined,
       videoUrl: form.videoUrl || undefined,
       returnPolicy: form.returnPolicy || undefined,
@@ -534,7 +530,6 @@ export default function AdminProducts() {
             <TableRow>
               <TableHead>Product</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead className="text-right">Purchase</TableHead>
               <TableHead className="text-right">Base price</TableHead>
               <TableHead className="text-right">Sizes</TableHead>
               <TableHead className="text-center">Stock</TableHead>
@@ -647,10 +642,9 @@ export default function AdminProducts() {
                       );
                     })()}
                   </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {formatBDT(p.purchaseRate)}
+                  <TableCell className="text-right font-semibold">
+                    {priceRange}
                   </TableCell>
-                  <TableCell className="text-right font-semibold">{priceRange}</TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {p.sizes.join(", ")}
                   </TableCell>
@@ -786,7 +780,7 @@ export default function AdminProducts() {
           <DialogHeader>
             <DialogTitle>{editingSlug ? "Edit product" : "Create product"}</DialogTitle>
             <DialogDescription>
-              Set the purchase rate (your cost) and a selling price for each size.
+              Set a selling price for each size.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={save} className="space-y-4">
@@ -1031,31 +1025,16 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            <div className={`grid gap-4 ${form.isBundle ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
-              {!form.isBundle && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="purchaseRate">Purchase rate (৳)</Label>
-                  <Input
-                    id="purchaseRate"
-                    type="number"
-                    min="0"
-                    value={form.purchaseRate || ""}
-                    onChange={(e) => update("purchaseRate", Number(e.target.value))}
-                    placeholder="450"
-                  />
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <Label htmlFor="compareAt">MRP / Original Price (৳)</Label>
-                <Input
-                  id="compareAt"
-                  type="number"
-                  min="0"
-                  value={form.compareAt || ""}
-                  onChange={(e) => update("compareAt", Number(e.target.value))}
-                  placeholder="990"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="compareAt">MRP / Original Price (৳)</Label>
+              <Input
+                id="compareAt"
+                type="number"
+                min="0"
+                value={form.compareAt || ""}
+                onChange={(e) => update("compareAt", Number(e.target.value))}
+                placeholder="990"
+              />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

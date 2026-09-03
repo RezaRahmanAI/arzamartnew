@@ -20,7 +20,6 @@ export interface RawApiInitProduct {
   fullDescription?: string;
   description?: string;
   badge?: string;
-  purchaseRate?: number;
   isBundle?: boolean;
   bundleProducts?: string[];
   variants?: { id?: string; name: string; sku?: string; priceOverride?: number; stockQuantity?: number }[];
@@ -109,7 +108,6 @@ class InitService {
       description: p.fullDescription || p.description || p.shortDescription || "",
       shortDescription: p.shortDescription || "",
       discountNote: p.shortDescription || undefined,
-      purchaseRate: p.purchaseRate ?? basePrice * 0.7,
       badge: p.badge,
       isBundle: p.isBundle ?? false,
       bundleProducts: p.bundleProducts ?? undefined,

@@ -18,7 +18,6 @@ export function mapPrismaProduct(p: {
   bundleProducts: string | null;
   averageRating: Prisma.Decimal | number | string;
   reviewCount: number;
-  purchaseRate: Prisma.Decimal | number | string;
   badge: string | null;
   category?: { id: number; name: string; slug: string; parentCategoryId?: number | null; parentCategory?: { id: number; name: string; slug: string } | null } | null;
   images?: { id: number; imageUrl: string; isMain: boolean; displayOrder: number }[];
@@ -112,7 +111,6 @@ export function mapPrismaProduct(p: {
     description: p.fullDescription || p.shortDescription || "",
     shortDescription: p.shortDescription || "",
     discountNote: p.shortDescription || undefined,
-    purchaseRate: Number(p.purchaseRate) || basePrice * 0.7,
     badge: p.badge || undefined,
     isBundle: p.isBundle,
     bundleProducts: parsedBundleProducts,

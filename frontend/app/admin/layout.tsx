@@ -34,7 +34,7 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   },
   "/admin/products": {
     title: "Products",
-    subtitle: "Manage products, size prices & purchase rates",
+    subtitle: "Manage products, size prices & stock",
   },
   "/admin/categories": {
     title: "Categories",

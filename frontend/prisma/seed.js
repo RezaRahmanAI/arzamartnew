@@ -111,7 +111,7 @@ async function main() {
       image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
       description: "A 240 GSM combed cotton tee with a boxy fall, ribbed neck and pre-shrunk finish. Keeps its shape after every wash.",
       badge: "Best seller",
-      purchaseRate: 450,
+
       sizes: ["S", "M", "L", "XL", "XXL"],
     },
     {
@@ -123,7 +123,7 @@ async function main() {
       image: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800",
       description: "Oversized silhouette with a hand-drawn print, screen printed with water-based ink so the graphic stays soft.",
       badge: "New",
-      purchaseRate: 520,
+
       sizes: ["S", "M", "L", "XL", "XXL"],
     },
     {
@@ -134,7 +134,7 @@ async function main() {
       compareAt: 1690,
       image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800",
       description: "Pure Belgian linen woven for breathable comfort in tropical humidity. Mother-of-pearl buttons, curved hem.",
-      purchaseRate: 850,
+
       sizes: ["M", "L", "XL", "XXL"],
     },
     {
@@ -146,7 +146,7 @@ async function main() {
       image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800",
       description: "Fine combed cotton with subtle jacquard weave, Mandarin collar, concealed placket and side pockets.",
       badge: "Festive",
-      purchaseRate: 1100,
+
       sizes: ["38", "40", "42", "44", "46"],
     },
     {
@@ -157,7 +157,7 @@ async function main() {
       compareAt: 1990,
       image: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800",
       description: "Heavyweight brushed fleece with a double-layered hood, ribbed cuffs and a kangaroo pocket built to last.",
-      purchaseRate: 920,
+
       sizes: ["M", "L", "XL", "XXL"],
     },
     {
@@ -168,7 +168,7 @@ async function main() {
       compareAt: 1490,
       image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800",
       description: "Tailored slim fit with 3% elastane for unrestricted movement. Deep pockets, YKK zipper, reinforced waistband.",
-      purchaseRate: 700,
+
       sizes: ["28", "30", "32", "34", "36"],
     },
     // Combo / Bundle Products
@@ -181,7 +181,7 @@ async function main() {
       image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800",
       description: "Pair our bestselling heavyweight tee with the active stretch trousers. A versatile combo.",
       badge: "Bundle Save",
-      purchaseRate: 800,
+
       sizes: ["M+32", "L+34", "XL+36"],
       isBundle: true,
       bundleProducts: ["midnight-heavy-tee", "stretch-chinos-black"],
@@ -195,7 +195,7 @@ async function main() {
       image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800",
       description: "Two premium light linen shirts to beat the summer heat in classic shades.",
       badge: "Bundle Save",
-      purchaseRate: 1100,
+
       sizes: ["M", "L", "XL"],
       isBundle: true,
       bundleProducts: ["cloudlight-linen-shirt", "cloudlight-linen-shirt"],
@@ -209,7 +209,7 @@ async function main() {
       image: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800",
       description: "Get 3 of our premium combed cotton tees in a single value pack.",
       badge: "Popular Bundle",
-      purchaseRate: 900,
+
       sizes: ["M", "L", "XL"],
       isBundle: true,
       bundleProducts: ["midnight-heavy-tee", "arza-graphic-tee", "midnight-heavy-tee"],
@@ -233,7 +233,6 @@ async function main() {
           fullDescription: p.description,
           basePrice: p.price,
           discountPrice: p.compareAt && p.compareAt > p.price ? p.compareAt : null,
-          purchaseRate: p.purchaseRate,
           badge: p.badge || null,
           isFeatured: true,
           isActive: true,

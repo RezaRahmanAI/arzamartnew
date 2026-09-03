@@ -99,7 +99,6 @@ export const inventory = products.map((p) => ({
   ...p,
   stock: 0,
   sold: 0,
-  margin: p.price - (p.purchaseRate ?? 0),
 }));
 
 export const statusStyles: Record<OrderStatus, string> = {

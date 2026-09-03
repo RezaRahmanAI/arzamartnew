@@ -53,7 +53,6 @@ export type Product = {
   offerMinQty?: number;
   offerDiscount?: number;
   badge?: string;
-  purchaseRate: number;
   sizePrices?: Record<string, number>;
   sizeStock?: Record<string, number>;
   videoUrl?: string;
@@ -166,7 +165,7 @@ export const products: Product[] = [
     description:
       "A 240 GSM combed cotton tee with a boxy fall, ribbed neck and pre-shrunk finish. Keeps its shape after every wash.",
     badge: "Best seller",
-    purchaseRate: 450,
+
     sizePrices: { M: 790, L: 820, XL: 850, XXL: 890 },
     images: [catShirt, catPanjabi, catHoodie],
   },
@@ -180,7 +179,7 @@ export const products: Product[] = [
     sizes: SIZES,
     description:
       "Oversized silhouette with a hand-drawn print, screen printed with water-based ink so the graphic stays soft.",
-    purchaseRate: 520,
+
     sizePrices: { M: 890, L: 920, XL: 950, XXL: 990 },
     images: [catShirt, catHoodie],
   },
@@ -196,7 +195,7 @@ export const products: Product[] = [
     description:
       "Airy 100% linen weave with a soft collar and coconut buttons. Built for humid afternoons and long commutes.",
     badge: "New",
-    purchaseRate: 980,
+
     sizePrices: { M: 1490, L: 1550, XL: 1590, XXL: 1650 },
     images: [catTshirt, catTrouser],
   },
@@ -210,7 +209,7 @@ export const products: Product[] = [
     sizes: SIZES,
     description:
       "Classic oxford cotton with a slightly relaxed fit. Works tucked in for the office and open over a tee.",
-    purchaseRate: 850,
+
     sizePrices: { M: 1350, L: 1390, XL: 1450, XXL: 1490 },
     images: [catTshirt, catTrouser],
   },
@@ -226,7 +225,7 @@ export const products: Product[] = [
     description:
       "Fine cotton panjabi with tonal chikan-style embroidery along the placket and cuffs. Festive without the fuss.",
     badge: "Eid pick",
-    purchaseRate: 1650,
+
     sizePrices: { M: 2390, L: 2490, XL: 2590, XXL: 2690 },
     images: [catShirt, catHoodie],
   },
@@ -240,7 +239,7 @@ export const products: Product[] = [
     sizes: SIZES,
     description:
       "Slim-cut panjabi in breathable viscose-cotton with a mandarin collar and side vents for easy movement.",
-    purchaseRate: 1300,
+
     sizePrices: { M: 1990, L: 2090, XL: 2150, XXL: 2190 },
     images: [catShirt, catHoodie],
   },
@@ -255,7 +254,7 @@ export const products: Product[] = [
     sizes: SIZES,
     description:
       "Brushed fleece inside, dense knit outside, with a double-layer hood and kangaroo pocket that holds its shape.",
-    purchaseRate: 1150,
+
     sizePrices: { M: 1790, L: 1850, XL: 1890, XXL: 1950 },
     images: [catTshirt, catTrouser],
   },
@@ -270,7 +269,7 @@ export const products: Product[] = [
     description:
       "Mid-rise chino in stretch twill with a tapered leg and deep pockets. Holds a crease, survives a rickshaw ride.",
     badge: "New",
-    purchaseRate: 1050,
+
     sizePrices: { "30": 1690, "32": 1690, "34": 1750, "36": 1790, "38": 1850 },
     images: [catShirt, catTshirt],
   },
@@ -284,7 +283,7 @@ export const products: Product[] = [
     sizes: ["M+32", "L+34", "XL+36"],
     description: "Pair our bestselling heavyweight tee with the active stretch trousers. A versatile combo.",
     badge: "Bundle Save",
-    purchaseRate: 800,
+
     isBundle: true,
     bundleProducts: ["midnight-heavy-tee", "campus-chino"],
     images: [catTrouser],
@@ -299,7 +298,7 @@ export const products: Product[] = [
     sizes: ["M", "L", "XL"],
     description: "Two premium light linen shirts to beat the summer heat.",
     badge: "Bundle Save",
-    purchaseRate: 1100,
+
     isBundle: true,
     bundleProducts: ["cloudlight-linen-shirt", "cloudlight-linen-shirt"],
     images: [catShirt],
@@ -314,7 +313,7 @@ export const products: Product[] = [
     sizes: ["M", "L", "XL"],
     description: "Get 3 of our premium combed cotton tees in a single package.",
     badge: "Popular Bundle",
-    purchaseRate: 900,
+
     isBundle: true,
     bundleProducts: ["midnight-heavy-tee", "arza-graphic-tee", "midnight-heavy-tee"],
     images: [catTshirt],
