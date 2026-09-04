@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter, notFound } from "next/navigation";
+import { useParams, notFound } from "next/navigation";
 import { Minus, Plus, RotateCcw, ShoppingBag, Truck, Star, ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -19,7 +19,6 @@ import { ProductSizeMeasurements } from "@/components/product-size-measurements"
 
 export default function ProductPage() {
   const params = useParams();
-  const router = useRouter();
   const slug = params.slug as string;
   const { getProduct, products } = useProducts();
   const { settings } = useSettings();
@@ -412,26 +411,14 @@ export default function ProductPage() {
                     Out of Stock
                   </button>
                 ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={addToCart}
-                      className="flex h-11 items-center gap-2 rounded-lg border border-primary px-5 text-sm font-bold text-primary transition-colors hover:bg-secondary cursor-pointer"
-                    >
-                      <ShoppingBag className="size-4" />
-                      Add to cart
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        addToCart();
-                        router.push("/checkout");
-                      }}
-                      className="h-11 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground transition-transform hover:scale-105 cursor-pointer"
-                    >
-                      Order now
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={addToCart}
+                    className="flex h-11 flex-1 min-w-[160px] items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 cursor-pointer"
+                  >
+                    <ShoppingBag className="size-4" />
+                    Add to cart
+                  </button>
                 )}
 
                 <button
