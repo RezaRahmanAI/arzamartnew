@@ -14,7 +14,6 @@ import { Switch } from "@/components/ui/switch";
 import {
   Globe,
   Palette,
-  PhoneCall,
   Truck,
   Share2,
   Building2,
@@ -68,10 +67,9 @@ interface CategoryTab {
 }
 
 const CATEGORIES: CategoryTab[] = [
-  { key: "general", label: "General Settings", description: "Website identity, currency, status & locale settings", icon: Globe },
+  { key: "general", label: "General Settings", description: "Website identity, currency, status, locale & contact information", icon: Globe },
   { key: "branding", label: "Branding & Appearance", description: "Logos, color palette, typography & theme styling", icon: Palette },
   { key: "sizeTemplates", label: "Size Templates", description: "Standard sizing, chest & length templates for products", icon: Ruler },
-  { key: "contact", label: "Contact Information", description: "Support channels, office address & Google Maps", icon: PhoneCall },
   { key: "shipping", label: "Shipping Settings", description: "Shipping rates, delivery rules & COD availability", icon: Truck },
   { key: "socialMedia", label: "Social Media Links", description: "Social accounts, messenger & channel handles", icon: Share2 },
   { key: "business", label: "Business Information", description: "Trade license, BIN, VAT & legal tax details", icon: Building2 },
@@ -439,6 +437,100 @@ export default function AdminSettingsPage() {
                     </select>
                   </div>
                 </div>
+
+                {/* Contact Information Sub-section */}
+                <div className="pt-4 mt-2 border-t border-border/60 space-y-4">
+                  <div className="pb-2">
+                    <h4 className="text-sm font-bold text-foreground">Contact Information</h4>
+                    <p className="text-[11px] text-muted-foreground">Manage support numbers, sales email, physical office address and map location</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Company Registered Name</Label>
+                      <Input
+                        value={draftSettings.contact.companyName}
+                        onChange={(e) => updateSection("contact", { companyName: e.target.value })}
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Owner / Administrator Name</Label>
+                      <Input
+                        value={draftSettings.contact.ownerName}
+                        onChange={(e) => updateSection("contact", { ownerName: e.target.value })}
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Support Phone</Label>
+                      <Input
+                        value={draftSettings.contact.supportPhone}
+                        onChange={(e) => updateSection("contact", { supportPhone: e.target.value })}
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Sales Phone</Label>
+                      <Input
+                        value={draftSettings.contact.salesPhone}
+                        onChange={(e) => updateSection("contact", { salesPhone: e.target.value })}
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">WhatsApp Official Number</Label>
+                      <Input
+                        value={draftSettings.contact.whatsAppNumber}
+                        onChange={(e) => updateSection("contact", { whatsAppNumber: e.target.value })}
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Info Email Address</Label>
+                      <Input
+                        type="email"
+                        value={draftSettings.contact.emailAddress}
+                        onChange={(e) => updateSection("contact", { emailAddress: e.target.value })}
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Support Email Address</Label>
+                      <Input
+                        type="email"
+                        value={draftSettings.contact.supportEmail}
+                        onChange={(e) => updateSection("contact", { supportEmail: e.target.value })}
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">Office Physical Address</Label>
+                    <Textarea
+                      value={draftSettings.contact.officeAddress}
+                      onChange={(e) => updateSection("contact", { officeAddress: e.target.value })}
+                      rows={2}
+                      className="text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">Google Map Embed URL</Label>
+                    <Input
+                      value={draftSettings.contact.googleMapEmbedUrl}
+                      onChange={(e) => updateSection("contact", { googleMapEmbedUrl: e.target.value })}
+                      className="h-9 text-xs font-mono"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -677,103 +769,7 @@ export default function AdminSettingsPage() {
               </div>
             )}
 
-            {/* 3. CONTACT INFORMATION */}
-            {activeTab === "contact" && (
-              <div className="space-y-5">
-                <div className="border-b border-border/60 pb-3">
-                  <h3 className="text-base font-bold text-foreground">Contact Information</h3>
-                  <p className="text-xs text-muted-foreground">Manage support numbers, sales email, physical office address and map location</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold">Company Registered Name</Label>
-                    <Input
-                      value={draftSettings.contact.companyName}
-                      onChange={(e) => updateSection("contact", { companyName: e.target.value })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold">Owner / Administrator Name</Label>
-                    <Input
-                      value={draftSettings.contact.ownerName}
-                      onChange={(e) => updateSection("contact", { ownerName: e.target.value })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold">Support Phone</Label>
-                    <Input
-                      value={draftSettings.contact.supportPhone}
-                      onChange={(e) => updateSection("contact", { supportPhone: e.target.value })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold">Sales Phone</Label>
-                    <Input
-                      value={draftSettings.contact.salesPhone}
-                      onChange={(e) => updateSection("contact", { salesPhone: e.target.value })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold">WhatsApp Official Number</Label>
-                    <Input
-                      value={draftSettings.contact.whatsAppNumber}
-                      onChange={(e) => updateSection("contact", { whatsAppNumber: e.target.value })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold">Info Email Address</Label>
-                    <Input
-                      type="email"
-                      value={draftSettings.contact.emailAddress}
-                      onChange={(e) => updateSection("contact", { emailAddress: e.target.value })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold">Support Email Address</Label>
-                    <Input
-                      type="email"
-                      value={draftSettings.contact.supportEmail}
-                      onChange={(e) => updateSection("contact", { supportEmail: e.target.value })}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Office Physical Address</Label>
-                  <Textarea
-                    value={draftSettings.contact.officeAddress}
-                    onChange={(e) => updateSection("contact", { officeAddress: e.target.value })}
-                    rows={2}
-                    className="text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Google Map Embed URL</Label>
-                  <Input
-                    value={draftSettings.contact.googleMapEmbedUrl}
-                    onChange={(e) => updateSection("contact", { googleMapEmbedUrl: e.target.value })}
-                    className="h-9 text-xs font-mono"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* 4. SHIPPING SETTINGS */}
+            {/* 3. SHIPPING SETTINGS */}
             {activeTab === "shipping" && (
               <div className="space-y-5">
                 <div className="flex items-center justify-between border-b border-border/60 pb-3">
