@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { formatBDT, getSizePrice } from "@/lib/shop-data";
 import { useOrders, type Order } from "@/lib/orders";
@@ -177,93 +178,131 @@ export default function CheckoutPage() {
     );
   }
 
-    const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const name = String(formData.get("name") ?? "");
-    const phone = String(formData.get("phone") ?? "");
-    const address = String(formData.get("address") ?? "");
 
-    // Fraud and IP / Account restriction check
-    try {
-      const { checkFraudStatusAction } = await import("@/actions/customers.actions");
-      const fraudRes = await checkFraudStatusAction({ phone });
-      if (fraudRes.isBlocked || fraudRes.isDeactivated) {
-        toast.error("Order Restriction", {
-          description: fraudRes.reason || "Your account or phone number is restricted from placing orders.",
-          duration: 6000,
-        });
-        return;
-      }
-    } catch {
-      /* ignore check failure and continue gracefully */
+    const cleanName = name.trim();
+    const cleanPhone = phone.trim().replace(/\D/g, "");
+    const cleanAddress = address.trim();
+
+    if (!cleanName) {
+      toast.error("নাম প্রয়োজন", { description: "অনুগ্রহ করে আপনার সম্পূর্ণ নাম লিখুন।" });
+      return;
     }
 
-    const zoneLabel = DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে";
-    const customerMaster = findOrCreateByPhone(phone, {
-      fullName: name,
-      address,
-      district: zoneLabel,
-    });
+    if (!cleanPhone || !/^01[0-9]{9}$/.test(cleanPhone)) {
+      toast.error("সঠিক মোবাইল নাম্বার দিন", {
+        description: "১১ ডিজিটের সঠিক মোবাইল নাম্বার লিখুন (যেমন: 017XXXXXXXX)।",
+      });
+      return;
+    }
 
-    // Auto-login the customer so their order is linked to their profile
-    loginAsCustomer(customerMaster);
+    if (!cleanAddress || cleanAddress.length < 5) {
+      toast.error("সম্পূর্ণ ঠিকানা প্রয়োজন", {
+        description: "অনুগ্রহ করে বাসা/রোড/এলাকার বিবরণ সহ ঠিকানা লিখুন।",
+      });
+      return;
+    }
 
     setPlacing(true);
-    const orderId = draftId ?? generateNextOrderId();
-    const order: Order = {
-      id: orderId,
-      customerId: customerMaster.customerId,
-      customer: name,
-      phone,
-      address,
-      city: zoneLabel,
-      area: zoneLabel,
-      note: String(formData.get("note") ?? ""),
-      payment: String(formData.get("payment") ?? "Cash on delivery"),
-      items: detailedLines.map((l) => ({
-        slug: l.slug,
-        name: l.product.name,
-        size: l.size,
-        qty: l.qty,
-        price: getSizePrice(l.product, l.size),
-      })),
-      total: grandTotal,
-      delivery,
-      status: "pending",
-      date: new Date().toISOString().slice(0, 10),
-      source: "checkout",
-    };
-    const finalOrderId = await addOrder(order);
 
-    // Persist checkout note into localStorage notes store for admin Notes modal
-    const checkoutNote = String(formData.get("note") ?? "").trim();
-    if (checkoutNote) {
-      const store = getSavedNotesStore();
-      const noteRecord: NoteRecord = {
-        id: `note-${Date.now()}`,
-        text: checkoutNote,
-        noteType: "Customer / Delivery Note",
-        author: "Customer (Website)",
-        timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+    try {
+      // Fraud and IP / Account restriction check
+      try {
+        const { checkFraudStatusAction } = await import("@/actions/customers.actions");
+        const fraudRes = await checkFraudStatusAction({ phone: cleanPhone });
+        if (fraudRes.isBlocked || fraudRes.isDeactivated) {
+          toast.error("Order Restriction", {
+            description: fraudRes.reason || "Your account or phone number is restricted from placing orders.",
+            duration: 6000,
+          });
+          setPlacing(false);
+          return;
+        }
+      } catch (fraudErr) {
+        console.warn("Fraud check error (skipped):", fraudErr);
+      }
+
+      const zoneLabel = DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে";
+      const customerMaster = findOrCreateByPhone(cleanPhone, {
+        fullName: cleanName,
+        address: cleanAddress,
+        district: zoneLabel,
+      });
+
+      // Auto-login the customer so their order is linked to their profile
+      try {
+        loginAsCustomer(customerMaster);
+      } catch (loginErr) {
+        console.warn("Auto-login error (non-fatal):", loginErr);
+      }
+
+      const orderId = draftId ?? generateNextOrderId();
+      const order: Order = {
+        id: orderId,
+        customerId: customerMaster.customerId,
+        customer: cleanName,
+        phone: cleanPhone,
+        address: cleanAddress,
+        city: zoneLabel,
+        area: zoneLabel,
+        note: note.trim(),
+        payment: "Cash on delivery",
+        items: detailedLines.map((l) => ({
+          slug: l.slug,
+          name: l.product.name,
+          size: l.size,
+          qty: l.qty,
+          price: getSizePrice(l.product, l.size),
+        })),
+        total: grandTotal,
+        delivery,
+        status: "pending",
+        date: new Date().toISOString().slice(0, 10),
+        source: "checkout",
       };
-      store[finalOrderId] = [...(store[finalOrderId] || []), noteRecord];
-      saveNotesStore(store);
-    }
 
-    if (draftId) removeIncomplete(draftId);
-    clear();
-    toast.success("Order placed!", {
-      description: `Thanks ${name}, order ${finalOrderId} is confirmed. We'll call to verify.`,
-    });
-    router.push(`/order-confirmation/${finalOrderId}`);
+      const finalOrderId = await addOrder(order);
+
+      // Persist checkout note into localStorage notes store for admin Notes modal
+      const checkoutNote = note.trim();
+      if (checkoutNote) {
+        try {
+          const store = getSavedNotesStore();
+          const noteRecord: NoteRecord = {
+            id: `note-${Date.now()}`,
+            text: checkoutNote,
+            noteType: "Customer / Delivery Note",
+            author: "Customer (Website)",
+            timestamp: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+          };
+          store[finalOrderId] = [...(store[finalOrderId] || []), noteRecord];
+          saveNotesStore(store);
+        } catch {
+          /* ignore */
+        }
+      }
+
+      if (draftId) removeIncomplete(draftId);
+      clear();
+      toast.success("Order placed!", {
+        description: `Thanks ${cleanName}, order ${finalOrderId} is confirmed. We'll call to verify.`,
+      });
+      router.push(`/order-confirmation/${finalOrderId}`);
+    } catch (error) {
+      console.error("Order submission failed:", error);
+      toast.error("অর্ডার সম্পন্ন করা যায়নি", {
+        description: error instanceof Error ? error.message : "অনুগ্রহ করে আবার চেষ্টা করুন অথবা আমাদের সাথে যোগাযোগ করুন।",
+      });
+      setPlacing(false);
+    }
   };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <h1 className="section-title border-l-4 border-primary">Checkout</h1>
 
-      <form ref={formRef} onSubmit={submit} className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+      <form ref={formRef} onSubmit={submit} noValidate className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <div className="rounded-xl border border-border bg-card p-5 shadow-card">
           <h2 className="font-display text-lg font-bold text-foreground">Delivery details</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -448,9 +487,16 @@ export default function CheckoutPage() {
           <button
             type="submit"
             disabled={placing}
-            className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-transform hover:scale-[1.02] disabled:opacity-60 cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-transform hover:scale-[1.02] disabled:opacity-60 cursor-pointer"
           >
-            {placing ? "Placing order..." : "Confirm order"}
+            {placing ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                <span>অর্ডার সাবমিট হচ্ছে...</span>
+              </>
+            ) : (
+              "Confirm order"
+            )}
           </button>
         </aside>
       </form>
