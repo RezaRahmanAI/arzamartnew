@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSettings } from "@/context/settings-context";
 import { SystemSettings, ShippingRule } from "@/types/settings";
 import { getSystemAuditLogs } from "@/lib/audit-logger";
@@ -97,8 +98,9 @@ export default function AdminSettingsPage() {
     clearSystemCache,
   } = useSettings();
 
-  const [activeTab, setActiveTab] = useState<SettingsCategoryKey>("general");
-  const [searchFilter, setSearchFilter] = useState("");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as SettingsCategoryKey | null;
+  const activeTab: SettingsCategoryKey = tabParam && CATEGORIES.some((c) => c.key === tabParam) ? tabParam : "general";
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [resetScope, setResetScope] = useState<"current" | "all">("current");
 
@@ -185,13 +187,6 @@ export default function AdminSettingsPage() {
     updateSection("socialMedia", { sources: existing });
     toast.info(`Removed "${removed[0]}" from ${sourceName}`);
   };
-
-  // Filter categories by search input
-  const filteredCategories = CATEGORIES.filter(
-    (c) =>
-      c.label.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      c.description.toLowerCase().includes(searchFilter.toLowerCase())
-  );
 
   if (isLoading) {
     return (
@@ -324,61 +319,9 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      {/* Main 2-Column Module Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT COLUMN: Categories Submenu & Search (4 Cols) */}
-        <div className="lg:col-span-4 space-y-3">
-          <div className="rounded-xl border border-border bg-card p-3 shadow-card space-y-3">
-            {/* Decoy inputs to absorb browser password autofill */}
-            <input type="text" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" readOnly />
-            <input type="password" style={{ display: "none" }} tabIndex={-1} aria-hidden="true" readOnly />
-
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                type="search"
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                placeholder="Search settings category..."
-                className="h-9 pl-8 text-xs"
-                autoComplete="new-search-filter-none"
-                name="settings_search_query_no_autofill_unique"
-                id="settings-search-box-field"
-              />
-            </div>
-
-            <div className="space-y-1 max-h-[600px] overflow-y-auto pr-1">
-              {filteredCategories.map((cat) => {
-                const IconComponent = cat.icon;
-                const isActive = activeTab === cat.key;
-                return (
-                  <button
-                    key={cat.key}
-                    type="button"
-                    onClick={() => setActiveTab(cat.key)}
-                    className={`w-full flex items-start gap-3 p-2.5 rounded-lg text-left transition-all cursor-pointer ${
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-sm font-semibold"
-                        : "hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <IconComponent className={`size-4 mt-0.5 shrink-0 ${isActive ? "text-primary-foreground" : "text-primary"}`} />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-semibold leading-snug truncate">{cat.label}</div>
-                      <div className={`text-[11px] leading-tight line-clamp-1 mt-0.5 ${isActive ? "opacity-90" : "opacity-70"}`}>
-                        {cat.description}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Active Category Config Panel (8 Cols) */}
-        <div className="lg:col-span-8">
-          <div className="rounded-xl border border-border bg-card shadow-card p-5 space-y-6">
+      {/* Main Settings Panel */}
+      <div className="w-full">
+        <div className="rounded-xl border border-border bg-card shadow-card p-5 space-y-6">
             {/* 1. GENERAL SETTINGS */}
             {activeTab === "general" && (
               <div className="space-y-5">
@@ -2175,7 +2118,6 @@ export default function AdminSettingsPage() {
             )}
           </div>
         </div>
-      </div>
 
       {/* Reset Confirmation Modal */}
       <AlertDialog open={resetModalOpen} onOpenChange={setResetModalOpen}>

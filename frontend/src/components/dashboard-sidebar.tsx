@@ -25,6 +25,16 @@ import {
   PackageCheck,
   ScanBarcode,
   ChevronRight,
+  Palette,
+  Ruler,
+  PhoneCall,
+  Share2,
+  Building2,
+  Search,
+  PanelBottom as LayoutFooter,
+  ShoppingCart,
+  BellRing,
+  ShieldCheck,
 } from "lucide-react";
 import { useSettings } from "@/context/settings-context";
 import { useOrders } from "@/lib/orders";
@@ -126,6 +136,24 @@ export function DashboardSidebar() {
         { title: "Staff Management", url: "/admin/staff", icon: UserCog },
       ],
     },
+    {
+      title: "Settings",
+      icon: SlidersHorizontal,
+      items: [
+        { title: "General Settings", url: "/admin/settings?tab=general", icon: Globe },
+        { title: "Branding & Appearance", url: "/admin/settings?tab=branding", icon: Palette },
+        { title: "Size Templates", url: "/admin/settings?tab=sizeTemplates", icon: Ruler },
+        { title: "Contact Information", url: "/admin/settings?tab=contact", icon: PhoneCall },
+        { title: "Shipping Settings", url: "/admin/settings?tab=shipping", icon: Truck },
+        { title: "Social Media Links", url: "/admin/settings?tab=socialMedia", icon: Share2 },
+        { title: "Business Information", url: "/admin/settings?tab=business", icon: Building2 },
+        { title: "SEO & Analytics", url: "/admin/settings?tab=seo", icon: Search },
+        { title: "Footer Settings", url: "/admin/settings?tab=footer", icon: LayoutFooter },
+        { title: "Order & Checkout", url: "/admin/settings?tab=orders", icon: ShoppingCart },
+        { title: "Notification Channels", url: "/admin/settings?tab=notifications", icon: BellRing },
+        { title: "Advanced & Logs", url: "/admin/settings?tab=advanced", icon: ShieldCheck },
+      ],
+    },
   ];
 
   const searchParams = useSearchParams();
@@ -135,11 +163,22 @@ export function DashboardSidebar() {
       if (url === "/admin") return pathname === "/admin";
       if (url.includes("?")) {
         const [targetPath, targetQuery] = url.split("?");
-        const currentType = searchParams.get("type");
-        const targetType = new URLSearchParams(targetQuery).get("type");
-        return pathname === targetPath && currentType === targetType;
+        if (pathname !== targetPath) return false;
+        const targetParams = new URLSearchParams(targetQuery);
+        for (const [key, value] of targetParams.entries()) {
+          const currentVal = searchParams.get(key);
+          // Default tab is 'general' if ?tab param is absent on /admin/settings
+          if (key === "tab" && !currentVal && value === "general") {
+            continue;
+          }
+          if (currentVal !== value) return false;
+        }
+        return true;
       }
       if (url === "/admin/orders" && searchParams.get("type")) {
+        return false;
+      }
+      if (url === "/admin/settings" && searchParams.get("tab")) {
         return false;
       }
       return pathname === url || pathname.startsWith(url + "/");
@@ -161,6 +200,7 @@ export function DashboardSidebar() {
       Products: true,
       "Storefront & Web": false,
       "Users & Staff": false,
+      Settings: false,
     };
     return initial;
   });
@@ -270,16 +310,6 @@ export function DashboardSidebar() {
                   </Collapsible>
                 );
               })}
-
-              {/* 3. Settings */}
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/admin/settings"} tooltip="Settings">
-                  <Link href="/admin/settings" className="flex items-center gap-2">
-                    <SlidersHorizontal className="h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
