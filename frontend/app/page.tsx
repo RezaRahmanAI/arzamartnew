@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BadgePercent, RotateCcw, ShieldCheck, Truck } from "lucide-react";
 import { fetchHomePageData } from "@/lib/api/server/fetch-home-data";
 import { getImageUrl } from "@/lib/utils";
+import { products as staticProducts } from "@/lib/shop-data";
 import { HomePageDeals, HomePageArrivals, HomePageHero } from "@/components/home-page-client-islands";
 
 // Dynamic: Always render with real fresh database data on every request
@@ -28,9 +29,10 @@ export default async function HomePage() {
 
   const ICON_MAP = { Truck, RotateCcw, ShieldCheck, BadgePercent };
 
-  // Active products & All products
-  const activeProducts = products.filter((p) => p.isActive !== false && !p.isBundle);
-  const allProducts = products
+  // Active products & All products (with fallback to static catalog if empty)
+  const resolvedProducts = products && products.length > 0 ? products : staticProducts;
+  const activeProducts = resolvedProducts.filter((p) => p.isActive !== false && !p.isBundle);
+  const allProducts = resolvedProducts
     .filter((p) => p.isActive !== false)
     .sort((a, b) => (b.isBundle ? 1 : 0) - (a.isBundle ? 1 : 0));
 

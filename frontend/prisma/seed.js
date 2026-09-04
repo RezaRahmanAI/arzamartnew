@@ -222,6 +222,10 @@ async function main() {
 
     let prod = await prisma.product.findUnique({ where: { slug: p.slug } });
     if (!prod) {
+      const hasDiscount = p.compareAt && p.compareAt > p.price;
+      const basePrice = hasDiscount ? p.compareAt : p.price;
+      const discountPrice = hasDiscount ? p.price : null;
+
       prod = await prisma.product.create({
         data: {
           brandId: brand.id,
@@ -231,8 +235,8 @@ async function main() {
           sku,
           shortDescription: p.description,
           fullDescription: p.description,
-          basePrice: p.price,
-          discountPrice: p.compareAt && p.compareAt > p.price ? p.compareAt : null,
+          basePrice,
+          discountPrice,
           badge: p.badge || null,
           isFeatured: true,
           isActive: true,

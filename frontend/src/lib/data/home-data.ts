@@ -49,9 +49,9 @@ export async function fetchHomePageData(): Promise<HomePageData> {
         : [];
 
     const products: Product[] =
-      productsResult.status === "fulfilled"
+      productsResult.status === "fulfilled" && productsResult.value.products.length > 0
         ? productsResult.value.products
-        : [];
+        : staticProducts;
 
     const settingsObj = settingsResult.status === "fulfilled" ? settingsResult.value : null;
 
@@ -95,7 +95,7 @@ export async function fetchHomePageData(): Promise<HomePageData> {
     return {
       banners: [],
       categories: [],
-      products: [],
+      products: staticProducts,
       settings: {
         brandName: "Arza",
         currencySymbol: "৳",
@@ -122,11 +122,16 @@ export async function getInitialAppData() {
       getWebsiteSettings(),
     ]);
 
+    const products =
+      productsResult.products && productsResult.products.length > 0
+        ? productsResult.products
+        : staticProducts;
+
     return {
       settings,
       banners,
       categories,
-      products: productsResult.products,
+      products,
       reviews: [],
       timestamp: Date.now(),
     };

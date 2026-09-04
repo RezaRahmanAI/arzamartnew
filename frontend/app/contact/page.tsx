@@ -17,7 +17,7 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.phone.trim() || !form.message.trim()) {
       toast.error("Please fill in your name, phone number, and message.");
@@ -25,14 +25,32 @@ export default function ContactPage() {
     }
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.isSuccess) {
+        throw new Error(data.error || "Failed to send message. Please try again.");
+      }
+
       setSubmitted(true);
       toast.success("Message received!", {
-        description: "Thank you for reaching out. Our support team will contact you shortly.",
+        description: data.message || "Thank you for reaching out. Our support team will contact you shortly.",
       });
       setForm({ name: "", phone: "", email: "", subject: "", message: "" });
-    }, 600);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      toast.error("Submission failed", {
+        description: errorMessage,
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

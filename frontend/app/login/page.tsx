@@ -59,9 +59,11 @@ export default function CustomerLoginPage() {
     setIsSubmitting(true);
     const zone = detectDeliveryZone(address);
     const zoneLabel = DELIVERY_ZONES[zone]?.label || "ঢাকার ভিতরে";
+    const cleanPhone = phone.trim().replace(/\D/g, "");
+    const fallbackEmail = `${cleanPhone || "customer"}@customer.local`;
     const success = await registerCustomer({
       name: name.trim(),
-      email: "",
+      email: fallbackEmail,
       phone: phone.trim(),
       address: address.trim(),
       password: regPassword,

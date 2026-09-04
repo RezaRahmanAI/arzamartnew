@@ -41,6 +41,7 @@ export type Product = {
   price: number;
   compareAt?: number;
   mrp?: number;
+  sku?: string;
   image: string;
   imageUrl?: string;
   sizes: string[];

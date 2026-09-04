@@ -288,10 +288,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const district = data.district || "Dhaka";
+      const cleanDigits = data.phone.trim().replace(/\D/g, "");
+      const resolvedEmail = data.email?.trim() || `${cleanDigits || "customer"}@customer.local`;
 
       const master = findOrCreateByPhone(data.phone, {
         fullName: data.name,
-        email: data.email,
+        email: resolvedEmail,
         address: data.address || "Dhaka, Bangladesh",
         area: data.area,
         district,
@@ -300,7 +302,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 1) Ensure the customer row exists on SQL Server, then set its password.
       const createdOnServer = await customersService.create({
         fullName: data.name,
-        email: data.email,
+        email: resolvedEmail,
         phone: data.phone,
         defaultAddress: data.address || "Dhaka, Bangladesh",
         district,

@@ -475,16 +475,18 @@ export default function ProductPage() {
           >
             Description
           </button>
-          <button
-            onClick={() => setActiveTab("video")}
-            className={`pb-3 border-b-2 transition-colors cursor-pointer ${
-              activeTab === "video"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Product Video
-          </button>
+          {Boolean(product.videoUrl) && (
+            <button
+              onClick={() => setActiveTab("video")}
+              className={`pb-3 border-b-2 transition-colors cursor-pointer ${
+                activeTab === "video"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Product Video
+            </button>
+          )}
           <button
             onClick={() => setActiveTab("return")}
             className={`pb-3 border-b-2 transition-colors cursor-pointer ${
@@ -507,28 +509,22 @@ export default function ProductPage() {
           </div>
         )}
 
-        {activeTab === "video" && (
+        {activeTab === "video" && product.videoUrl && (
           <div className="max-w-xl overflow-hidden rounded-xl border border-border bg-card p-2 shadow-sm">
-            {product.videoUrl ? (
-              <div className="aspect-video w-full">
-                <iframe
-                  src={
-                    product.videoUrl.includes("watch?v=")
-                      ? product.videoUrl.replace("watch?v=", "embed/")
-                      : product.videoUrl.includes("youtu.be/")
-                      ? product.videoUrl.replace("youtu.be/", "youtube.com/embed/")
-                      : product.videoUrl
-                  }
-                  title={`${product.name} Video`}
-                  className="size-full rounded-lg border-0"
-                  allowFullScreen
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
-                <p>No video available for this product.</p>
-              </div>
-            )}
+            <div className="aspect-video w-full">
+              <iframe
+                src={
+                  product.videoUrl.includes("watch?v=")
+                    ? product.videoUrl.replace("watch?v=", "embed/")
+                    : product.videoUrl.includes("youtu.be/")
+                    ? product.videoUrl.replace("youtu.be/", "youtube.com/embed/")
+                    : product.videoUrl
+                }
+                title={`${product.name} Video`}
+                className="size-full rounded-lg border-0"
+                allowFullScreen
+              />
+            </div>
           </div>
         )}
 

@@ -21,11 +21,21 @@ export async function GET(request: Request) {
       categorySlug,
     });
 
+    // If database returned no products and this was not a specific filter query, fall back to static catalog
+    let items = result.products;
+    let totalCount = result.totalCount;
+
+    if (items.length === 0 && !search && !categorySlug && !categoryId) {
+      const { products: staticProducts } = await import("@/lib/shop-data");
+      items = staticProducts;
+      totalCount = staticProducts.length;
+    }
+
     return NextResponse.json({
       isSuccess: true,
       data: {
-        items: result.products,
-        totalCount: result.totalCount,
+        items,
+        totalCount,
       },
     });
   } catch (error) {

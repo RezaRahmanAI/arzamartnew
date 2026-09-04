@@ -17,11 +17,17 @@ export async function GET() {
       getRecentReviews(20),
     ]);
 
+    const { products: staticProducts } = await import("@/lib/shop-data");
+    const products =
+      productsResult.products && productsResult.products.length > 0
+        ? productsResult.products
+        : staticProducts;
+
     return NextResponse.json({
       settings,
       banners,
       categories,
-      products: productsResult.products,
+      products,
       reviews,
       timestamp: Date.now(),
     });

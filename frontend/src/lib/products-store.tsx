@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { type Product } from "./shop-data";
+import { type Product, products as staticProducts } from "./shop-data";
 import { productsService } from "./api/services/products.service";
 import { useAppInit } from "@/context/app-init-context";
 import { logSystemAction } from "@/lib/audit-logger";
@@ -127,7 +127,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getProduct = useCallback(
-    (slug: string) => products.find((p) => p.slug === slug),
+    (slug: string) => {
+      const match = products.find((p) => p.slug === slug);
+      if (match) return match;
+      return staticProducts.find((p) => p.slug === slug);
+    },
     [products]
   );
 

@@ -43,9 +43,17 @@ export function SiteHeader() {
 
     const source = products && products.length > 0 ? products : initialProducts;
 
-    // Filter products matching query at any position in their name
+    // Filter products matching query across name, category, subcategory, SKU, or description
     return source
-      .filter((p) => p.name.toLowerCase().includes(trimmed))
+      .filter((p) => {
+        if (p.isActive === false) return false;
+        const nameMatch = p.name?.toLowerCase().includes(trimmed);
+        const catMatch = p.category?.toLowerCase().includes(trimmed);
+        const subCatMatch = p.subcategory?.toLowerCase().includes(trimmed);
+        const descMatch = p.description?.toLowerCase().includes(trimmed);
+        const skuMatch = p.sku?.toLowerCase().includes(trimmed);
+        return Boolean(nameMatch || catMatch || subCatMatch || descMatch || skuMatch);
+      })
       .sort((a, b) => {
         const aName = a.name.toLowerCase();
         const bName = b.name.toLowerCase();
@@ -55,7 +63,7 @@ export function SiteHeader() {
         if (!aStart && bStart) return 1;
         return aName.localeCompare(bName);
       });
-  }, [query, products]);
+  }, [query, products, initialProducts]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

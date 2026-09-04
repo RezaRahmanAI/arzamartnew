@@ -529,3 +529,19 @@ model SizeTemplateEntry {
   @@index([sizeTemplateId, displayOrder], map: "IX_SizeTemplateEntries_Template_Order")
   @@map("SizeTemplateEntries")
 }
+
+model ContactInquiry {
+  id           String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  name         String    @map("Name") @db.NVarChar(150)
+  phone        String    @map("Phone") @db.NVarChar(30)
+  email        String?   @map("Email") @db.NVarChar(255)
+  subject      String?   @map("Subject") @db.NVarChar(255)
+  message      String    @map("Message") @db.NVarChar(Max)
+  status       String    @default("unread") @map("Status") @db.NVarChar(50)
+  createdAtUtc DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime? @updatedAt @map("UpdatedAtUtc")
+
+  @@index([createdAtUtc], map: "IX_ContactInquiries_CreatedAtUtc")
+  @@map("ContactInquiries")
+}
+
