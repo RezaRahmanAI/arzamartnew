@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import type { Order, OrderStatus } from "@/lib/orders";
 import { getAllOrders, getOrderById } from "@/lib/data/orders";
 
@@ -63,6 +64,12 @@ export interface CreateOrderInput {
   socialMediaSourceName?: string;
   courierName?: string;
   courierTrackingNumber?: string;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isTrustedCustomerId(value?: string): value is string {
+  return !!value && UUID_RE.test(value);
 }
 
 // Module-level in-memory cache for WebsiteSettings (60-second TTL)
@@ -190,6 +197,72 @@ export async function getOrderByIdAction(id: string): Promise<Order | null> {
   }
 }
 
+export interface GuestLinkPayload {
+  orderId: string;
+  phone: string;
+  customer?: string;
+  address?: string;
+  city?: string;
+  area?: string;
+}
+
+/**
+ * Background (non-blocking) customer linking for guest orders.
+ *
+ * 1. Checks if a customer with this phone already exists.
+ * 2. If yes -> links the existing customerId to the order (async UPDATE).
+ * 3. If no  -> creates a new customer record with this phone/name, then links
+ *    the new customerId to the order (async UPDATE).
+ *
+ * Failures are logged and swallowed so the order always remains valid. These can
+ * be reconciled later via a cron job or manual review (orders with a guestPhone
+ * but null customerId are unlinked guests).
+ */
+export async function linkGuestOrderToCustomer(payload: GuestLinkPayload): Promise<{
+  linked: boolean;
+  customerId?: string;
+}> {
+  const phone = (payload.phone || "").trim().replace(/\D/g, "");
+  if (!phone) {
+    return { linked: false };
+  }
+
+  try {
+    const existingCustomer = await prisma.customer.findUnique({
+      where: { phone },
+      select: { id: true },
+    });
+
+    let customerId = existingCustomer?.id;
+
+    if (!customerId) {
+      const created = await prisma.customer.create({
+        data: {
+          fullName: (payload.customer || "").trim() || "Guest Customer",
+          email: `${phone}@customer.local`,
+          phone,
+          defaultAddress: (payload.address || "").trim() || "Dhaka",
+          district: (payload.city || "").trim() || "Dhaka",
+          area: (payload.area || "").trim() || null,
+          isGuest: true,
+        },
+        select: { id: true },
+      });
+      customerId = created.id;
+    }
+
+    await prisma.order.update({
+      where: { id: payload.orderId },
+      data: { customerId },
+    });
+
+    return { linked: true, customerId };
+  } catch (error: unknown) {
+    console.error("[OrderPerf] linkGuestOrderToCustomer failed:", error);
+    return { linked: false };
+  }
+}
+
 export async function createOrderAction(input: CreateOrderInput): Promise<{
   success: boolean;
   id?: string;
@@ -278,51 +351,17 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
 
     const statusInt = STATUS_MAP_STR_TO_INT[input.status || "pending"] ?? 1;
 
-    // Step C: Atomic transaction (Customer safe resolution + Single Nested Order & Items Create)
+    // Step C: Resolve the trusted (logged-in) customer without a DB round-trip.
+    // A well-formed customerId from a valid session is used directly — no
+    // findUnique() "confirmation" lookup on the critical path.
+    const trustedCustomerId = isTrustedCustomerId(input.customerId) ? input.customerId : undefined;
+    const isGuestOrder = !trustedCustomerId;
+
+    // Step D: Atomic transaction (Order + OrderItems only). For guest orders the
+    // customer is NOT looked up or created here — the order is persisted with the
+    // phone attached (guestPhone) and linked to a customer in the background.
     const tTxStart = performance.now();
     const createdOrder = await prisma.$transaction(async (tx) => {
-      // Safely resolve customer without triggering SQL Server unique constraint violation (P2002) on Customers_UserId_key
-      const existingCustomer = await tx.customer.findUnique({
-        where: { phone: cleanPhone },
-        select: { id: true, fullName: true, defaultAddress: true, district: true, area: true },
-      });
-
-      let customerId: string;
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
-        const needsUpdate =
-          (input.customer && input.customer !== "Customer" && input.customer !== existingCustomer.fullName) ||
-          (input.address && input.address !== existingCustomer.defaultAddress) ||
-          (input.city && input.city !== existingCustomer.district) ||
-          (input.area && input.area !== existingCustomer.area);
-
-        if (needsUpdate) {
-          await tx.customer.update({
-            where: { id: existingCustomer.id },
-            data: {
-              ...(input.customer && input.customer !== "Customer" ? { fullName: input.customer } : {}),
-              ...(input.address ? { defaultAddress: input.address } : {}),
-              ...(input.city ? { district: input.city } : {}),
-              ...(input.area ? { area: input.area } : {}),
-            },
-          });
-        }
-      } else {
-        const createdCustomer = await tx.customer.create({
-          data: {
-            fullName: input.customer || "Guest Customer",
-            email: `${cleanPhone.replace(/\+/g, "")}@customer.local`,
-            phone: cleanPhone,
-            defaultAddress: input.address || "Dhaka",
-            district: input.city || "Dhaka",
-            area: input.area || null,
-            isGuest: true,
-          },
-          select: { id: true },
-        });
-        customerId = createdCustomer.id;
-      }
-
       // Build items payload for single nested create
       const itemsCreatePayload: Array<{
         productId: string;
@@ -367,7 +406,8 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       const ord = await tx.order.create({
         data: {
           orderNumber,
-          customerId,
+          customerId: trustedCustomerId ?? null,
+          guestPhone: isGuestOrder ? cleanPhone : null,
           subTotal,
           discountAmount,
           shippingFee,
@@ -398,19 +438,47 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
     });
     console.log(`[OrderPerf] Transaction (Order + OrderItems) took ${(performance.now() - tTxStart).toFixed(1)}ms`);
 
-    // Step G: Fire-and-forget non-blocking background cleanup and cache revalidation
-    (async () => {
+    // Step G: Non-blocking background work scheduled AFTER the response is sent —
+    // cleanup, cache revalidation, and async guest-customer linking. None of this
+    // delays the customer's order confirmation.
+    const createdOrderId = createdOrder.id;
+    const guestLinkPayload = isGuestOrder
+      ? {
+          orderId: createdOrderId,
+          phone: cleanPhone,
+          customer: input.customer,
+          address: input.address,
+          city: input.city,
+          area: input.area || undefined,
+        }
+      : null;
+
+    after(async () => {
+      // Background cleanup of incomplete drafts for this phone.
       try {
         await prisma.incompleteOrder.deleteMany({
           where: { phone: cleanPhone },
         });
-        revalidatePath("/admin/orders");
-        revalidatePath("/admin/incomplete");
-        revalidatePath("/orders");
       } catch (bgErr) {
         console.warn("[OrderPerf] Background cleanup warning:", bgErr);
       }
-    })();
+
+      // Non-blocking guest linking: find-or-create the customer by phone and attach
+      // their id to this guest order. If it fails, the order stays valid and can be
+      // reconciled later (e.g. cron / manual review of orders with a guestPhone but
+      // no customerId).
+      if (guestLinkPayload) {
+        try {
+          await linkGuestOrderToCustomer(guestLinkPayload);
+          revalidatePath("/admin/orders");
+          revalidatePath("/admin/customers");
+          revalidatePath("/orders");
+          revalidatePath(`/order-confirmation/${createdOrder.orderNumber}`);
+        } catch (bgErr) {
+          console.warn("[OrderPerf] Background guest customer linking warning:", bgErr);
+        }
+      }
+    });
 
     console.log(`[OrderPerf] Total createOrderAction took ${(performance.now() - tTotalStart).toFixed(1)}ms`);
     return { success: true, id: createdOrder.id, orderNumber: createdOrder.orderNumber };
@@ -623,8 +691,8 @@ export async function updateOrderAction(
 
     const updatedMeta = {
       ...existingMeta,
-      address: payload.address !== undefined ? payload.address : existingMeta.address || order.customer.defaultAddress,
-      city: payload.city !== undefined ? payload.city : existingMeta.city || order.customer.district,
+      address: payload.address !== undefined ? payload.address : existingMeta.address || order.customer?.defaultAddress,
+      city: payload.city !== undefined ? payload.city : existingMeta.city || order.customer?.district,
       area: payload.area !== undefined ? payload.area : existingMeta.area,
       note: payload.note !== undefined ? payload.note : existingMeta.note,
       source: payload.source !== undefined ? payload.source : existingMeta.source,
@@ -645,15 +713,52 @@ export async function updateOrderAction(
       });
 
       if (payload.customer || payload.phone || payload.address || payload.city) {
-        await tx.customer.update({
-          where: { id: order.customerId },
-          data: {
-            fullName: payload.customer || order.customer.fullName,
-            phone: payload.phone || order.customer.phone,
-            defaultAddress: payload.address || order.customer.defaultAddress,
-            district: payload.city || order.customer.district,
-          },
-        });
+        const resolvedCustomerId = order.customerId;
+        if (resolvedCustomerId) {
+          await tx.customer.update({
+            where: { id: resolvedCustomerId },
+            data: {
+              fullName: payload.customer || order.customer?.fullName,
+              phone: payload.phone || order.customer?.phone,
+              defaultAddress: payload.address || order.customer?.defaultAddress,
+              district: payload.city || order.customer?.district,
+            },
+          });
+        } else if (order.guestPhone) {
+          // Unlinked guest order — persist the corrected details on the order and link
+          // the customer by phone (find or create) so the profile stays accurate.
+          const cleanPhone = (payload.phone || order.guestPhone || "").trim().replace(/\D/g, "");
+          if (cleanPhone) {
+            let customer = await tx.customer.findUnique({ where: { phone: cleanPhone }, select: { id: true } });
+            if (!customer) {
+              customer = await tx.customer.create({
+                data: {
+                  fullName: payload.customer || order.customer?.fullName || "Guest Customer",
+                  email: `${cleanPhone}@customer.local`,
+                  phone: cleanPhone,
+                  defaultAddress: payload.address || order.customer?.defaultAddress || "Dhaka",
+                  district: payload.city || order.customer?.district || "Dhaka",
+                  isGuest: true,
+                },
+                select: { id: true },
+              });
+            } else {
+              await tx.customer.update({
+                where: { id: customer.id },
+                data: {
+                  fullName: payload.customer || order.customer?.fullName || "Guest Customer",
+                  phone: cleanPhone,
+                  defaultAddress: payload.address || order.customer?.defaultAddress || "Dhaka",
+                  district: payload.city || order.customer?.district || "Dhaka",
+                },
+              });
+            }
+            await tx.order.update({
+              where: { id: order.id },
+              data: { customerId: customer.id },
+            });
+          }
+        }
       }
     });
 

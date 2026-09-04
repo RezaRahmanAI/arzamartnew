@@ -21,7 +21,8 @@ const STATUS_MAP_INT_TO_STR: Record<number, OrderStatus> = {
 export function mapPrismaOrder(o: {
   id: string;
   orderNumber: string;
-  customerId: string;
+  customerId: string | null;
+  guestPhone?: string | null;
   subTotal: Prisma.Decimal | number | string;
   discountAmount: Prisma.Decimal | number | string;
   shippingFee: Prisma.Decimal | number | string;
@@ -54,7 +55,7 @@ export function mapPrismaOrder(o: {
   } | null;
 }): Order {
   const customerName = o.customer?.fullName || "Customer";
-  const customerPhone = o.customer?.phone || "";
+  const customerPhone = o.customer?.phone || o.guestPhone || "";
   const customerDistrict = o.customer?.district || "Dhaka";
   const customerArea = o.customer?.area || undefined;
 
@@ -144,7 +145,7 @@ export function mapPrismaOrder(o: {
 
   return {
     id: o.orderNumber || `ORD-${o.id}`,
-    customerId: o.customerId,
+    customerId: o.customerId ?? undefined,
     customer: customerName,
     phone: customerPhone,
     address: cleanAddress,

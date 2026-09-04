@@ -165,7 +165,8 @@ model ProductImage {
 model Order {
   id                  String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
   orderNumber         String    @unique @map("OrderNumber") @db.NVarChar(50)
-  customerId          String    @map("CustomerId") @db.UniqueIdentifier
+  customerId          String?   @map("CustomerId") @db.UniqueIdentifier
+  guestPhone          String?   @map("GuestPhone") @db.NVarChar(20)
   subTotal            Decimal   @map("SubTotal") @db.Decimal(18, 2)
   discountAmount      Decimal   @default(0) @map("DiscountAmount") @db.Decimal(18, 2)
   shippingFee         Decimal   @default(0) @map("ShippingFee") @db.Decimal(18, 2)
@@ -178,7 +179,7 @@ model Order {
   createdAtUtc        DateTime  @default(now()) @map("CreatedAtUtc")
   updatedAtUtc        DateTime? @updatedAt @map("UpdatedAtUtc")
 
-  customer Customer    @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customer Customer?   @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items    OrderItem[]
   shipment Shipment?
 
