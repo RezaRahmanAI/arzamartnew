@@ -65,18 +65,39 @@ export interface CreateOrderInput {
   courierTrackingNumber?: string;
 }
 
+// Module-level in-memory cache for WebsiteSettings (60-second TTL)
+let cachedSettingsJson: string | null = null;
+let cachedSettingsTimestamp = 0;
+const SETTINGS_CACHE_TTL_MS = 60_000;
+
+async function getCachedWebsiteSettingsJson(): Promise<string | null> {
+  const now = Date.now();
+  if (cachedSettingsJson !== null && now - cachedSettingsTimestamp < SETTINGS_CACHE_TTL_MS) {
+    return cachedSettingsJson;
+  }
+  try {
+    const row = await prisma.websiteSettings.findFirst({ select: { settingsJson: true } });
+    cachedSettingsJson = row?.settingsJson ?? null;
+    cachedSettingsTimestamp = now;
+    return cachedSettingsJson;
+  } catch (err) {
+    console.warn("[OrderPerf] Failed to fetch websiteSettings for cache:", err);
+    return cachedSettingsJson;
+  }
+}
+
 async function resolveNextOrderNumber(latestOrderNumber?: string | null, settingsJson?: string | null): Promise<string> {
   let prefix = "ORD-";
   let nextNum = 10001;
 
   // 1. Check WebsiteSettings for orderIdPrefix and nextOrderNumber
-  const settingsRow = settingsJson !== undefined
-    ? (settingsJson ? { settingsJson } : null)
-    : await prisma.websiteSettings.findFirst({ select: { settingsJson: true } });
+  const resolvedSettingsJson = settingsJson !== undefined
+    ? settingsJson
+    : await getCachedWebsiteSettingsJson();
 
-  if (settingsRow?.settingsJson) {
+  if (resolvedSettingsJson) {
     try {
-      const parsed = JSON.parse(settingsRow.settingsJson);
+      const parsed = JSON.parse(resolvedSettingsJson);
       if (parsed?.orders?.orderIdPrefix) {
         prefix = parsed.orders.orderIdPrefix;
       }
@@ -113,13 +134,13 @@ async function resolveNextPreOrderNumber(latestOrderNumber?: string | null, sett
   let nextNum = 1001;
 
   // 1. Check WebsiteSettings for preOrderIdPrefix and nextPreOrderNumber
-  const settingsRow = settingsJson !== undefined
-    ? (settingsJson ? { settingsJson } : null)
-    : await prisma.websiteSettings.findFirst({ select: { settingsJson: true } });
+  const resolvedSettingsJson = settingsJson !== undefined
+    ? settingsJson
+    : await getCachedWebsiteSettingsJson();
 
-  if (settingsRow?.settingsJson) {
+  if (resolvedSettingsJson) {
     try {
-      const parsed = JSON.parse(settingsRow.settingsJson);
+      const parsed = JSON.parse(resolvedSettingsJson);
       if (parsed?.orders?.preOrderIdPrefix) {
         prefix = parsed.orders.preOrderIdPrefix;
       }
@@ -182,7 +203,7 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       return { success: false, error: "Phone number is required." };
     }
 
-    // Step A: Parallelize customer lookup, settings, latest order numbers, and all product lookups
+    // Step A: Parallelize settings (from cache or fast read), latest order numbers, and all product lookups
     const tFetchStart = performance.now();
     const isPreOrderRequested = input.source === "pre-order" || input.status === "preorder";
 
@@ -212,8 +233,8 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       });
     });
 
-    const [settingsRow, latestRegOrder, latestPreOrder, ...loadedProducts] = await Promise.all([
-      prisma.websiteSettings.findFirst({ select: { settingsJson: true } }),
+    const [cachedSettings, latestRegOrder, latestPreOrder, ...loadedProducts] = await Promise.all([
+      getCachedWebsiteSettingsJson(),
       prisma.order.findFirst({
         where: { orderNumber: { startsWith: "ORD-" } },
         orderBy: { createdAtUtc: "desc" },
@@ -236,10 +257,10 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
 
     const calculatedIsPreOrder = isPreOrderRequested;
 
-    // Resolve order number instantly using already fetched settingsRow and latestOrder
+    // Resolve order number instantly using cached settings and latestOrder
     const orderNumber = calculatedIsPreOrder
-      ? await resolveNextPreOrderNumber(latestPreOrder?.orderNumber, settingsRow?.settingsJson)
-      : await resolveNextOrderNumber(latestRegOrder?.orderNumber, settingsRow?.settingsJson);
+      ? await resolveNextPreOrderNumber(latestPreOrder?.orderNumber, cachedSettings)
+      : await resolveNextOrderNumber(latestRegOrder?.orderNumber, cachedSettings);
 
     const fullAddressJson = JSON.stringify({
       address: input.address,
@@ -257,45 +278,61 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
 
     const statusInt = STATUS_MAP_STR_TO_INT[input.status || "pending"] ?? 1;
 
-    // Step C: Atomic transaction (Customer upsert + Order + OrderItems)
+    // Step C: Atomic transaction (Customer safe resolution + Single Nested Order & Items Create)
     const tTxStart = performance.now();
     const createdOrder = await prisma.$transaction(async (tx) => {
-      // Upsert customer: atomic find-or-create/update within the transaction
-      const customer = await tx.customer.upsert({
+      // Safely resolve customer without triggering SQL Server unique constraint violation (P2002) on Customers_UserId_key
+      const existingCustomer = await tx.customer.findUnique({
         where: { phone: cleanPhone },
-        update: {
-          ...(input.customer && input.customer !== "Customer" ? { fullName: input.customer } : {}),
-          ...(input.address ? { defaultAddress: input.address } : {}),
-          ...(input.city ? { district: input.city } : {}),
-          ...(input.area ? { area: input.area } : {}),
-        },
-        create: {
-          fullName: input.customer || "Guest Customer",
-          email: `${cleanPhone.replace(/\+/g, "")}@customer.local`,
-          phone: cleanPhone,
-          defaultAddress: input.address || "Dhaka",
-          district: input.city || "Dhaka",
-          area: input.area || null,
-          isGuest: true,
-        },
-        select: { id: true },
+        select: { id: true, fullName: true, defaultAddress: true, district: true, area: true },
       });
 
-      const ord = await tx.order.create({
-        data: {
-          orderNumber,
-          customerId: customer.id,
-          subTotal,
-          discountAmount,
-          shippingFee,
-          totalAmount,
-          orderStatus: statusInt,
-          paymentStatus: 0, // 0 = Unpaid
-          shippingAddressJson: fullAddressJson,
-          couponCode: null,
-          isPreOrder: calculatedIsPreOrder,
-        },
-      });
+      let customerId: string;
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+        const needsUpdate =
+          (input.customer && input.customer !== "Customer" && input.customer !== existingCustomer.fullName) ||
+          (input.address && input.address !== existingCustomer.defaultAddress) ||
+          (input.city && input.city !== existingCustomer.district) ||
+          (input.area && input.area !== existingCustomer.area);
+
+        if (needsUpdate) {
+          await tx.customer.update({
+            where: { id: existingCustomer.id },
+            data: {
+              ...(input.customer && input.customer !== "Customer" ? { fullName: input.customer } : {}),
+              ...(input.address ? { defaultAddress: input.address } : {}),
+              ...(input.city ? { district: input.city } : {}),
+              ...(input.area ? { area: input.area } : {}),
+            },
+          });
+        }
+      } else {
+        const createdCustomer = await tx.customer.create({
+          data: {
+            fullName: input.customer || "Guest Customer",
+            email: `${cleanPhone.replace(/\+/g, "")}@customer.local`,
+            phone: cleanPhone,
+            defaultAddress: input.address || "Dhaka",
+            district: input.city || "Dhaka",
+            area: input.area || null,
+            isGuest: true,
+          },
+          select: { id: true },
+        });
+        customerId = createdCustomer.id;
+      }
+
+      // Build items payload for single nested create
+      const itemsCreatePayload: Array<{
+        productId: string;
+        variantId?: string;
+        productName: string;
+        unitPrice: number;
+        quantity: number;
+      }> = [];
+
+      const variantDecrements: Array<{ variantId: string; qty: number }> = [];
 
       for (let idx = 0; idx < input.items.length; idx++) {
         const item = input.items[idx];
@@ -312,25 +349,49 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
         }
 
         if (productId) {
-          await tx.orderItem.create({
-            data: {
-              orderId: ord.id,
-              productId,
-              variantId: matchedVariantId,
-              productName: item.size ? `${item.name} (${item.size})` : item.name,
-              unitPrice: item.price,
-              quantity: item.qty || 1,
-            },
+          itemsCreatePayload.push({
+            productId,
+            variantId: matchedVariantId,
+            productName: item.size ? `${item.name} (${item.size})` : item.name,
+            unitPrice: item.price,
+            quantity: item.qty || 1,
           });
-        }
 
-        // Stock decrement only if order is directly confirmed
-        if (input.status === "confirmed" && matchedVariantId) {
-          await tx.productVariant.update({
-            where: { id: matchedVariantId },
-            data: { stockQuantity: { decrement: item.qty || 1 } },
-          });
+          if (input.status === "confirmed" && matchedVariantId) {
+            variantDecrements.push({ variantId: matchedVariantId, qty: item.qty || 1 });
+          }
         }
+      }
+
+      // Single nested create: creates order and all order items in ONE round-trip
+      const ord = await tx.order.create({
+        data: {
+          orderNumber,
+          customerId,
+          subTotal,
+          discountAmount,
+          shippingFee,
+          totalAmount,
+          orderStatus: statusInt,
+          paymentStatus: 0, // 0 = Unpaid
+          shippingAddressJson: fullAddressJson,
+          couponCode: null,
+          isPreOrder: calculatedIsPreOrder,
+          items: {
+            create: itemsCreatePayload,
+          },
+        },
+        include: {
+          items: true,
+        },
+      });
+
+      // Stock decrement only if order is directly confirmed
+      for (const dec of variantDecrements) {
+        await tx.productVariant.update({
+          where: { id: dec.variantId },
+          data: { stockQuantity: { decrement: dec.qty } },
+        });
       }
 
       return ord;
