@@ -212,19 +212,7 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       });
     });
 
-    const [existingCustomer, settingsRow, latestRegOrder, latestPreOrder, ...loadedProducts] = await Promise.all([
-      prisma.customer.findUnique({
-        where: { phone: cleanPhone },
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-          phone: true,
-          defaultAddress: true,
-          district: true,
-          area: true,
-        },
-      }),
+    const [settingsRow, latestRegOrder, latestPreOrder, ...loadedProducts] = await Promise.all([
       prisma.websiteSettings.findFirst({ select: { settingsJson: true } }),
       prisma.order.findFirst({
         where: { orderNumber: { startsWith: "ORD-" } },
@@ -240,57 +228,7 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
     ]);
     console.log(`[OrderPerf] Parallel pre-fetch took ${(performance.now() - tFetchStart).toFixed(1)}ms`);
 
-    // Step C: Customer find-or-create / update
-    const tCustStart = performance.now();
-    let customer = existingCustomer;
-    if (!customer) {
-      customer = await prisma.customer.create({
-        data: {
-          fullName: input.customer || "Guest Customer",
-          email: `${cleanPhone.replace(/\+/g, "")}@customer.local`,
-          phone: cleanPhone,
-          defaultAddress: input.address || "Dhaka",
-          district: input.city || "Dhaka",
-          area: input.area || null,
-          isGuest: true,
-        },
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-          phone: true,
-          defaultAddress: true,
-          district: true,
-          area: true,
-        },
-      });
-    } else if (
-      (input.customer && input.customer !== "Customer" && input.customer !== customer.fullName) ||
-      (input.address && input.address !== customer.defaultAddress) ||
-      (input.city && input.city !== customer.district)
-    ) {
-      customer = await prisma.customer.update({
-        where: { id: customer.id },
-        data: {
-          fullName: input.customer && input.customer !== "Customer" ? input.customer : customer.fullName,
-          defaultAddress: input.address || customer.defaultAddress,
-          district: input.city || customer.district,
-          area: input.area || customer.area,
-        },
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-          phone: true,
-          defaultAddress: true,
-          district: true,
-          area: true,
-        },
-      });
-    }
-    console.log(`[OrderPerf] Customer resolution took ${(performance.now() - tCustStart).toFixed(1)}ms`);
-
-    // Step D: Resolve subTotal, discount, delivery
+    // Step B: Resolve subTotal, discount, delivery
     const subTotal = input.items.reduce((acc, item) => acc + (item.price || 0) * (item.qty || 1), 0);
     const shippingFee = input.delivery ?? 0;
     const totalAmount = input.total || subTotal + shippingFee;
@@ -319,9 +257,30 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
 
     const statusInt = STATUS_MAP_STR_TO_INT[input.status || "pending"] ?? 1;
 
-    // Step F: Fast atomic transaction (NO redundant findFirst inside transaction)
+    // Step C: Atomic transaction (Customer upsert + Order + OrderItems)
     const tTxStart = performance.now();
     const createdOrder = await prisma.$transaction(async (tx) => {
+      // Upsert customer: atomic find-or-create/update within the transaction
+      const customer = await tx.customer.upsert({
+        where: { phone: cleanPhone },
+        update: {
+          ...(input.customer && input.customer !== "Customer" ? { fullName: input.customer } : {}),
+          ...(input.address ? { defaultAddress: input.address } : {}),
+          ...(input.city ? { district: input.city } : {}),
+          ...(input.area ? { area: input.area } : {}),
+        },
+        create: {
+          fullName: input.customer || "Guest Customer",
+          email: `${cleanPhone.replace(/\+/g, "")}@customer.local`,
+          phone: cleanPhone,
+          defaultAddress: input.address || "Dhaka",
+          district: input.city || "Dhaka",
+          area: input.area || null,
+          isGuest: true,
+        },
+        select: { id: true },
+      });
+
       const ord = await tx.order.create({
         data: {
           orderNumber,
