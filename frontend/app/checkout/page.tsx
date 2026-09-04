@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, FileText, Loader2, ShoppingBag } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { formatBDT, getSizePrice } from "@/lib/shop-data";
 import { useOrders, type Order } from "@/lib/orders";
@@ -39,6 +39,8 @@ export default function CheckoutPage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  const [placedCustomerName, setPlacedCustomerName] = useState<string>("");
 
   useEffect(() => {
     try {
@@ -110,24 +112,22 @@ export default function CheckoutPage() {
   const enableOnlinePayment = settings?.orders?.enableOnlinePayment ?? true;
 
   const saveIncompleteDraft = useCallback(
-    (nameVal?: string, phoneVal?: string, addrVal?: string) => {
+    (customName?: string, customPhone?: string) => {
+      const targetName = (customName !== undefined ? customName : name).trim();
+      const targetPhone = (customPhone !== undefined ? customPhone : phone).trim().replace(/\D/g, "");
+
+      if (!targetName && !targetPhone) return;
       if (detailedLines.length === 0) return;
-      const customerName = (nameVal !== undefined ? nameVal : name).trim();
-      const customerPhone = (phoneVal !== undefined ? phoneVal : phone).trim();
-      const customerAddress = (addrVal !== undefined ? addrVal : address).trim();
 
-      if (!customerName && !customerPhone) return;
-
-      const id = draftId ?? generateNextIncompleteOrderId();
-      if (!draftId) setDraftId(id);
+      const incompleteId = draftId ?? generateNextIncompleteOrderId();
+      if (!draftId) setDraftId(incompleteId);
 
       const zoneLabel = DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে";
-
       const order: Order = {
-        id,
-        customer: customerName || "Incomplete Customer",
-        phone: customerPhone,
-        address: customerAddress,
+        id: incompleteId,
+        customer: targetName || "Unknown Customer",
+        phone: targetPhone || "",
+        address: address.trim(),
         city: zoneLabel,
         area: zoneLabel,
         note: note.trim(),
@@ -151,6 +151,7 @@ export default function CheckoutPage() {
   );
 
   useEffect(() => {
+    if (placedOrderId) return;
     if (detailedLines.length === 0) return;
     if (!name.trim() && !phone.trim()) return;
 
@@ -159,7 +160,50 @@ export default function CheckoutPage() {
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [detailedLines, name, phone, address, selectedDeliveryZone, note, saveIncompleteDraft]);
+  }, [detailedLines, name, phone, address, selectedDeliveryZone, note, saveIncompleteDraft, placedOrderId]);
+
+  if (placedOrderId) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center animate-in fade-in zoom-in-95 duration-200">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+          <CheckCircle2 className="size-12" />
+        </div>
+        <h1 className="mt-6 font-display text-3xl font-extrabold text-foreground">
+          Order Placed Successfully ✅
+        </h1>
+        <p className="mt-2 text-base text-muted-foreground">
+          Thank you <span className="font-semibold text-foreground">{placedCustomerName || "valued customer"}</span>, your order has been received and confirmed.
+        </p>
+
+        <div className="mt-6 inline-flex flex-col sm:flex-row items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-4 shadow-sm">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Order ID:</span>
+          <span className="font-mono text-xl font-extrabold text-primary">{placedOrderId}</span>
+        </div>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          We will call your mobile number shortly to verify delivery details.
+        </p>
+
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.push(`/order-confirmation/${placedOrderId}`)}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all hover:scale-[1.02] cursor-pointer"
+          >
+            <FileText className="size-4" />
+            View Invoice
+          </button>
+          <Link
+            href="/"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-8 py-3.5 text-sm font-bold text-foreground hover:bg-muted transition-all cursor-pointer"
+          >
+            <ShoppingBag className="size-4" />
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (detailedLines.length === 0) {
     return (
@@ -269,10 +313,12 @@ export default function CheckoutPage() {
 
       if (draftId) removeIncomplete(draftId);
       clear();
+      setPlacedCustomerName(cleanName);
+      setPlacedOrderId(finalOrderId);
+      setPlacing(false);
       toast.success("Order placed!", {
         description: `Thanks ${cleanName}, order ${finalOrderId} is confirmed. We'll call to verify.`,
       });
-      router.push(`/order-confirmation/${finalOrderId}`);
     } catch (error) {
       console.error("Order submission failed:", error);
       toast.error("অর্ডার সম্পন্ন করা যায়নি", {
