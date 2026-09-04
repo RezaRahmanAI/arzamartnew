@@ -154,12 +154,14 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         const extractedNum = parseInt(finalId.replace(regPrefix, ""), 10);
         const nextNum = !isNaN(extractedNum) ? Math.max(regCurrentNum + 1, extractedNum + 1) : regCurrentNum + 1;
         updateSection("orders", { nextOrderNumber: nextNum });
-        saveSettings({ silent: true });
+        // Update settings in background non-blockingly so customer is not stalled
+        Promise.resolve().then(() => saveSettings({ silent: true })).catch(() => {});
       } else if (finalId.startsWith(prePrefix)) {
         const extractedNum = parseInt(finalId.replace(prePrefix, ""), 10);
         const nextNum = !isNaN(extractedNum) ? Math.max(preCurrentNum + 1, extractedNum + 1) : preCurrentNum + 1;
         updateSection("orders", { nextPreOrderNumber: nextNum });
-        saveSettings({ silent: true });
+        // Update settings in background non-blockingly so customer is not stalled
+        Promise.resolve().then(() => saveSettings({ silent: true })).catch(() => {});
       }
 
       // Record immutable audit log for order creation

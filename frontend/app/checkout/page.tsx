@@ -207,22 +207,6 @@ export default function CheckoutPage() {
     setPlacing(true);
 
     try {
-      // Fraud and IP / Account restriction check
-      try {
-        const { checkFraudStatusAction } = await import("@/actions/customers.actions");
-        const fraudRes = await checkFraudStatusAction({ phone: cleanPhone });
-        if (fraudRes.isBlocked || fraudRes.isDeactivated) {
-          toast.error("Order Restriction", {
-            description: fraudRes.reason || "Your account or phone number is restricted from placing orders.",
-            duration: 6000,
-          });
-          setPlacing(false);
-          return;
-        }
-      } catch (fraudErr) {
-        console.warn("Fraud check error (skipped):", fraudErr);
-      }
-
       const zoneLabel = DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে";
       const customerMaster = findOrCreateByPhone(cleanPhone, {
         fullName: cleanName,

@@ -65,12 +65,15 @@ export interface CreateOrderInput {
   courierTrackingNumber?: string;
 }
 
-async function resolveNextOrderNumber(): Promise<string> {
+async function resolveNextOrderNumber(latestOrderNumber?: string | null, settingsJson?: string | null): Promise<string> {
   let prefix = "ORD-";
   let nextNum = 10001;
 
   // 1. Check WebsiteSettings for orderIdPrefix and nextOrderNumber
-  const settingsRow = await prisma.websiteSettings.findFirst();
+  const settingsRow = settingsJson !== undefined
+    ? (settingsJson ? { settingsJson } : null)
+    : await prisma.websiteSettings.findFirst({ select: { settingsJson: true } });
+
   if (settingsRow?.settingsJson) {
     try {
       const parsed = JSON.parse(settingsRow.settingsJson);
@@ -86,13 +89,13 @@ async function resolveNextOrderNumber(): Promise<string> {
   }
 
   // 2. Query highest orderNumber matching this regular prefix in database
-  const latestOrder = await prisma.order.findFirst({
-    where: {
-      orderNumber: { startsWith: prefix },
-    },
-    orderBy: { createdAtUtc: "desc" },
-    select: { orderNumber: true },
-  });
+  const latestOrder = latestOrderNumber !== undefined
+    ? (latestOrderNumber ? { orderNumber: latestOrderNumber } : null)
+    : await prisma.order.findFirst({
+        where: { orderNumber: { startsWith: prefix } },
+        orderBy: { createdAtUtc: "desc" },
+        select: { orderNumber: true },
+      });
 
   if (latestOrder?.orderNumber) {
     const rawNumStr = latestOrder.orderNumber.replace(prefix, "").replace(/\D/g, "");
@@ -105,12 +108,15 @@ async function resolveNextOrderNumber(): Promise<string> {
   return `${prefix}${nextNum}`;
 }
 
-async function resolveNextPreOrderNumber(): Promise<string> {
+async function resolveNextPreOrderNumber(latestOrderNumber?: string | null, settingsJson?: string | null): Promise<string> {
   let prefix = "PRE-";
   let nextNum = 1001;
 
   // 1. Check WebsiteSettings for preOrderIdPrefix and nextPreOrderNumber
-  const settingsRow = await prisma.websiteSettings.findFirst();
+  const settingsRow = settingsJson !== undefined
+    ? (settingsJson ? { settingsJson } : null)
+    : await prisma.websiteSettings.findFirst({ select: { settingsJson: true } });
+
   if (settingsRow?.settingsJson) {
     try {
       const parsed = JSON.parse(settingsRow.settingsJson);
@@ -126,13 +132,13 @@ async function resolveNextPreOrderNumber(): Promise<string> {
   }
 
   // 2. Query highest pre-order number matching this prefix in database
-  const latestPreOrder = await prisma.order.findFirst({
-    where: {
-      orderNumber: { startsWith: prefix },
-    },
-    orderBy: { createdAtUtc: "desc" },
-    select: { orderNumber: true },
-  });
+  const latestPreOrder = latestOrderNumber !== undefined
+    ? (latestOrderNumber ? { orderNumber: latestOrderNumber } : null)
+    : await prisma.order.findFirst({
+        where: { orderNumber: { startsWith: prefix } },
+        orderBy: { createdAtUtc: "desc" },
+        select: { orderNumber: true },
+      });
 
   if (latestPreOrder?.orderNumber) {
     const rawNumStr = latestPreOrder.orderNumber.replace(prefix, "").replace(/\D/g, "");
@@ -169,17 +175,105 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
   orderNumber?: string;
   error?: string;
 }> {
+  const tTotalStart = performance.now();
   try {
     const cleanPhone = (input.phone || "").trim().replace(/\D/g, "");
     if (!cleanPhone) {
       return { success: false, error: "Phone number is required." };
     }
 
-    // 1. Find or create Customer
-    let customer = await prisma.customer.findFirst({
-      where: { phone: cleanPhone },
+    // Step A: Parallelize customer lookup, settings, latest order numbers, and all product lookups
+    const tFetchStart = performance.now();
+    const isPreOrderRequested = input.source === "pre-order" || input.status === "preorder";
+
+    const productQueries = input.items.map((item) => {
+      const isUuid = item.slug && item.slug.length === 36 && item.slug.includes("-");
+      return prisma.product.findFirst({
+        where: {
+          OR: [
+            ...(item.productId ? [{ id: item.productId }] : []),
+            ...(isUuid ? [{ id: item.slug }] : []),
+            ...(item.slug ? [{ slug: item.slug }] : []),
+            ...(item.name ? [{ name: item.name }] : []),
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          badge: true,
+          variants: {
+            select: {
+              id: true,
+              name: true,
+              stockQuantity: true,
+            },
+          },
+        },
+      });
     });
 
+    const [existingCustomer, settingsRow, latestRegOrder, latestPreOrder, ...loadedProducts] = await Promise.all([
+      prisma.customer.findUnique({
+        where: { phone: cleanPhone },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          defaultAddress: true,
+          district: true,
+          area: true,
+          defaultNote: true,
+        },
+      }),
+      prisma.websiteSettings.findFirst({ select: { settingsJson: true } }),
+      prisma.order.findFirst({
+        where: { orderNumber: { startsWith: "ORD-" } },
+        orderBy: { createdAtUtc: "desc" },
+        select: { orderNumber: true },
+      }),
+      prisma.order.findFirst({
+        where: { orderNumber: { startsWith: "PRE-" } },
+        orderBy: { createdAtUtc: "desc" },
+        select: { orderNumber: true },
+      }),
+      ...productQueries,
+    ]);
+    console.log(`[OrderPerf] Parallel pre-fetch took ${(performance.now() - tFetchStart).toFixed(1)}ms`);
+
+    // Step B: Built-in server-side fraud & restriction verification from the parallel read
+    if (existingCustomer?.defaultNote) {
+      try {
+        const meta = JSON.parse(existingCustomer.defaultNote);
+        if (meta.isBlocked || meta.isFraud || meta.isDeactivated) {
+          return {
+            success: false,
+            error: meta.fraudReason || meta.blockReason || "This account is restricted from placing orders.",
+          };
+        }
+      } catch {
+        /* non-JSON note */
+      }
+    }
+    if (settingsRow?.settingsJson) {
+      try {
+        const sys = JSON.parse(settingsRow.settingsJson);
+        const blockedPhones: string[] = Array.isArray(sys.security?.blockedPhones) ? sys.security.blockedPhones : [];
+        if (blockedPhones.includes(cleanPhone)) {
+          return {
+            success: false,
+            error: "This phone number is restricted from placing orders.",
+          };
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // Step C: Customer find-or-create / update
+    const tCustStart = performance.now();
+    let customer = existingCustomer;
     if (!customer) {
       customer = await prisma.customer.create({
         data: {
@@ -191,10 +285,23 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
           area: input.area || null,
           isGuest: true,
         },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          defaultAddress: true,
+          district: true,
+          area: true,
+          defaultNote: true,
+        },
       });
-    } else {
-      // Update customer info if missing
-      await prisma.customer.update({
+    } else if (
+      (input.customer && input.customer !== "Customer" && input.customer !== customer.fullName) ||
+      (input.address && input.address !== customer.defaultAddress) ||
+      (input.city && input.city !== customer.district)
+    ) {
+      customer = await prisma.customer.update({
         where: { id: customer.id },
         data: {
           fullName: input.customer && input.customer !== "Customer" ? input.customer : customer.fullName,
@@ -202,31 +309,32 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
           district: input.city || customer.district,
           area: input.area || customer.area,
         },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          defaultAddress: true,
+          district: true,
+          area: true,
+          defaultNote: true,
+        },
       });
     }
+    console.log(`[OrderPerf] Customer resolution took ${(performance.now() - tCustStart).toFixed(1)}ms`);
 
-    // 2. Resolve subTotal, discount, delivery
+    // Step D: Resolve subTotal, discount, delivery
     const subTotal = input.items.reduce((acc, item) => acc + (item.price || 0) * (item.qty || 1), 0);
     const shippingFee = input.delivery ?? 0;
     const totalAmount = input.total || subTotal + shippingFee;
     const discountAmount = Math.max(0, subTotal + shippingFee - totalAmount);
 
-    // 3. Validate items against actual stock & calculate isPreOrder
-    let calculatedIsPreOrder = input.source === "pre-order" || input.status === "preorder";
+    // Step E: Stock validation & calculate isPreOrder using preloaded products
+    let calculatedIsPreOrder = isPreOrderRequested;
 
-    for (const item of input.items) {
-      const isUuid = item.slug && item.slug.length === 36 && item.slug.includes("-");
-      const prod = await prisma.product.findFirst({
-        where: {
-          OR: [
-            ...(item.productId ? [{ id: item.productId }] : []),
-            ...(isUuid ? [{ id: item.slug }] : []),
-            ...(item.slug ? [{ slug: item.slug }] : []),
-            ...(item.name ? [{ name: item.name }] : []),
-          ],
-        },
-        include: { variants: true },
-      });
+    for (let idx = 0; idx < input.items.length; idx++) {
+      const item = input.items[idx];
+      const prod = loadedProducts[idx];
 
       if (!prod) {
         continue;
@@ -242,20 +350,16 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
         if (variant) {
           availableStock = variant.stockQuantity;
         } else {
-          // If variant wasn't found by exact name, look for substring
           const partialVariant = prod.variants.find((v) => v.name.includes(item.size!));
           if (partialVariant) availableStock = partialVariant.stockQuantity;
         }
       }
 
       const requestedQty = item.qty || 1;
-
       if (availableStock < requestedQty) {
         if (acceptsPreOrder || input.source === "pre-order") {
-          // Allowed: will be classified as Pre-Order
           calculatedIsPreOrder = true;
         } else {
-          // Blocked: Stock out & AcceptPreOrder = false
           return {
             success: false,
             error: `"${item.name} (${item.size || "Standard"})" is Out of Stock.`,
@@ -264,10 +368,10 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       }
     }
 
-    // Resolve order number independently for pre-order vs regular order
+    // Resolve order number instantly using already fetched settingsRow and latestOrder
     const orderNumber = calculatedIsPreOrder
-      ? await resolveNextPreOrderNumber()
-      : await resolveNextOrderNumber();
+      ? await resolveNextPreOrderNumber(latestPreOrder?.orderNumber, settingsRow?.settingsJson)
+      : await resolveNextOrderNumber(latestRegOrder?.orderNumber, settingsRow?.settingsJson);
 
     const fullAddressJson = JSON.stringify({
       address: input.address,
@@ -285,7 +389,8 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
 
     const statusInt = STATUS_MAP_STR_TO_INT[input.status || "pending"] ?? 1;
 
-    // 5. Create Order & OrderItems in a transaction
+    // Step F: Fast atomic transaction (NO redundant findFirst inside transaction)
+    const tTxStart = performance.now();
     const createdOrder = await prisma.$transaction(async (tx) => {
       const ord = await tx.order.create({
         data: {
@@ -303,37 +408,21 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
         },
       });
 
-      for (const item of input.items) {
-        const isUuid = item.slug && item.slug.length === 36 && item.slug.includes("-");
-        let product = await tx.product.findFirst({
-          where: {
-            OR: [
-              ...(item.productId ? [{ id: item.productId }] : []),
-              ...(isUuid ? [{ id: item.slug }] : []),
-              ...(item.slug ? [{ slug: item.slug }] : []),
-              ...(item.name ? [{ name: item.name }] : []),
-            ],
-          },
-          include: { variants: true },
-        });
+      for (let idx = 0; idx < input.items.length; idx++) {
+        const item = input.items[idx];
+        const prod = loadedProducts[idx];
+        const productId = prod?.id;
 
-        if (!product) {
-          product = await tx.product.findFirst({
-            include: { variants: true },
-          });
+        let matchedVariantId: string | undefined = undefined;
+        if (prod && item.size && prod.variants.length > 0) {
+          const v = prod.variants.find(
+            (varItem) =>
+              varItem.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === item.size!.trim().toLowerCase()
+          );
+          if (v) matchedVariantId = v.id;
         }
 
-        const productId = product?.id;
-        if (productId && product) {
-          let matchedVariantId: string | undefined = undefined;
-          if (item.size && product.variants.length > 0) {
-            const v = product.variants.find(
-              (varItem) =>
-                varItem.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === item.size!.trim().toLowerCase()
-            );
-            if (v) matchedVariantId = v.id;
-          }
-
+        if (productId) {
           await tx.orderItem.create({
             data: {
               orderId: ord.id,
@@ -345,43 +434,35 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
             },
           });
         }
-      }
 
-      // 6. Deduct available stock only if confirmed AND not pre-order stock deficit
-      if (input.status === "confirmed") {
-        for (const item of input.items) {
-          const prod = await tx.product.findFirst({
-            where: { OR: [{ slug: item.slug }, { name: item.name }] },
-            include: { variants: true },
+        // Stock decrement only if order is directly confirmed
+        if (input.status === "confirmed" && matchedVariantId) {
+          await tx.productVariant.update({
+            where: { id: matchedVariantId },
+            data: { stockQuantity: { decrement: item.qty || 1 } },
           });
-
-          if (prod && item.size && prod.variants.length > 0) {
-            const variant = prod.variants.find(
-              (v) => v.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === item.size!.trim().toLowerCase()
-            );
-            if (variant && variant.stockQuantity >= item.qty) {
-              await tx.productVariant.update({
-                where: { id: variant.id },
-                data: { stockQuantity: { decrement: item.qty } },
-              });
-            }
-          }
         }
       }
 
       return ord;
     });
+    console.log(`[OrderPerf] Transaction (Order + OrderItems) took ${(performance.now() - tTxStart).toFixed(1)}ms`);
 
-    // 6. Delete from Incomplete Orders if exists
-    await prisma.incompleteOrder.deleteMany({
-      where: { phone: cleanPhone },
-    });
+    // Step G: Fire-and-forget non-blocking background cleanup and cache revalidation
+    (async () => {
+      try {
+        await prisma.incompleteOrder.deleteMany({
+          where: { phone: cleanPhone },
+        });
+        revalidatePath("/admin/orders");
+        revalidatePath("/admin/incomplete");
+        revalidatePath("/orders");
+      } catch (bgErr) {
+        console.warn("[OrderPerf] Background cleanup warning:", bgErr);
+      }
+    })();
 
-    // Revalidate paths for instant Next.js update
-    revalidatePath("/admin/orders");
-    revalidatePath("/admin/incomplete");
-    revalidatePath("/orders");
-
+    console.log(`[OrderPerf] Total createOrderAction took ${(performance.now() - tTotalStart).toFixed(1)}ms`);
     return { success: true, id: createdOrder.id, orderNumber: createdOrder.orderNumber };
   } catch (error: unknown) {
     console.error("createOrderAction failed:", error);
