@@ -23,6 +23,7 @@ import {
   Globe,
   Truck,
   PackageCheck,
+  ScanBarcode,
   ChevronRight,
 } from "lucide-react";
 import { useSettings } from "@/context/settings-context";
@@ -93,6 +94,7 @@ export function DashboardSidebar() {
         { title: "Pre-Orders", url: "/admin/pre-order", icon: PackagePlus },
         { title: "Incomplete Orders", url: "/admin/incomplete", icon: ClipboardX, badge: incompleteOrdersCount },
         { title: "Bulk Shipment", url: "/admin/bulk-shipment", icon: PackageCheck },
+        { title: "Bulk Shipped", url: "/admin/bulk-shipped", icon: ScanBarcode },
         { title: "Couriers", url: "/admin/couriers", icon: Truck },
       ],
     },

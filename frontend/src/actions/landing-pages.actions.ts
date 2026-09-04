@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import type { CustomLandingPageConfig } from "@/lib/api/services/custom-landing-page.service";
+import type { CustomLandingPageConfig, CLPReview } from "@/lib/api/services/custom-landing-page.service";
 import { Prisma } from "@prisma/client";
 import { getLandingPageBySlug, getAllLandingPages } from "@/lib/data/landing-pages";
 
@@ -40,9 +40,35 @@ export async function getLandingPageConfigAction(productId: string): Promise<Cus
       }
     }
 
+    let customHeroImages: string[] | undefined = undefined;
+    if (row.customHeroImagesJson) {
+      try {
+        customHeroImages = JSON.parse(row.customHeroImagesJson);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    let reviews: CLPReview[] | undefined = undefined;
+    if (row.reviewsJson) {
+      try {
+        reviews = JSON.parse(row.reviewsJson);
+      } catch {
+        /* ignore */
+      }
+    }
+
     return {
       id: row.id,
       productId: row.productId,
+      isActive: row.isActive,
+      isCustomHeroDescriptionVisible: row.isCustomHeroDescriptionVisible,
+      discountCtaText: row.discountCtaText || undefined,
+      freeDeliveryCtaText: row.freeDeliveryCtaText || undefined,
+      customHeroImagesJson: row.customHeroImagesJson || undefined,
+      customHeroImages,
+      reviewsJson: row.reviewsJson || undefined,
+      reviews,
       relativeTimerTotalMinutes: row.relativeTimerTotalMinutes,
       isTimerVisible: row.isTimerVisible,
       headerTitle: row.headerTitle || undefined,
@@ -92,7 +118,21 @@ export async function saveLandingPageConfigAction(
 
     const sizePricesJson = config.sizePrices ? JSON.stringify(config.sizePrices) : config.sizePricesJson || null;
 
+    const customHeroImagesJson = config.customHeroImages
+      ? JSON.stringify(config.customHeroImages)
+      : config.customHeroImagesJson || null;
+
+    const reviewsJson = config.reviews
+      ? JSON.stringify(config.reviews)
+      : config.reviewsJson || null;
+
     const data: Prisma.CustomLandingPageConfigUpdateInput = {
+      isActive: config.isActive ?? true,
+      isCustomHeroDescriptionVisible: config.isCustomHeroDescriptionVisible ?? true,
+      discountCtaText: config.discountCtaText ?? null,
+      freeDeliveryCtaText: config.freeDeliveryCtaText ?? null,
+      customHeroImagesJson,
+      reviewsJson,
       relativeTimerTotalMinutes: config.relativeTimerTotalMinutes ?? 120,
       isTimerVisible: config.isTimerVisible ?? true,
       headerTitle: config.headerTitle ?? null,
@@ -129,6 +169,12 @@ export async function saveLandingPageConfigAction(
       row = await prisma.customLandingPageConfig.create({
         data: {
           productId,
+          isActive: config.isActive ?? true,
+          isCustomHeroDescriptionVisible: config.isCustomHeroDescriptionVisible ?? true,
+          discountCtaText: config.discountCtaText ?? null,
+          freeDeliveryCtaText: config.freeDeliveryCtaText ?? null,
+          customHeroImagesJson,
+          reviewsJson,
           relativeTimerTotalMinutes: config.relativeTimerTotalMinutes ?? 120,
           isTimerVisible: config.isTimerVisible ?? true,
           headerTitle: config.headerTitle ?? null,
@@ -160,11 +206,37 @@ export async function saveLandingPageConfigAction(
     revalidatePath("/admin/landing-pages");
     revalidatePath("/admin/landing-page-design");
 
+    let customHeroImages: string[] | undefined = undefined;
+    if (row.customHeroImagesJson) {
+      try {
+        customHeroImages = JSON.parse(row.customHeroImagesJson);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    let reviews: CLPReview[] | undefined = undefined;
+    if (row.reviewsJson) {
+      try {
+        reviews = JSON.parse(row.reviewsJson);
+      } catch {
+        /* ignore */
+      }
+    }
+
     return {
       success: true,
       config: {
         id: row.id,
         productId: row.productId,
+        isActive: row.isActive,
+        isCustomHeroDescriptionVisible: row.isCustomHeroDescriptionVisible,
+        discountCtaText: row.discountCtaText || undefined,
+        freeDeliveryCtaText: row.freeDeliveryCtaText || undefined,
+        customHeroImagesJson: row.customHeroImagesJson || undefined,
+        customHeroImages,
+        reviewsJson: row.reviewsJson || undefined,
+        reviews,
         relativeTimerTotalMinutes: row.relativeTimerTotalMinutes,
         isTimerVisible: row.isTimerVisible,
         headerTitle: row.headerTitle || undefined,
@@ -195,6 +267,23 @@ export async function saveLandingPageConfigAction(
   } catch (error: unknown) {
     console.error("saveLandingPageConfigAction failed:", error);
     return { success: false, error: error instanceof Error ? error.message : "Failed to save config." };
+  }
+}
+
+export async function toggleLandingPageActiveAction(
+  productId: string,
+  isActive: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await prisma.customLandingPageConfig.update({
+      where: { productId },
+      data: { isActive },
+    });
+    revalidatePath("/admin/landing-pages");
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("toggleLandingPageActiveAction failed:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to toggle status." };
   }
 }
 

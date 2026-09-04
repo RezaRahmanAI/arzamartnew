@@ -137,6 +137,8 @@ export interface OrderSettings {
   nextOrderNumber: number;
   incompleteOrderIdPrefix?: string;
   nextIncompleteOrderNumber?: number;
+  preOrderIdPrefix?: string;
+  nextPreOrderNumber?: number;
 }
 
 export interface NotificationSettings {
@@ -322,6 +324,8 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     nextOrderNumber: 10001,
     incompleteOrderIdPrefix: "INC-",
     nextIncompleteOrderNumber: 5001,
+    preOrderIdPrefix: "PRE-",
+    nextPreOrderNumber: 1001,
   },
   notifications: {
     smsApiKey: "",

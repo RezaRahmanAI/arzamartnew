@@ -66,6 +66,7 @@ import {
   Bell,
   History,
   PhoneCall,
+  Printer,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { getSavedNotesStore, getOrderNoteCount } from "@/components/admin/order-notes-modal";
@@ -82,6 +83,7 @@ const OrderTrackingModal = dynamic(() => import("@/components/admin/order-tracki
 const OrderInvoiceModal = dynamic(() => import("@/components/admin/order-invoice-modal").then(m => m.OrderInvoiceModal), { ssr: false });
 const OrderStockWarningModal = dynamic(() => import("@/components/admin/order-stock-warning-modal").then(m => m.OrderStockWarningModal), { ssr: false });
 const QuickEditOrderModal = dynamic(() => import("@/components/admin/quick-edit-order-modal").then(m => m.QuickEditOrderModal), { ssr: false });
+const OrderReturnProcessModal = dynamic(() => import("@/components/admin/order-return-process-modal").then(m => m.OrderReturnProcessModal), { ssr: false });
 
 const statusOptions: OrderStatus[] = [
   "pending", "confirmed", "processing", "packed", "shipped", "delivered", 
@@ -136,6 +138,7 @@ export default function AdminOrders() {
   const [activeTrackingOrder, setActiveTrackingOrder] = useState<Order | null>(null);
   const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<Order | null>(null);
   const [activeQuickEditOrder, setActiveQuickEditOrder] = useState<Order | null>(null);
+  const [activeReturnOrder, setActiveReturnOrder] = useState<Order | null>(null);
 
   // Quick Payment Popover state
   const [editingPaymentOrderId, setEditingPaymentOrderId] = useState<string | null>(null);
@@ -154,7 +157,20 @@ export default function AdminOrders() {
   // Cancel Order Confirmation Modal State
   const [orderToCancel, setOrderToCancel] = useState<{ order: Order; targetStatus: OrderStatus } | null>(null);
 
-  const { orders: contextOrders, updateStatus: contextUpdateStatus, updateOrder: contextUpdateOrder, deleteOrder } = useOrders();
+  // Transferring state
+  const [isTransferringId, setIsTransferringId] = useState<string | null>(null);
+
+  // Bulk Selection State
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+
+  const {
+    orders: contextOrders,
+    updateStatus: contextUpdateStatus,
+    updateOrder: contextUpdateOrder,
+    deleteOrder,
+    transferToRegularOrder,
+    transferToPreOrder,
+  } = useOrders();
   const { staffList } = useStaffStore();
   const { settings } = useSettings();
   const [page, setPage] = useState(1);
@@ -204,6 +220,9 @@ export default function AdminOrders() {
       filtered = filtered.filter(o => !o.isPreOrder && !o.sourcePageName && !o.socialMediaSourceName && o.source !== "manual");
     } else if (orderTypeFilter === "manual") {
       filtered = filtered.filter(o => !o.isPreOrder && (o.source === "manual" || !!o.sourcePageName || !!o.socialMediaSourceName));
+    } else {
+      // Default: 'all' (All Orders) view excludes pre-orders
+      filtered = filtered.filter(o => !o.isPreOrder);
     }
     if (sourceFilter === "facebook") {
       filtered = filtered.filter(o =>
@@ -550,6 +569,11 @@ export default function AdminOrders() {
       return;
     }
 
+    if (newStatus === "return" || newStatus === "return-process") {
+      setActiveReturnOrder(order);
+      return;
+    }
+
     if (order.status === "pending" && newStatus === "confirmed") {
       checkStockBeforeConfirm(order);
     } else {
@@ -565,9 +589,76 @@ export default function AdminOrders() {
     }
   };
 
-  const transferToMainOrder = (orderId: string) => {
-    setData(prev => prev.map(o => o.id === orderId ? { ...o, isPreOrder: false } : o));
-    toast.success("Order transferred to main pool. Stock will now be deducted upon confirmation.");
+  const handleTransferToRegularOrder = async (order: Order) => {
+    setIsTransferringId(order.id);
+    try {
+      const res = await transferToRegularOrder(order.id);
+      if (res.success && res.newOrderNumber) {
+        toast.success(
+          `Pre-Order #${order.id} transferred to regular order #${res.newOrderNumber}! Stock reserved.`
+        );
+        // Refresh orders data silently
+        fetchOrders();
+      } else {
+        toast.error(res.error || "Cannot transfer to regular order.");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to transfer order.");
+    } finally {
+      setIsTransferringId(null);
+    }
+  };
+
+  const handleTransferToPreOrder = async (order: Order) => {
+    if (order.status !== "pending") {
+      toast.error("Only orders in 'Pending' status can be transferred to Pre-Order.");
+      return;
+    }
+
+    setIsTransferringId(order.id);
+    try {
+      const res = await transferToPreOrder(order.id);
+      if (res.success && res.newOrderNumber) {
+        toast.success(
+          `Pending order #${order.id} transferred to pre-order #${res.newOrderNumber}!`
+        );
+        // Refresh orders data silently
+        fetchOrders();
+      } else {
+        toast.error(res.error || "Cannot transfer to pre-order.");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to transfer order.");
+    } finally {
+      setIsTransferringId(null);
+    }
+  };
+
+  const checkPreOrderStockAvailability = (order: Order): { available: boolean; reason?: string } => {
+    for (const item of order.items) {
+      let rawName = item.name || "Product";
+      let extractedSize = item.size && item.size !== "Standard" ? item.size.trim() : "";
+
+      const match = rawName.match(/\(([^)]+)\)$/);
+      if (match) {
+        if (!extractedSize || extractedSize === "Standard") {
+          extractedSize = match[1].trim();
+        }
+        rawName = rawName.replace(/\s*\([^)]+\)$/, "").trim();
+      }
+
+      const displaySize = extractedSize || "Standard";
+      const prod = products.find(p => p.slug === item.slug || p.name.toLowerCase() === rawName.toLowerCase());
+
+      const availableStock = prod ? getSizeStock(prod, displaySize) : 15;
+      if (availableStock < item.qty) {
+        return {
+          available: false,
+          reason: `${rawName} (${displaySize}): Stock is ${Math.max(0, availableStock)}, required ${item.qty}`,
+        };
+      }
+    }
+    return { available: true };
   };
 
   const getOrderSourceDetails = (o: Order & { socialMediaSourceName?: string; sourcePageName?: string; note?: string; address?: string; shippingAddress?: string }) => {
@@ -615,7 +706,7 @@ export default function AdminOrders() {
           }`}
         >
           <ShoppingCart className="size-3.5" />
-          All Orders ({data.length})
+          All Orders ({data.filter(o => !o.isPreOrder).length})
         </button>
         <button
           type="button"
@@ -1105,11 +1196,64 @@ export default function AdminOrders() {
         </div>
       </div>
 
+      {/* Bulk Action Toolbar */}
+      {selectedOrderIds.length > 0 && (
+        <div className="flex items-center justify-between rounded-xl bg-primary/10 border border-primary/20 px-4 py-2.5 animate-in fade-in duration-200">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-primary">
+              {selectedOrderIds.length} order{selectedOrderIds.length > 1 ? "s" : ""} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedOrderIds([])}
+              className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer"
+            >
+              Deselect All
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const selectedOrders = paginatedOrders.filter((o) => selectedOrderIds.includes(o.id));
+                toast.success(`Printing invoices for ${selectedOrders.length} orders...`);
+                window.print();
+              }}
+              className="h-8 text-xs font-semibold gap-1.5 cursor-pointer"
+            >
+              <Printer className="size-3.5" />
+              Bulk Print ({selectedOrderIds.length})
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Orders Table */}
       <div className="overflow-x-auto rounded-xl border bg-card shadow-sm min-h-[400px]">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
+              <TableHead className="w-[40px] px-3">
+                <input
+                  type="checkbox"
+                  checked={
+                    paginatedOrders.length > 0 &&
+                    paginatedOrders.every((o) => selectedOrderIds.includes(o.id))
+                  }
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      const allPageIds = paginatedOrders.map((o) => o.id);
+                      setSelectedOrderIds((prev) => Array.from(new Set([...prev, ...allPageIds])));
+                    } else {
+                      const pageIdSet = new Set(paginatedOrders.map((o) => o.id));
+                      setSelectedOrderIds((prev) => prev.filter((id) => !pageIdSet.has(id)));
+                    }
+                  }}
+                  className="rounded border-input text-primary focus:ring-primary size-4 cursor-pointer"
+                  title="Select all on this page"
+                />
+              </TableHead>
               <TableHead>Order No.</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Name</TableHead>
@@ -1151,6 +1295,20 @@ export default function AdminOrders() {
 
               return (
                 <TableRow key={o.id} className="group">
+                  <TableCell className="w-[40px] px-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedOrderIds.includes(o.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedOrderIds((prev) => [...prev, o.id]);
+                        } else {
+                          setSelectedOrderIds((prev) => prev.filter((id) => id !== o.id));
+                        }
+                      }}
+                      className="rounded border-input text-primary focus:ring-primary size-4 cursor-pointer"
+                    />
+                  </TableCell>
                   <TableCell>
                     <div
                       className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors select-none group/id"
@@ -1225,7 +1383,10 @@ export default function AdminOrders() {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-48">
-                        {statusOptions.map(s => (
+                        {(o.isPreOrder
+                          ? (["pending", "confirmed", "cancelled"] as OrderStatus[])
+                          : statusOptions
+                        ).map(s => (
                           <DropdownMenuItem key={s} onClick={() => handleManualStatusChange(o, s)} className="capitalize flex justify-between">
                             {s}
                             {o.status === s && <Check className="h-3 w-3" />}
@@ -1484,9 +1645,45 @@ export default function AdminOrders() {
                         </Button>
                       )}
                       
-                      {o.isPreOrder && (
-                        <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-600 hover:text-white" onClick={() => transferToMainOrder(o.id)}>
-                          Transfer
+                      {/* Transfer Action Button for Pre-Orders with stock check gating */}
+                      {o.isPreOrder && (() => {
+                        const stockCheck = checkPreOrderStockAvailability(o);
+                        const isBusy = isTransferringId === o.id;
+                        return (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!stockCheck.available || isBusy}
+                            title={
+                              !stockCheck.available
+                                ? `Cannot transfer: ${stockCheck.reason}`
+                                : "Transfer this pre-order to a regular running order"
+                            }
+                            className={`h-7 text-[10px] px-2 flex items-center gap-1 font-bold ${
+                              stockCheck.available
+                                ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-600 hover:text-white"
+                                : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                            }`}
+                            onClick={() => handleTransferToRegularOrder(o)}
+                          >
+                            <ArrowRightLeft className={`size-3 ${isBusy ? "animate-spin" : ""}`} />
+                            {isBusy ? "Transferring..." : "Transfer"}
+                          </Button>
+                        );
+                      })()}
+
+                      {/* Transfer Action Button for Pending Regular Orders */}
+                      {!o.isPreOrder && o.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={isTransferringId === o.id}
+                          title="Transfer this pending order to Pre-Order"
+                          className="h-7 text-[10px] px-2 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-600 hover:text-white flex items-center gap-1 font-bold"
+                          onClick={() => handleTransferToPreOrder(o)}
+                        >
+                          <ArrowRightLeft className={`size-3 ${isTransferringId === o.id ? "animate-spin" : ""}`} />
+                          {isTransferringId === o.id ? "Transferring..." : "To Pre-Order"}
                         </Button>
                       )}
 
@@ -1520,20 +1717,56 @@ export default function AdminOrders() {
                         <Truck className="size-3 text-slate-600" /> Tracking
                       </Button>
 
-                      {/* Contact Dropdown Option (WhatsApp, Reminder) */}
+                      {/* Action & Contact Dropdown Menu */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 text-[10px] px-2 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-600 hover:text-white flex items-center gap-1 font-semibold"
+                            className="h-7 text-[10px] px-2 bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-200 hover:text-slate-900 flex items-center gap-1 font-semibold"
                           >
-                            <PhoneCall className="size-3 text-emerald-600" />
-                            Contact
+                            <MoreVertical className="size-3 text-slate-600" />
+                            More
                             <ChevronDown className="size-3 opacity-60 ml-0.5" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44 p-1 text-xs">
+                        <DropdownMenuContent align="end" className="w-52 p-1 text-xs">
+                          {/* Transfer options in Action Menu */}
+                          {o.isPreOrder && (() => {
+                            const stockCheck = checkPreOrderStockAvailability(o);
+                            return (
+                              <DropdownMenuItem
+                                disabled={!stockCheck.available || isTransferringId === o.id}
+                                className={`cursor-pointer flex items-center gap-2 py-1.5 text-xs font-semibold ${
+                                  stockCheck.available
+                                    ? "text-indigo-700 focus:text-indigo-800 focus:bg-indigo-50"
+                                    : "text-slate-400 focus:text-slate-400 focus:bg-transparent cursor-not-allowed"
+                                }`}
+                                onClick={() => {
+                                  if (stockCheck.available) {
+                                    handleTransferToRegularOrder(o);
+                                  } else {
+                                    toast.error(`Cannot transfer: ${stockCheck.reason}`);
+                                  }
+                                }}
+                              >
+                                <ArrowRightLeft className="size-3.5 text-indigo-600" />
+                                {stockCheck.available ? "Transfer to Regular Order" : "Transfer to Regular (No Stock)"}
+                              </DropdownMenuItem>
+                            );
+                          })()}
+
+                          {!o.isPreOrder && o.status === "pending" && (
+                            <DropdownMenuItem
+                              disabled={isTransferringId === o.id}
+                              className="cursor-pointer flex items-center gap-2 py-1.5 text-xs font-semibold text-purple-700 focus:text-purple-800 focus:bg-purple-50"
+                              onClick={() => handleTransferToPreOrder(o)}
+                            >
+                              <ArrowRightLeft className="size-3.5 text-purple-600" />
+                              Transfer to Pre-Order
+                            </DropdownMenuItem>
+                          )}
+
                           <DropdownMenuItem
                             className="cursor-pointer flex items-center gap-2 py-1.5 text-xs text-green-700 focus:text-green-800 focus:bg-green-50"
                             onClick={() => window.open(`https://wa.me/${o.phone.replace(/\D/g, "")}`, "_blank")}
@@ -1558,19 +1791,29 @@ export default function AdminOrders() {
                             <History className="size-3.5 text-slate-600" />
                             Tracking & History
                           </DropdownMenuItem>
+
+                          <DropdownMenuItem
+                            className="cursor-pointer flex items-center gap-2 py-1.5 text-xs font-semibold text-rose-700 focus:text-rose-800 focus:bg-rose-50"
+                            onClick={() => setActiveReturnOrder(o)}
+                          >
+                            <RotateCcw className="size-3.5 text-rose-600" />
+                            Process Return
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
 
-                      {/* Delete Order Button */}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-[10px] px-2 bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-600 hover:text-white flex items-center gap-1 font-bold"
-                        onClick={() => setOrderToDelete(o)}
-                        title="Delete this order"
-                      >
-                        <Trash2 className="size-3" /> Delete
-                      </Button>
+                      {/* Delete Order Button — ONLY visible when order status is Cancelled */}
+                      {o.status === "cancelled" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[10px] px-2 bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-600 hover:text-white flex items-center gap-1 font-bold"
+                          onClick={() => setOrderToDelete(o)}
+                          title="Delete this cancelled order"
+                        >
+                          <Trash2 className="size-3" /> Delete
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1631,6 +1874,15 @@ export default function AdminOrders() {
         items={stockWarningItems} 
         onCancel={cancelStockWarning} 
         onConfirmAnyway={confirmWithStockIssue} 
+      />
+
+      <OrderReturnProcessModal
+        isOpen={!!activeReturnOrder}
+        order={activeReturnOrder}
+        onClose={() => setActiveReturnOrder(null)}
+        onReturnSuccess={({ newStatus, newTotal, newDue, refund }) => {
+          fetchOrders();
+        }}
       />
 
       {/* Cancel Order Confirmation Popup */}

@@ -6,10 +6,28 @@ import {
   deleteLandingPageConfigAction,
 } from "@/actions/landing-pages.actions";
 
+export interface CLPReview {
+  id: string;
+  name: string;
+  rating: number;
+  comment: string;
+  imageUrl?: string;
+  date?: string;
+  verified?: boolean;
+}
+
 export interface CustomLandingPageConfig {
   id?: string;
   productId: string;
   productSlug?: string;
+  isActive?: boolean;
+  isCustomHeroDescriptionVisible?: boolean;
+  discountCtaText?: string;
+  freeDeliveryCtaText?: string;
+  customHeroImagesJson?: string;
+  customHeroImages?: string[];
+  reviewsJson?: string;
+  reviews?: CLPReview[];
   relativeTimerTotalMinutes?: number | null;
   isTimerVisible: boolean;
   headerTitle?: string;
@@ -265,6 +283,15 @@ export const customLandingPageService = {
     if (!res.success) {
       throw new Error(res.error || "Failed to delete config");
     }
-    return { message: "Deleted successfully" };
+    return { message: "Config deleted" };
+  },
+
+  async toggleActive(productId: string, isActive: boolean): Promise<boolean> {
+    const { toggleLandingPageActiveAction } = await import("@/actions/landing-pages.actions");
+    const res = await toggleLandingPageActiveAction(productId, isActive);
+    if (!res.success) {
+      throw new Error(res.error || "Failed to toggle active status");
+    }
+    return true;
   },
 };

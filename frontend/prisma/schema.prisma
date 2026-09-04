@@ -106,11 +106,13 @@ model Product {
   averageRating    Decimal   @default(0) @map("AverageRating") @db.Decimal(3, 2)
   reviewCount      Int       @default(0) @map("ReviewCount")
   badge            String?   @map("Badge") @db.NVarChar(100)
+  sizeTemplateId   String?   @map("SizeTemplateId") @db.UniqueIdentifier
   createdAtUtc     DateTime  @default(now()) @map("CreatedAtUtc")
   updatedAtUtc     DateTime? @updatedAt @map("UpdatedAtUtc")
 
   brand                  Brand                   @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   category               Category                @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sizeTemplate           SizeTemplate?           @relation(fields: [sizeTemplateId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   variants               ProductVariant[]
   images                 ProductImage[]
   reviews                Review[]
@@ -131,6 +133,10 @@ model ProductVariant {
   sku           String    @map("SKU") @db.NVarChar(Max)
   priceOverride Decimal?  @map("PriceOverride") @db.Decimal(18, 2)
   stockQuantity Int       @default(0) @map("StockQuantity")
+  chest         String?   @map("Chest") @db.NVarChar(50)
+  length        String?   @map("Length") @db.NVarChar(50)
+  waist         String?   @map("Waist") @db.NVarChar(50)
+  sleeve        String?   @map("Sleeve") @db.NVarChar(50)
   isActive      Boolean   @default(true) @map("IsActive")
   createdAtUtc  DateTime  @default(now()) @map("CreatedAtUtc")
   updatedAtUtc  DateTime? @updatedAt @map("UpdatedAtUtc")
@@ -167,6 +173,7 @@ model Order {
   paymentStatus       Int       @default(1) @map("PaymentStatus")
   shippingAddressJson String    @map("ShippingAddressJson") @db.NVarChar(Max)
   couponCode          String?   @map("CouponCode") @db.NVarChar(Max)
+  isPreOrder          Boolean   @default(false) @map("IsPreOrder")
   createdAtUtc        DateTime  @default(now()) @map("CreatedAtUtc")
   updatedAtUtc        DateTime? @updatedAt @map("UpdatedAtUtc")
 
@@ -233,6 +240,12 @@ model CustomLandingPageConfig {
   customHeroDescription         String?   @map("CustomHeroDescription") @db.NVarChar(Max)
   customHeroBgColor             String?   @default("#9333ea") @map("CustomHeroBgColor") @db.NVarChar(Max)
   customHeroTextColor           String?   @default("#ffffff") @map("CustomHeroTextColor") @db.NVarChar(Max)
+  isActive                      Boolean   @default(true) @map("IsActive")
+  isCustomHeroDescriptionVisible Boolean  @default(true) @map("IsCustomHeroDescriptionVisible")
+  discountCtaText               String?   @map("DiscountCtaText") @db.NVarChar(Max)
+  freeDeliveryCtaText           String?   @map("FreeDeliveryCtaText") @db.NVarChar(Max)
+  customHeroImagesJson          String?   @map("CustomHeroImagesJson") @db.NVarChar(Max)
+  reviewsJson                   String?   @map("ReviewsJson") @db.NVarChar(Max)
   sectionsJson                  String?   @map("SectionsJson") @db.NVarChar(Max)
   createdAtUtc                  DateTime  @default(now()) @map("CreatedAtUtc")
   updatedAtUtc                  DateTime? @updatedAt @map("UpdatedAtUtc")
@@ -482,4 +495,36 @@ model ShipmentStatusHistory {
 
   @@index([shipmentId, changedAtUtc], map: "IX_ShipmentStatusHistory_Shipment_Date")
   @@map("ShipmentStatusHistories")
+}
+
+model SizeTemplate {
+  id           String              @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  name         String              @map("Name") @db.NVarChar(150)
+  category     String?             @map("Category") @db.NVarChar(100)
+  description  String?             @map("Description") @db.NVarChar(500)
+  createdAtUtc DateTime            @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc DateTime?           @updatedAt @map("UpdatedAtUtc")
+
+  entries  SizeTemplateEntry[]
+  products Product[]
+
+  @@map("SizeTemplates")
+}
+
+model SizeTemplateEntry {
+  id             String       @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  sizeTemplateId String       @map("SizeTemplateId") @db.UniqueIdentifier
+  size           String       @map("Size") @db.NVarChar(50)
+  chest          String?      @map("Chest") @db.NVarChar(50)
+  length         String?      @map("Length") @db.NVarChar(50)
+  waist          String?      @map("Waist") @db.NVarChar(50)
+  sleeve         String?      @map("Sleeve") @db.NVarChar(50)
+  displayOrder   Int          @default(0) @map("DisplayOrder")
+  createdAtUtc   DateTime     @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc   DateTime?    @updatedAt @map("UpdatedAtUtc")
+
+  template SizeTemplate @relation(fields: [sizeTemplateId], references: [id], onDelete: Cascade)
+
+  @@index([sizeTemplateId, displayOrder], map: "IX_SizeTemplateEntries_Template_Order")
+  @@map("SizeTemplateEntries")
 }

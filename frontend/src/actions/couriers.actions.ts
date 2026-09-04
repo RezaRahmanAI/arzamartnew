@@ -232,3 +232,41 @@ export async function toggleCourierActiveAction(
     return { success: false, error: "Failed to toggle courier status" };
   }
 }
+
+export async function deleteCourierAction(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const shipmentCount = await prisma.shipment.count({
+      where: { courierId: id },
+    });
+
+    if (shipmentCount > 0) {
+      // If courier has historical shipments, deactivate instead of hard delete to preserve foreign keys
+      await prisma.courier.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      revalidatePath("/admin/couriers");
+      revalidatePath("/admin/bulk-shipment");
+      return {
+        success: true,
+        error: `Courier has ${shipmentCount} associated shipment(s). Deactivated instead of deleted to protect order history.`,
+      };
+    }
+
+    await prisma.courier.delete({
+      where: { id },
+    });
+
+    revalidatePath("/admin/couriers");
+    revalidatePath("/admin/bulk-shipment");
+    return { success: true };
+  } catch (error) {
+    console.error("deleteCourierAction failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete courier",
+    };
+  }
+}

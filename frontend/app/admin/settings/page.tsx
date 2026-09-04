@@ -34,7 +34,9 @@ import {
   AlertTriangle,
   ChevronDown,
   Eye,
+  Ruler,
 } from "lucide-react";
+import { SizeTemplatesTab } from "@/components/admin/settings/size-templates-tab";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -55,7 +57,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type SettingsCategoryKey = keyof SystemSettings | "auditLogs";
+type SettingsCategoryKey = keyof SystemSettings | "auditLogs" | "sizeTemplates";
 
 interface CategoryTab {
   key: SettingsCategoryKey;
@@ -67,6 +69,7 @@ interface CategoryTab {
 const CATEGORIES: CategoryTab[] = [
   { key: "general", label: "General Settings", description: "Website identity, currency, status & locale settings", icon: Globe },
   { key: "branding", label: "Branding & Appearance", description: "Logos, color palette, typography & theme styling", icon: Palette },
+  { key: "sizeTemplates", label: "Size Templates", description: "Standard sizing, chest & length templates for products", icon: Ruler },
   { key: "contact", label: "Contact Information", description: "Support channels, office address & Google Maps", icon: PhoneCall },
   { key: "shipping", label: "Shipping Settings", description: "Shipping rates, delivery rules & COD availability", icon: Truck },
   { key: "socialMedia", label: "Social Media Links", description: "Social accounts, messenger & channel handles", icon: Share2 },
@@ -100,7 +103,7 @@ export default function AdminSettingsPage() {
   const [resetScope, setResetScope] = useState<"current" | "all">("current");
 
   const currentCategory = CATEGORIES.find((c) => c.key === activeTab);
-  const isSystemSettingsTab = activeTab !== "auditLogs";
+  const isSystemSettingsTab = activeTab !== "auditLogs" && activeTab !== "sizeTemplates";
 
   const handleConfirmReset = async () => {
     setResetModalOpen(false);
@@ -1836,6 +1839,29 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-border/60 pb-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">Pre-Order ID Prefix</Label>
+                    <Input
+                      value={draftSettings.orders.preOrderIdPrefix ?? "PRE-"}
+                      onChange={(e) => updateSection("orders", { preOrderIdPrefix: e.target.value })}
+                      placeholder="e.g. PRE-"
+                      className="h-9 text-xs font-mono"
+                    />
+                    <p className="text-[11px] text-muted-foreground">Independent prefix for all pre-order numbers</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">Next Pre-Order Number</Label>
+                    <Input
+                      type="number"
+                      value={draftSettings.orders.nextPreOrderNumber ?? 1001}
+                      onChange={(e) => updateSection("orders", { nextPreOrderNumber: Math.max(1, Number(e.target.value)) })}
+                      className="h-9 text-xs font-mono"
+                    />
+                    <p className="text-[11px] text-muted-foreground">Next pre-order ID will be: <span className="font-bold text-indigo-600 dark:text-indigo-400">{draftSettings.orders.preOrderIdPrefix ?? "PRE-"}{draftSettings.orders.nextPreOrderNumber ?? 1001}</span></p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-border">
                     <span className="text-xs font-bold text-foreground">Enable Coupon Codes</span>
@@ -2138,6 +2164,13 @@ export default function AdminSettingsPage() {
                     );
                   })()}
                 </div>
+              </div>
+            )}
+
+            {/* SIZE TEMPLATES SECTION */}
+            {activeTab === "sizeTemplates" && (
+              <div className="space-y-4">
+                <SizeTemplatesTab />
               </div>
             )}
           </div>

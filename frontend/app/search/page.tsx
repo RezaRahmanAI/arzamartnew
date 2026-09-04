@@ -5,18 +5,25 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { ProductCard } from "@/components/product-card";
 import { useProducts } from "@/lib/products-store";
+import { products as fallbackProducts } from "@/lib/shop-data";
 
 function SearchContent() {
-  const { products } = useProducts();
+  const { products, isLoading } = useProducts();
   const searchParams = useSearchParams();
   const q = searchParams.get("q") || "";
   const term = q.trim().toLowerCase();
+
+  const sourceProducts = products && products.length > 0 ? products : fallbackProducts;
+
   const results = term
-    ? products.filter(
+    ? sourceProducts.filter(
         (p) =>
           p.isActive !== false &&
           (p.name.toLowerCase().includes(term) ||
-            p.category.includes(term))
+            (p.category && p.category.toLowerCase().includes(term)) ||
+            (p.subcategory && p.subcategory.toLowerCase().includes(term)) ||
+            (p.description && p.description.toLowerCase().includes(term)) ||
+            (p.badge && p.badge.toLowerCase().includes(term)))
       )
     : [];
 

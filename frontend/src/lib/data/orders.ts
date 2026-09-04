@@ -30,9 +30,21 @@ export function mapPrismaOrder(o: {
   paymentStatus: number;
   shippingAddressJson: string;
   couponCode: string | null;
+  isPreOrder?: boolean;
   createdAtUtc: Date;
   customer?: { id: string; fullName: string; phone: string; district: string; defaultAddress: string | null; area: string | null } | null;
-  items?: { id: number; productId: string; productName: string; unitPrice: Prisma.Decimal | number | string; quantity: number; product?: { slug: string; name: string } | null }[];
+  items?: {
+    id: number;
+    productId: string;
+    productName: string;
+    unitPrice: Prisma.Decimal | number | string;
+    quantity: number;
+    product?: {
+      slug: string;
+      name: string;
+      images?: { imageUrl: string; isMain?: boolean }[];
+    } | null;
+  }[];
   shipment?: {
     id: string;
     trackingNumber: string | null;
@@ -52,10 +64,12 @@ export function mapPrismaOrder(o: {
   let note = "";
   let paymentMethod = o.paymentStatus === 2 ? "Paid (bKash/Online)" : "Cash on Delivery";
 
-  let isPreOrderFlag = o.orderStatus === 10; // status 10 is preorder
+  let isPreOrderFlag = !!o.isPreOrder || o.orderStatus === 9 || o.orderStatus === 10; // status 9 or 10 or db column is preorder
   let orderSource: "checkout" | "manual" | "pre-order" = "checkout";
   let sourcePageName: string | undefined = undefined;
   let socialMediaSourceName: string | undefined = undefined;
+  let extractedCourierName: string | null = null;
+  let extractedTrackingNumber: string | null = null;
 
   if (o.shippingAddressJson) {
     const trimmed = o.shippingAddressJson.trim();
@@ -71,6 +85,8 @@ export function mapPrismaOrder(o: {
         if (parsed.source) orderSource = parsed.source;
         if (parsed.sourcePageName) sourcePageName = parsed.sourcePageName;
         if (parsed.socialMediaSourceName) socialMediaSourceName = parsed.socialMediaSourceName;
+        if (parsed.courierName) extractedCourierName = parsed.courierName;
+        if (parsed.courierTrackingNumber) extractedTrackingNumber = parsed.courierTrackingNumber;
       } catch {
         // Not valid JSON, proceed with legacy regex parsing
       }
@@ -107,12 +123,15 @@ export function mapPrismaOrder(o: {
       rawName = rawName.substring(0, sizeMatch.index).trim();
     }
 
+    const mainImg = i.product?.images?.find((img) => img.isMain)?.imageUrl || i.product?.images?.[0]?.imageUrl || undefined;
+
     return {
       slug: i.product?.slug || "product",
       name: rawName,
       size,
       qty: i.quantity,
       price: Number(i.unitPrice) || 0,
+      imageUrl: mainImg,
     };
   });
 
@@ -146,17 +165,41 @@ export function mapPrismaOrder(o: {
     socialMediaSourceName,
     isPreOrder: isPreOrderFlag,
     hasNotes: !!note,
-    courierName: o.shipment?.courier?.name || null,
-    courierTrackingNumber: o.shipment?.trackingNumber || null,
+    courierName: o.shipment?.courier?.name || extractedCourierName || null,
+    courierTrackingNumber: o.shipment?.trackingNumber || extractedTrackingNumber || null,
     shipmentStatus: o.shipment?.status || null,
     shipmentBatchId: o.shipment?.shipmentBatchId || null,
   };
 }
 
-export async function getAllOrders(): Promise<{ orders: Order[]; incomplete: Order[] }> {
+export async function getAllOrders(options?: {
+  type?: "all" | "regular" | "preorder";
+  includePreOrders?: boolean;
+}): Promise<{ orders: Order[]; incomplete: Order[] }> {
   try {
+    let orderWhere: Prisma.OrderWhereInput | undefined = undefined;
+
+    if (options?.type === "preorder") {
+      orderWhere = {
+        OR: [
+          { isPreOrder: true },
+          { orderStatus: 9 },
+          { shippingAddressJson: { contains: '"isPreOrder":true' } },
+        ],
+      };
+    } else if (options?.type === "regular" || options?.includePreOrders === false) {
+      orderWhere = {
+        AND: [
+          { isPreOrder: false },
+          { orderStatus: { not: 9 } },
+          { NOT: { shippingAddressJson: { contains: '"isPreOrder":true' } } },
+        ],
+      };
+    }
+
     const [orderRows, incompleteRows] = await Promise.all([
       prisma.order.findMany({
+        where: orderWhere,
         include: {
           customer: true,
           shipment: {
@@ -166,7 +209,11 @@ export async function getAllOrders(): Promise<{ orders: Order[]; incomplete: Ord
           },
           items: {
             include: {
-              product: true,
+              product: {
+                include: {
+                  images: true,
+                },
+              },
             },
           },
         },
@@ -241,7 +288,11 @@ export async function getOrderById(idOrNumber: string): Promise<Order | null> {
         },
         items: {
           include: {
-            product: true,
+            product: {
+              include: {
+                images: true,
+              },
+            },
           },
         },
       },

@@ -23,30 +23,20 @@ import {
   Layers,
   Search,
   Palette,
+  GripVertical,
 } from "lucide-react";
 import {
   LandingSection,
   CustomLandingPageConfig,
+  CLPReview,
 } from "@/lib/api/services/custom-landing-page.service";
 import { Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { ImageUploader } from "@/components/image-uploader";
+import { ColorGradientPicker } from "./color-gradient-picker";
+import { TextStyleControl, TextStyleValue } from "./text-style-control";
 import { getImageUrl } from "@/lib/utils";
 import dynamic from "next/dynamic";
-
-const COLOR_PRESETS = [
-  { label: "Purple", color: "#9333ea" },
-  { label: "Magenta / Rose", color: "#c026d3" },
-  { label: "Navy Blue", color: "#1e3a8a" },
-  { label: "Ocean Blue", color: "#0284c7" },
-  { label: "Emerald Green", color: "#059669" },
-  { label: "Amber Gold", color: "#d97706" },
-  { label: "Fire Red", color: "#dc2626" },
-  { label: "Dark Slate", color: "#0f172a" },
-  { label: "Pure Black", color: "#000000" },
-  { label: "Soft Gray", color: "#f8fafc" },
-  { label: "Pure White", color: "#ffffff" },
-];
 
 const CustomSectionEditor = dynamic(
   () => import("./custom-section-editor").then((m) => m.CustomSectionEditor),
@@ -276,65 +266,24 @@ export function CustomLandingPageEditor({
                       (sec.settings?.backgroundColor as string) ||
                       (sec.type === "product-hero" ? config.customHeroBgColor || "#9333ea" : "");
 
-                    const updateSectionBg = (newColor: string) => {
+                    const updateSectionBg = (newBg: string) => {
                       const updatedSec = {
                         ...sec,
-                        settings: { ...sec.settings, backgroundColor: newColor },
+                        settings: { ...sec.settings, backgroundColor: newBg },
                       };
                       if (sec.type === "product-hero") {
-                        onConfigChange({ ...config, customHeroBgColor: newColor });
+                        onConfigChange({ ...config, customHeroBgColor: newBg });
                       }
                       onSectionsChange(sections.map((s) => (s.id === sec.id ? updatedSec : s)));
                     };
 
                     return (
-                      <div className="p-2.5 rounded-lg border border-border bg-muted/20 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-[11px] font-bold text-muted-foreground uppercase flex items-center gap-1.5">
-                            <Palette className="size-3.5 text-primary" />
-                            <span>সেকশন ব্যাকগ্রাউন্ড কালার</span>
-                          </label>
-                          <div className="flex items-center gap-2">
-                            {currentSectionBg && (
-                              <button
-                                type="button"
-                                onClick={() => updateSectionBg("")}
-                                className="text-[10px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
-                              >
-                                রিসেট (ডিফল্ট)
-                              </button>
-                            )}
-                            <span className="text-[10px] font-mono text-foreground font-normal">
-                              {currentSectionBg || "ডিফল্ট"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="color"
-                            value={currentSectionBg || "#ffffff"}
-                            onChange={(e) => updateSectionBg(e.target.value)}
-                            className="size-8 rounded border border-border cursor-pointer bg-transparent p-0.5"
-                          />
-                          <div className="flex flex-wrap gap-1.5 items-center">
-                            {COLOR_PRESETS.map((p) => (
-                              <button
-                                key={p.color}
-                                type="button"
-                                title={p.label}
-                                onClick={() => updateSectionBg(p.color)}
-                                className={`size-5 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
-                                  (currentSectionBg || "").toLowerCase() === p.color.toLowerCase()
-                                    ? "border-white ring-2 ring-primary scale-110"
-                                    : "border-border"
-                                }`}
-                                style={{ backgroundColor: p.color }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                      <ColorGradientPicker
+                        value={currentSectionBg}
+                        onChange={updateSectionBg}
+                        label="সেকশন ব্যাকগ্রাউন্ড কালার / গ্র্যাডিয়েন্ট"
+                        defaultColor={sec.type === "product-hero" ? "#9333ea" : "#ffffff"}
+                      />
                     );
                   })()}
 
@@ -454,29 +403,87 @@ export function CustomLandingPageEditor({
                         </div>
                       )}
 
-                      {/* Custom Image Uploader */}
-                      <div className="p-2.5 rounded-lg border border-border bg-muted/20 space-y-2">
+                      {/* Multi-Image Hero Gallery Uploader */}
+                      <div className="p-2.5 rounded-lg border border-border bg-muted/20 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                            <span>হিরো প্রোডাক্ট ছবি গ্যালারি (Multiple Images)</span>
+                          </label>
+                          <span className="text-[10px] text-primary font-bold">
+                            {(config.customHeroImages?.length || (config.customHeroImageUrl ? 1 : 0))}টি ছবি
+                          </span>
+                        </div>
+
+                        {/* List existing hero images */}
+                        {config.customHeroImages && config.customHeroImages.length > 0 && (
+                          <div className="grid grid-cols-4 gap-1.5 pt-1">
+                            {config.customHeroImages.map((imgUrl, imgIdx) => (
+                              <div key={imgIdx} className="relative aspect-square rounded-lg border border-border overflow-hidden group bg-background">
+                                <img
+                                  src={getImageUrl(imgUrl, "thumb")}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextImages = config.customHeroImages!.filter((_, i) => i !== imgIdx);
+                                    onConfigChange({
+                                      ...config,
+                                      customHeroImages: nextImages,
+                                      customHeroImageUrl: nextImages[0] || "",
+                                    });
+                                  }}
+                                  className="absolute top-1 right-1 size-5 bg-destructive text-destructive-foreground rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-xs"
+                                  title="ছবি বাদ দিন"
+                                >
+                                  <Trash2 className="size-3" />
+                                </button>
+                                {imgIdx === 0 && (
+                                  <span className="absolute bottom-0 inset-x-0 bg-primary/90 text-primary-foreground text-[8px] font-bold text-center py-0.2">
+                                    মেইন
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         <ImageUploader
-                          value={config.customHeroImageUrl || ""}
-                          onChange={(url) =>
-                            onConfigChange({ ...config, customHeroImageUrl: url })
-                          }
-                          label="হিরো সেকশনের প্রোডাক্ট ছবি পরিবর্তন করুন"
-                          sublabel="ডিফল্ট ছবির বদলে ল্যান্ডিং পেজে এই কাস্টম ছবিটি বড় আকারে দেখানো হবে।"
+                          value=""
+                          onChange={(url) => {
+                            if (!url) return;
+                            const current = config.customHeroImages || (config.customHeroImageUrl ? [config.customHeroImageUrl] : []);
+                            const next = [...current, url];
+                            onConfigChange({
+                              ...config,
+                              customHeroImages: next,
+                              customHeroImageUrl: next[0] || url,
+                            });
+                          }}
+                          label="নতুন ছবি যোগ করুন (গ্যালারিতে)"
+                          sublabel="এখানে যুক্ত করা ছবিগুলো গ্রাহক স্লাইডার/থাম্বনেইল হিসেবে দেখতে পাবে।"
                           folder="landing-pages"
                         />
-                        {config.customHeroImageUrl && (
+
+                        {((config.customHeroImages && config.customHeroImages.length > 0) || config.customHeroImageUrl) && (
                           <button
                             type="button"
-                            onClick={() => onConfigChange({ ...config, customHeroImageUrl: "" })}
+                            onClick={() =>
+                              onConfigChange({
+                                ...config,
+                                customHeroImageUrl: "",
+                                customHeroImages: [],
+                              })
+                            }
                             className="text-[10px] text-rose-600 hover:underline font-semibold cursor-pointer"
                           >
-                            মূল প্রোডাক্টের ছবিতে ফিরে যান (Reset)
+                            মূল প্রোডাক্টের ডিফল্ট ছবিতে ফিরে যান (Reset Gallery)
                           </button>
                         )}
                       </div>
 
-                      {/* Editable Fields */}
+                      {/* Section Title & Typography */}
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-muted-foreground uppercase">
                           সেকশন শিরোনাম (ঐচ্ছিক)
@@ -491,6 +498,8 @@ export function CustomLandingPageEditor({
                           className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </div>
+
+                      {/* Custom Product Name */}
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-muted-foreground uppercase">
                           কাস্টম প্রোডাক্ট শিরোনাম (ঐচ্ছিক)
@@ -505,33 +514,71 @@ export function CustomLandingPageEditor({
                           className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-muted-foreground uppercase">
-                          কাস্টম বর্ণনা / ডেসক্রিপশন (ঐচ্ছিক)
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={config.customHeroDescription || ""}
-                          onChange={(e) =>
-                            onConfigChange({ ...config, customHeroDescription: e.target.value })
-                          }
-                          placeholder={product?.shortDescription || product?.description || "কাস্টম ডেসক্রিপশন লিখুন..."}
-                          className="w-full p-2 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed"
-                        />
-                        <p className="text-[10px] text-muted-foreground">
-                          * এটি শুধু এই ল্যান্ডিং পেজে দেখাবে, আসল প্রোডাক্টের ডাটায় কোনো পরিবর্তন হবে না।
-                        </p>
+
+                      {/* Issue 2: Custom Description Toggle & Textarea */}
+                      <div className="p-2.5 rounded-lg border border-border bg-muted/20 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                            কাস্টম ডেসক্রিপশন সেকশন
+                          </label>
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={config.isCustomHeroDescriptionVisible ?? true}
+                              onChange={(e) =>
+                                onConfigChange({
+                                  ...config,
+                                  isCustomHeroDescriptionVisible: e.target.checked,
+                                })
+                              }
+                              className="size-3.5 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                            />
+                            <span className="text-[11px] font-bold text-foreground">
+                              {(config.isCustomHeroDescriptionVisible ?? true) ? "প্রদর্শিত (Yes)" : "লুকানো (No)"}
+                            </span>
+                          </label>
+                        </div>
+
+                        {(config.isCustomHeroDescriptionVisible ?? true) && (
+                          <div className="space-y-1">
+                            <textarea
+                              rows={3}
+                              value={config.customHeroDescription || ""}
+                              onChange={(e) =>
+                                onConfigChange({ ...config, customHeroDescription: e.target.value })
+                              }
+                              placeholder={product?.shortDescription || product?.description || "কাস্টম ডেসক্রিপশন লিখুন..."}
+                              className="w-full p-2 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed"
+                            />
+                            <p className="text-[10px] text-muted-foreground">
+                              * ফাঁকা রাখলে আসল প্রোডাক্টের ডেসক্রিপশন স্বয়ংক্রিয়ভাবে দেখাবে।
+                            </p>
+                          </div>
+                        )}
                       </div>
+
+                      {/* Typography Style Control for Hero */}
+                      <TextStyleControl
+                        label="হিরো সেকশন টেক্সট টাইপোগ্রাফি"
+                        value={sec.settings?.textStyle as TextStyleValue}
+                        onChange={(newStyle) => {
+                          const updatedSec = {
+                            ...sec,
+                            settings: { ...sec.settings, textStyle: newStyle },
+                          };
+                          onSectionsChange(sections.map((s) => (s.id === sec.id ? updatedSec : s)));
+                        }}
+                      />
                     </div>
                   )}
 
                   {/* Discount CTA Editor */}
                   {sec.type === "discount-cta" && (
-                    <div className="space-y-2 pt-1 text-xs">
+                    <div className="space-y-3 pt-1 text-xs">
                       {/* Promo Text */}
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-muted-foreground uppercase">
-                          অফার টেক্সট
+                          অফার শিরোনাম (হেডিং)
                         </label>
                         <input
                           type="text"
@@ -544,7 +591,26 @@ export function CustomLandingPageEditor({
                         />
                       </div>
 
-                      {/* Free Shipping Threshold */}
+                      {/* Issue 4: Editable Discount CTA Subtext */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                          ডিসকাউন্ট অফার বার্তা (যখন ফ্রি শিপিং নেই)
+                        </label>
+                        <input
+                          type="text"
+                          value={config.discountCtaText || ""}
+                          onChange={(e) =>
+                            onConfigChange({ ...config, discountCtaText: e.target.value })
+                          }
+                          placeholder="সীমিত সময়ের জন্য বিশেষ ছাড়ের সুযোগ গ্রহণ করুন।"
+                          className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          * ডিফল্ট: "সীমিত সময়ের জন্য বিশেষ ছাড়ের সুযোগ গ্রহণ করুন।"
+                        </p>
+                      </div>
+
+                      {/* Free Shipping Threshold & Custom Delivery CTA */}
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-muted-foreground uppercase">
                           ফ্রি ডেলিভারি কোয়ান্টিটি
@@ -562,6 +628,37 @@ export function CustomLandingPageEditor({
                           className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                          ফ্রি ডেলিভারি বার্তা (টেমপ্লেট)
+                        </label>
+                        <input
+                          type="text"
+                          value={config.freeDeliveryCtaText || ""}
+                          onChange={(e) =>
+                            onConfigChange({ ...config, freeDeliveryCtaText: e.target.value })
+                          }
+                          placeholder="যেকোনো {qty}টি প্রোডাক্ট অর্ডার করলেই ফ্রি হোম ডেলিভারি!"
+                          className="w-full h-8 px-2.5 bg-background border border-border rounded-md text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          * {`{qty}`} চিহ্নের জায়গায় কোয়ান্টিটি সংখ্যাটি বসবে।
+                        </p>
+                      </div>
+
+                      {/* Typography Style Control for CTA */}
+                      <TextStyleControl
+                        label="ডিসকাউন্ট CTA টেক্সট স্টাইল"
+                        value={sec.settings?.textStyle as TextStyleValue}
+                        onChange={(newStyle) => {
+                          const updatedSec = {
+                            ...sec,
+                            settings: { ...sec.settings, textStyle: newStyle },
+                          };
+                          onSectionsChange(sections.map((s) => (s.id === sec.id ? updatedSec : s)));
+                        }}
+                      />
                     </div>
                   )}
 
@@ -642,37 +739,41 @@ export function CustomLandingPageEditor({
                               p.name.toLowerCase().includes(productSearchQuery.toLowerCase())
                             )
                             .map((p) => {
-                              const isMainProduct = Boolean((product?.id && p.id === product.id) || (product?.slug && p.slug === product.slug));
-                              const selectedIds = (sec.settings?.selectedProductIds as string[]) || [];
-                              const isChecked = Boolean(isMainProduct || (p.id && selectedIds.includes(p.id)) || (p.slug && selectedIds.includes(p.slug)));
+                                const pIdentifier = String(p.slug || p.id || "");
+                                if (!pIdentifier) return null;
+                                const isMainProduct = Boolean(
+                                  (product?.slug && p.slug === product.slug) ||
+                                  (product?.id && p.id === product.id)
+                                );
+                                const selectedIds = (sec.settings?.selectedProductIds as string[]) || [];
+                                const isChecked = isMainProduct || selectedIds.includes(pIdentifier);
 
-                              return (
-                                <label
-                                  key={p.id || p.slug}
-                                  className={`flex items-center gap-2.5 p-1.5 rounded-md hover:bg-muted/40 cursor-pointer transition-colors ${
-                                    isMainProduct ? "bg-emerald-500/10 border border-emerald-500/20" : ""
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    disabled={isMainProduct}
-                                    checked={isChecked}
-                                    onChange={(e) => {
-                                      const pKey = p.id || p.slug;
-                                      let newSelected: string[];
-                                      if (e.target.checked) {
-                                        newSelected = [...selectedIds.filter((id) => id !== p.id && id !== p.slug), pKey];
-                                      } else {
-                                        newSelected = selectedIds.filter((id) => id !== p.id && id !== p.slug);
-                                      }
-                                      const updatedSec = {
-                                        ...sec,
-                                        settings: { ...sec.settings, selectedProductIds: newSelected },
-                                      };
-                                      onSectionsChange(sections.map((s) => (s.id === sec.id ? updatedSec : s)));
-                                    }}
-                                    className="rounded border-border text-primary focus:ring-primary size-4 cursor-pointer"
-                                  />
+                                return (
+                                  <label
+                                    key={pIdentifier}
+                                    className={`flex items-center gap-2.5 p-1.5 rounded-md hover:bg-muted/40 cursor-pointer transition-colors ${
+                                      isMainProduct ? "bg-emerald-500/10 border border-emerald-500/20" : ""
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      disabled={isMainProduct}
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        let newSelected: string[];
+                                        if (e.target.checked) {
+                                          newSelected = Array.from(new Set([...selectedIds, pIdentifier]));
+                                        } else {
+                                          newSelected = selectedIds.filter((id) => id !== pIdentifier && id !== p.id && id !== p.slug);
+                                        }
+                                        const updatedSec = {
+                                          ...sec,
+                                          settings: { ...sec.settings, selectedProductIds: newSelected },
+                                        };
+                                        onSectionsChange(sections.map((s) => (s.id === sec.id ? updatedSec : s)));
+                                      }}
+                                      className="rounded border-border text-primary focus:ring-primary size-4 cursor-pointer"
+                                    />
                                   <img
                                     src={getImageUrl(p.image || (p.images?.[0] ?? ""), "thumb")}
                                     alt={p.name}
@@ -715,11 +816,164 @@ export function CustomLandingPageEditor({
                     />
                   )}
 
-                  {/* Other default sections */}
-                  {(sec.type === "reviews" ||
-                    sec.type === "order-form") && (
+                  {/* Issue 6: Customer Reviews Section Editor (Add / Remove / Photo Proof) */}
+                  {sec.type === "reviews" && (
+                    <div className="space-y-3 pt-1 text-xs">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                          <Star className="size-3.5 text-amber-500" />
+                          <span>কাস্টমার রিভিউ তালিকা ({config.reviews?.length || 0})</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newRev: CLPReview = {
+                              id: `rev-${Date.now()}`,
+                              name: "নতুন গ্রাহক",
+                              rating: 5,
+                              comment: "অসাধারণ প্রোডাক্ট! দ্রুত ডেলিভারি পেয়েছি।",
+                              verified: true,
+                            };
+                            const next = [...(config.reviews || []), newRev];
+                            onConfigChange({ ...config, reviews: next });
+                          }}
+                          className="px-2 py-1 bg-primary text-primary-foreground text-[10px] font-bold rounded flex items-center gap-1 cursor-pointer hover:opacity-90"
+                        >
+                          <Plus className="size-3" />
+                          <span>রিভিউ যোগ করুন</span>
+                        </button>
+                      </div>
+
+                      {/* List of Reviews */}
+                      <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                        {(config.reviews || []).map((rev, revIdx) => (
+                          <div key={rev.id} className="p-2.5 rounded-lg border border-border bg-background space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-muted-foreground">রিভিউ #{revIdx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = (config.reviews || []).filter((_, i) => i !== revIdx);
+                                  onConfigChange({ ...config, reviews: next });
+                                }}
+                                className="text-destructive hover:bg-destructive/10 p-1 rounded cursor-pointer transition-colors"
+                                title="Delete Review"
+                              >
+                                <Trash2 className="size-3" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-0.5">
+                                <label className="text-[10px] text-muted-foreground">নাম</label>
+                                <input
+                                  type="text"
+                                  value={rev.name}
+                                  onChange={(e) => {
+                                    const next = [...(config.reviews || [])];
+                                    next[revIdx] = { ...next[revIdx], name: e.target.value };
+                                    onConfigChange({ ...config, reviews: next });
+                                  }}
+                                  className="w-full h-7 px-2 bg-card border border-border rounded text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                                />
+                              </div>
+
+                              <div className="space-y-0.5">
+                                <label className="text-[10px] text-muted-foreground">রেটিং (১-৫ স্টার)</label>
+                                <select
+                                  value={rev.rating}
+                                  onChange={(e) => {
+                                    const next = [...(config.reviews || [])];
+                                    next[revIdx] = { ...next[revIdx], rating: Number(e.target.value) };
+                                    onConfigChange({ ...config, reviews: next });
+                                  }}
+                                  className="w-full h-7 px-2 bg-card border border-border rounded text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                                >
+                                  {[5, 4, 3, 2, 1].map((st) => (
+                                    <option key={st} value={st}>
+                                      {st} Star {st === 5 ? "⭐⭐⭐⭐⭐" : ""}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] text-muted-foreground">মন্তব্য / রিভিউ টেক্সট</label>
+                              <textarea
+                                rows={2}
+                                value={rev.comment}
+                                onChange={(e) => {
+                                  const next = [...(config.reviews || [])];
+                                  next[revIdx] = { ...next[revIdx], comment: e.target.value };
+                                  onConfigChange({ ...config, reviews: next });
+                                }}
+                                className="w-full p-1.5 bg-card border border-border rounded text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                              />
+                            </div>
+
+                            {/* Photo Proof */}
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-muted-foreground">ছবি প্রুফ (ঐচ্ছিক)</label>
+                              {rev.imageUrl ? (
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={getImageUrl(rev.imageUrl, "thumb")}
+                                    alt=""
+                                    className="size-8 rounded object-cover border border-border shrink-0"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={rev.imageUrl}
+                                    onChange={(e) => {
+                                      const next = [...(config.reviews || [])];
+                                      next[revIdx] = { ...next[revIdx], imageUrl: e.target.value };
+                                      onConfigChange({ ...config, reviews: next });
+                                    }}
+                                    className="flex-1 h-7 px-2 bg-card border border-border rounded text-[10px] text-foreground font-mono"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const next = [...(config.reviews || [])];
+                                      next[revIdx] = { ...next[revIdx], imageUrl: "" };
+                                      onConfigChange({ ...config, reviews: next });
+                                    }}
+                                    className="text-destructive text-[10px] hover:underline cursor-pointer"
+                                  >
+                                    মুছুন
+                                  </button>
+                                </div>
+                              ) : (
+                                <ImageUploader
+                                  value=""
+                                  onChange={(url) => {
+                                    const next = [...(config.reviews || [])];
+                                    next[revIdx] = { ...next[revIdx], imageUrl: url };
+                                    onConfigChange({ ...config, reviews: next });
+                                  }}
+                                  label="গ্রাহকের ছবি আপলোড করুন"
+                                  sublabel="প্রোডাক্ট পরিহিত বা আনবক্সিং ছবি"
+                                  folder="landing-pages"
+                                />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+
+                        {(!config.reviews || config.reviews.length === 0) && (
+                          <div className="py-3 text-center text-muted-foreground text-[11px] bg-muted/20 rounded-lg">
+                            এখনো কোনো কাস্টম রিভিউ যোগ করা হয়নি (ডিফল্ট রিভিউগুলো প্রদর্শিত হবে)।
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Order form default section */}
+                  {sec.type === "order-form" && (
                     <div className="py-2 text-center text-xs text-muted-foreground bg-muted/20 rounded-lg">
-                      এই সেকশনটি স্বয়ংক্রিয়ভাবে অপটিমাইজড এবং লাইভ ডাটার সাথে কানেক্টেড।
+                      অর্ডার ফর্ম সেকশনটি স্বয়ংক্রিয়ভাবে অপটিমাইজড এবং লাইভ চেকআউট ও ইনস্ট্যান্ট অর্ডারের সাথে কানেক্টেড।
                     </div>
                   )}
                 </div>

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrders, type Order, type OrderItem } from "@/lib/orders";
-import { getSizePrice, type Product } from "@/lib/shop-data";
+import { getSizePrice, getSizeStock, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { CustomerSearchInput } from "@/components/admin/customer-search-input";
 import { useSettings } from "@/context/settings-context";
@@ -148,7 +148,7 @@ function SearchableSelect({
 export default function AdminPreOrderPage() {
   const searchParams = useSearchParams();
   const editOrderId = searchParams ? searchParams.get("edit") : null;
-  const { addOrder, generateNextOrderId, orders, updateOrder } = useOrders();
+  const { addOrder, generateNextOrderId, generateNextPreOrderId, orders, updateOrder } = useOrders();
   const { products } = useProducts();
   const { settings } = useSettings();
   const router = useRouter();
@@ -450,7 +450,7 @@ export default function AdminPreOrderPage() {
     const actualNote = note.trim() ? `${noteType} Note: ${note.trim()}` : "";
 
     const order: Order = {
-      id: editOrderId || generateNextOrderId(),
+      id: editOrderId || generateNextPreOrderId(),
       customer: customer.trim(),
       phone: phone.trim(),
       address: address.trim() ? address.trim() : `${district}, ${division}`,
@@ -466,6 +466,7 @@ export default function AdminPreOrderPage() {
       status: editOrderId ? existingStatus : "pending",
       date: new Date().toISOString().slice(0, 10),
       source: "pre-order",
+      isPreOrder: true,
       sourcePageName: sourcePage || undefined,
       socialMediaSourceName: socialSource || undefined,
       courierName: courierName || undefined,
@@ -571,73 +572,91 @@ export default function AdminPreOrderPage() {
                         <th className="py-2 text-left font-semibold">Product</th>
                         <th className="py-2 text-center w-[90px] font-semibold">Qty</th>
                         <th className="py-2 text-left w-[70px] font-semibold">Size</th>
+                        <th className="py-2 text-center w-[110px] font-semibold">Stock Availability</th>
                         <th className="py-2 text-right w-[80px] font-semibold">Price</th>
                         <th className="py-2 text-right w-[75px] font-semibold">Total</th>
                         <th className="py-2 text-center w-[35px] font-semibold"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
-                      {lines.map((l) => (
-                        <tr key={l.key} className="hover:bg-secondary/20">
-                          <td className="py-2.5 pr-2 font-medium text-foreground truncate max-w-[130px] align-middle">
-                            {l.name}
-                          </td>
-                          <td className="py-2.5 px-1 align-middle">
-                            <div className="flex items-center justify-center gap-1 bg-secondary/50 rounded border border-border p-0.5 w-[84px] mx-auto">
+                      {lines.map((l) => {
+                        const matchedProd = products.find((p) => p.slug === l.slug);
+                        const currentStock = matchedProd ? getSizeStock(matchedProd, l.size) : 0;
+                        const inStock = currentStock > 0;
+
+                        return (
+                          <tr key={l.key} className="hover:bg-secondary/20">
+                            <td className="py-2.5 pr-2 font-medium text-foreground truncate max-w-[130px] align-middle">
+                              {l.name}
+                            </td>
+                            <td className="py-2.5 px-1 align-middle">
+                              <div className="flex items-center justify-center gap-1 bg-secondary/50 rounded border border-border p-0.5 w-[84px] mx-auto">
+                                <button
+                                  type="button"
+                                  onClick={() => updateLineQty(l.key, -1)}
+                                  className="size-5 flex items-center justify-center rounded hover:bg-background cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
+                                >
+                                  <Minus className="size-2.5" />
+                                </button>
+                                <span className="font-semibold text-xs min-w-[16px] text-center">{l.qty}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => updateLineQty(l.key, 1)}
+                                  className="size-5 flex items-center justify-center rounded hover:bg-background cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
+                                >
+                                  <Plus className="size-2.5" />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-1 align-middle">
+                              <select
+                                value={l.size}
+                                onChange={(e) => updateLineSize(l.key, e.target.value)}
+                                className="h-7 w-[64px] rounded border border-border bg-background px-1 text-xs font-semibold text-left"
+                              >
+                                {(l.availableSizes || [l.size]).map((s) => (
+                                  <option key={s} value={s}>
+                                    {s}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="py-2.5 px-1 text-center align-middle">
+                              {inStock ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-300">
+                                  Yes ({currentStock})
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-300">
+                                  No (0)
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-1 text-right align-middle">
+                              <input
+                                type="number"
+                                value={l.price === 0 ? "" : l.price}
+                                onFocus={(e) => e.target.select()}
+                                placeholder="0"
+                                onChange={(e) => updateLinePrice(l.key, e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
+                                className="h-7 w-[72px] text-right rounded border border-border bg-background px-1 text-xs font-medium ml-auto"
+                              />
+                            </td>
+                            <td className="py-2.5 pl-1 text-right font-bold text-foreground align-middle">
+                              ৳{l.price * l.qty}
+                            </td>
+                            <td className="py-2.5 text-center align-middle">
                               <button
                                 type="button"
-                                onClick={() => updateLineQty(l.key, -1)}
-                                className="size-5 flex items-center justify-center rounded hover:bg-background cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
+                                onClick={() => removeLine(l.key)}
+                                className="size-6 inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded cursor-pointer transition-colors"
                               >
-                                <Minus className="size-2.5" />
+                                <X className="size-3.5" />
                               </button>
-                              <span className="font-semibold text-xs min-w-[16px] text-center">{l.qty}</span>
-                              <button
-                                type="button"
-                                onClick={() => updateLineQty(l.key, 1)}
-                                className="size-5 flex items-center justify-center rounded hover:bg-background cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
-                              >
-                                <Plus className="size-2.5" />
-                              </button>
-                            </div>
-                          </td>
-                          <td className="py-2.5 px-1 align-middle">
-                            <select
-                              value={l.size}
-                              onChange={(e) => updateLineSize(l.key, e.target.value)}
-                              className="h-7 w-[64px] rounded border border-border bg-background px-1 text-xs font-semibold text-left"
-                            >
-                              {(l.availableSizes || [l.size]).map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="py-2.5 px-1 text-right align-middle">
-                            <input
-                              type="number"
-                              value={l.price === 0 ? "" : l.price}
-                              onFocus={(e) => e.target.select()}
-                              placeholder="0"
-                              onChange={(e) => updateLinePrice(l.key, e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
-                              className="h-7 w-[72px] text-right rounded border border-border bg-background px-1 text-xs font-medium ml-auto"
-                            />
-                          </td>
-                          <td className="py-2.5 pl-1 text-right font-bold text-foreground align-middle">
-                            ৳{l.price * l.qty}
-                          </td>
-                          <td className="py-2.5 text-center align-middle">
-                            <button
-                              type="button"
-                              onClick={() => removeLine(l.key)}
-                              className="size-6 inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded cursor-pointer transition-colors"
-                            >
-                              <X className="size-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

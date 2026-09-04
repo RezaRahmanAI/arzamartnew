@@ -23,7 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useOrders, type Order, type OrderItem } from "@/lib/orders";
 import { ordersService } from "@/lib/api/services/orders.service";
-import { getSizePrice, type Product } from "@/lib/shop-data";
+import { getSizePrice, getSizeStock, type Product } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
 import { CustomerSearchInput } from "@/components/admin/customer-search-input";
 import { useSettings } from "@/context/settings-context";
@@ -382,6 +382,12 @@ export default function AdminManualOrder() {
 
   // Directly select size and add product to order lines without popup
   const addProductDirectly = (product: Product, size: string) => {
+    const stock = getSizeStock(product, size);
+    if (stock <= 0) {
+      toast.error(`"${product.name} (${size})" is Out of Stock. Cannot add to regular order.`);
+      return;
+    }
+
     const unitPrice = getSizePrice(product, size);
 
     setLines((prev) => {
@@ -389,10 +395,15 @@ export default function AdminManualOrder() {
         (l) => l.slug === product.slug && l.size === size
       );
       if (existingIdx >= 0) {
+        const nextQty = prev[existingIdx].qty + 1;
+        if (nextQty > stock) {
+          toast.error(`Cannot add more. Available stock is only ${stock}.`);
+          return prev;
+        }
         const next = [...prev];
         next[existingIdx] = {
           ...next[existingIdx],
-          qty: next[existingIdx].qty + 1,
+          qty: nextQty,
         };
         return next;
       }
@@ -416,6 +427,16 @@ export default function AdminManualOrder() {
   // Confirm options in modal and add to cart
   const confirmAddToCartFromModal = () => {
     if (!selectedProductForModal) return;
+    const stock = getSizeStock(selectedProductForModal, modalSize);
+    if (stock <= 0) {
+      toast.error(`"${selectedProductForModal.name} (${modalSize})" is Out of Stock. Cannot add to regular order.`);
+      return;
+    }
+    if (modalQty > stock) {
+      toast.error(`Requested quantity (${modalQty}) exceeds available stock (${stock}).`);
+      return;
+    }
+
     const unitPrice = getSizePrice(selectedProductForModal, modalSize);
 
     setLines((prev) => {
@@ -423,10 +444,15 @@ export default function AdminManualOrder() {
         (l) => l.slug === selectedProductForModal.slug && l.size === modalSize
       );
       if (existingIdx >= 0) {
+        const totalQty = prev[existingIdx].qty + modalQty;
+        if (totalQty > stock) {
+          toast.error(`Cannot add more. Available stock is only ${stock}.`);
+          return prev;
+        }
         const next = [...prev];
         next[existingIdx] = {
           ...next[existingIdx],
-          qty: next[existingIdx].qty + modalQty,
+          qty: totalQty,
         };
         return next;
       }
@@ -444,7 +470,7 @@ export default function AdminManualOrder() {
       ];
     });
 
-    toast.success(`Added ${selectedProductForModal.name} (${modalSize})`);
+    toast.success(`Added ${selectedProductForModal.name} (${modalSize}) x${modalQty}`);
     setSelectedProductForModal(null);
   };
 
@@ -1017,17 +1043,29 @@ export default function AdminManualOrder() {
                         {/* Size Stock Badges Grid directly selects size and adds to cart */}
                         <div className="pt-1.5 border-t border-border/40 mt-1">
                           <div className="grid grid-cols-3 gap-0.5">
-                            {product.sizes.slice(0, 6).map((sz) => (
-                              <button
-                                key={sz}
-                                type="button"
-                                onClick={() => addProductDirectly(product, sz)}
-                                className="flex items-center justify-between bg-secondary/40 hover:bg-primary/20 hover:border-primary border border-border rounded px-1 py-0.5 text-[9px] cursor-pointer transition-colors"
-                              >
-                                <span className="font-bold text-foreground text-[9px]">{sz}</span>
-                                <span className="text-[8.5px] text-green-700 font-semibold">20</span>
-                              </button>
-                            ))}
+                            {product.sizes.slice(0, 6).map((sz) => {
+                              const szStock = getSizeStock(product, sz);
+                              const isOutOfStock = szStock <= 0;
+                              return (
+                                <button
+                                  key={sz}
+                                  type="button"
+                                  disabled={isOutOfStock}
+                                  onClick={() => addProductDirectly(product, sz)}
+                                  className={`flex items-center justify-between border rounded px-1 py-0.5 text-[9px] transition-colors ${
+                                    isOutOfStock
+                                      ? "bg-muted/60 border-border text-muted-foreground opacity-50 cursor-not-allowed line-through"
+                                      : "bg-secondary/40 hover:bg-primary/20 hover:border-primary border-border cursor-pointer"
+                                  }`}
+                                  title={isOutOfStock ? `${sz}: Out of stock` : `${sz}: ${szStock} in stock`}
+                                >
+                                  <span className="font-bold text-foreground text-[9px]">{sz}</span>
+                                  <span className={`text-[8.5px] font-semibold ${isOutOfStock ? "text-destructive" : "text-emerald-600"}`}>
+                                    {szStock}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
@@ -1097,18 +1135,26 @@ export default function AdminManualOrder() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {selectedProductForModal.sizes.map((s) => {
                     const sp = getSizePrice(selectedProductForModal, s);
+                    const st = getSizeStock(selectedProductForModal, s);
+                    const isOut = st <= 0;
                     return (
                       <button
                         key={s}
                         type="button"
+                        disabled={isOut}
                         onClick={() => setModalSize(s)}
-                        className={`min-w-10 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                          s === modalSize
-                            ? "border-primary bg-primary text-primary-foreground font-bold"
-                            : "border-border bg-card text-foreground hover:border-primary"
+                        className={`min-w-10 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                          isOut
+                            ? "border-border bg-muted/60 text-muted-foreground opacity-50 cursor-not-allowed line-through"
+                            : s === modalSize
+                            ? "border-primary bg-primary text-primary-foreground font-bold cursor-pointer"
+                            : "border-border bg-card text-foreground hover:border-primary cursor-pointer"
                         }`}
                       >
                         {s}
+                        <span className={`ml-1 text-[9px] ${isOut ? "text-destructive" : "opacity-80"}`}>
+                          ({st})
+                        </span>
                         {selectedProductForModal.sizePrices &&
                           selectedProductForModal.sizePrices[s] !== undefined && (
                             <span className="ml-1 text-[9px] opacity-70">

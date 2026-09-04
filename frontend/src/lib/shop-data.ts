@@ -62,6 +62,16 @@ export type Product = {
   images?: string[];
   isActive?: boolean;
   acceptPreOrder?: boolean;
+  sizeTemplateId?: string | null;
+  sizeMeasurements?: Record<
+    string,
+    {
+      chest?: string | null;
+      length?: string | null;
+      waist?: string | null;
+      sleeve?: string | null;
+    }
+  >;
 };
 
 export const getSizePrice = (product: Product, size: string): number =>

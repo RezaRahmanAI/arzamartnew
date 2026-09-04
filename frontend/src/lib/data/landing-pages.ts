@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import type { LandingPageData, CustomLandingPageConfig, LandingPageListItem } from "@/lib/api/services/custom-landing-page.service";
+import type { LandingPageData, CustomLandingPageConfig, LandingPageListItem, CLPReview } from "@/lib/api/services/custom-landing-page.service";
 
 export async function getLandingPageBySlug(slug: string): Promise<LandingPageData | null> {
   try {
@@ -32,11 +32,37 @@ export async function getLandingPageBySlug(slug: string): Promise<LandingPageDat
       }
     }
 
+    let customHeroImages: string[] | undefined = undefined;
+    if (config?.customHeroImagesJson) {
+      try {
+        customHeroImages = JSON.parse(config.customHeroImagesJson);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    let reviews: CLPReview[] | undefined = undefined;
+    if (config?.reviewsJson) {
+      try {
+        reviews = JSON.parse(config.reviewsJson);
+      } catch {
+        /* ignore */
+      }
+    }
+
     const customConfig: CustomLandingPageConfig | null = config
       ? {
           id: config.id,
           productId: config.productId,
           productSlug: product.slug,
+          isActive: config.isActive ?? true,
+          isCustomHeroDescriptionVisible: config.isCustomHeroDescriptionVisible ?? true,
+          discountCtaText: config.discountCtaText || undefined,
+          freeDeliveryCtaText: config.freeDeliveryCtaText || undefined,
+          customHeroImagesJson: config.customHeroImagesJson || undefined,
+          customHeroImages,
+          reviewsJson: config.reviewsJson || undefined,
+          reviews,
           relativeTimerTotalMinutes: config.relativeTimerTotalMinutes,
           isTimerVisible: config.isTimerVisible,
           headerTitle: config.headerTitle || undefined,
@@ -162,6 +188,12 @@ export async function getAllLandingPages(): Promise<LandingPageListItem[]> {
               id: config.id,
               productId: config.productId,
               productSlug: p.slug,
+              isActive: config.isActive ?? true,
+              isCustomHeroDescriptionVisible: config.isCustomHeroDescriptionVisible ?? true,
+              discountCtaText: config.discountCtaText || undefined,
+              freeDeliveryCtaText: config.freeDeliveryCtaText || undefined,
+              customHeroImagesJson: config.customHeroImagesJson || undefined,
+              reviewsJson: config.reviewsJson || undefined,
               relativeTimerTotalMinutes: config.relativeTimerTotalMinutes,
               isTimerVisible: config.isTimerVisible,
               headerTitle: config.headerTitle || undefined,

@@ -21,6 +21,22 @@ const STATUS_MAP_STR_TO_INT: Record<string, number> = {
   "return-process": 13,
 };
 
+const STATUS_MAP_INT_TO_STR: Record<number, OrderStatus> = {
+  1: "pending",
+  2: "processing",
+  3: "shipped",
+  4: "delivered",
+  5: "cancelled",
+  6: "confirmed",
+  7: "packed",
+  8: "hold",
+  9: "preorder",
+  10: "return",
+  11: "exchange",
+  12: "refund",
+  13: "return-process",
+};
+
 export interface CreateOrderInput {
   id?: string;
   customerId?: string;
@@ -45,10 +61,12 @@ export interface CreateOrderInput {
   source?: "checkout" | "manual" | "pre-order";
   sourcePageName?: string;
   socialMediaSourceName?: string;
+  courierName?: string;
+  courierTrackingNumber?: string;
 }
 
 async function resolveNextOrderNumber(): Promise<string> {
-  const prefix = "ORD-";
+  let prefix = "ORD-";
   let nextNum = 10001;
 
   // 1. Check WebsiteSettings for orderIdPrefix and nextOrderNumber
@@ -56,6 +74,9 @@ async function resolveNextOrderNumber(): Promise<string> {
   if (settingsRow?.settingsJson) {
     try {
       const parsed = JSON.parse(settingsRow.settingsJson);
+      if (parsed?.orders?.orderIdPrefix) {
+        prefix = parsed.orders.orderIdPrefix;
+      }
       if (parsed?.orders?.nextOrderNumber) {
         nextNum = Number(parsed.orders.nextOrderNumber);
       }
@@ -64,14 +85,18 @@ async function resolveNextOrderNumber(): Promise<string> {
     }
   }
 
-  // 2. Query highest orderNumber in database
+  // 2. Query highest orderNumber matching this regular prefix in database
   const latestOrder = await prisma.order.findFirst({
+    where: {
+      orderNumber: { startsWith: prefix },
+    },
     orderBy: { createdAtUtc: "desc" },
     select: { orderNumber: true },
   });
 
   if (latestOrder?.orderNumber) {
-    const numPart = parseInt(latestOrder.orderNumber.replace(/\D/g, ""), 10);
+    const rawNumStr = latestOrder.orderNumber.replace(prefix, "").replace(/\D/g, "");
+    const numPart = parseInt(rawNumStr, 10);
     if (!isNaN(numPart) && numPart >= nextNum) {
       nextNum = numPart + 1;
     }
@@ -80,9 +105,49 @@ async function resolveNextOrderNumber(): Promise<string> {
   return `${prefix}${nextNum}`;
 }
 
-export async function getOrdersAction(): Promise<{ orders: Order[]; incomplete: Order[] }> {
+async function resolveNextPreOrderNumber(): Promise<string> {
+  let prefix = "PRE-";
+  let nextNum = 1001;
+
+  // 1. Check WebsiteSettings for preOrderIdPrefix and nextPreOrderNumber
+  const settingsRow = await prisma.websiteSettings.findFirst();
+  if (settingsRow?.settingsJson) {
+    try {
+      const parsed = JSON.parse(settingsRow.settingsJson);
+      if (parsed?.orders?.preOrderIdPrefix) {
+        prefix = parsed.orders.preOrderIdPrefix;
+      }
+      if (parsed?.orders?.nextPreOrderNumber) {
+        nextNum = Number(parsed.orders.nextPreOrderNumber);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // 2. Query highest pre-order number matching this prefix in database
+  const latestPreOrder = await prisma.order.findFirst({
+    where: {
+      orderNumber: { startsWith: prefix },
+    },
+    orderBy: { createdAtUtc: "desc" },
+    select: { orderNumber: true },
+  });
+
+  if (latestPreOrder?.orderNumber) {
+    const rawNumStr = latestPreOrder.orderNumber.replace(prefix, "").replace(/\D/g, "");
+    const numPart = parseInt(rawNumStr, 10);
+    if (!isNaN(numPart) && numPart >= nextNum) {
+      nextNum = numPart + 1;
+    }
+  }
+
+  return `${prefix}${nextNum}`;
+}
+
+export async function getOrdersAction(options?: { type?: "all" | "regular" | "preorder"; includePreOrders?: boolean }): Promise<{ orders: Order[]; incomplete: Order[] }> {
   try {
-    return await getAllOrders();
+    return await getAllOrders(options);
   } catch (error) {
     console.error("getOrdersAction error:", error);
     return { orders: [], incomplete: [] };
@@ -140,17 +205,14 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       });
     }
 
-    // 2. Resolve order number
-    const orderNumber = await resolveNextOrderNumber();
-
-    // 3. Resolve subTotal, discount, delivery
+    // 2. Resolve subTotal, discount, delivery
     const subTotal = input.items.reduce((acc, item) => acc + (item.price || 0) * (item.qty || 1), 0);
     const shippingFee = input.delivery ?? 0;
     const totalAmount = input.total || subTotal + shippingFee;
     const discountAmount = Math.max(0, subTotal + shippingFee - totalAmount);
 
-    // 4. Validate items against actual stock & calculate isPreOrder
-    let calculatedIsPreOrder = false;
+    // 3. Validate items against actual stock & calculate isPreOrder
+    let calculatedIsPreOrder = input.source === "pre-order" || input.status === "preorder";
 
     for (const item of input.items) {
       const isUuid = item.slug && item.slug.length === 36 && item.slug.includes("-");
@@ -189,7 +251,7 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       const requestedQty = item.qty || 1;
 
       if (availableStock < requestedQty) {
-        if (acceptsPreOrder) {
+        if (acceptsPreOrder || input.source === "pre-order") {
           // Allowed: will be classified as Pre-Order
           calculatedIsPreOrder = true;
         } else {
@@ -202,6 +264,11 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       }
     }
 
+    // Resolve order number independently for pre-order vs regular order
+    const orderNumber = calculatedIsPreOrder
+      ? await resolveNextPreOrderNumber()
+      : await resolveNextOrderNumber();
+
     const fullAddressJson = JSON.stringify({
       address: input.address,
       city: input.city,
@@ -209,9 +276,11 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       note: input.note || "",
       paymentMethod: input.payment || "Cash on Delivery",
       isPreOrder: calculatedIsPreOrder,
-      source: input.source || "checkout",
+      source: input.source || (calculatedIsPreOrder ? "pre-order" : "checkout"),
       sourcePageName: input.sourcePageName || "",
       socialMediaSourceName: input.socialMediaSourceName || "",
+      courierName: input.courierName || "",
+      courierTrackingNumber: input.courierTrackingNumber || "",
     });
 
     const statusInt = STATUS_MAP_STR_TO_INT[input.status || "pending"] ?? 1;
@@ -230,6 +299,7 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
           paymentStatus: 0, // 0 = Unpaid
           shippingAddressJson: fullAddressJson,
           couponCode: null,
+          isPreOrder: calculatedIsPreOrder,
         },
       });
 
@@ -618,6 +688,14 @@ export async function deleteOrderAction(orderIdentifier: string): Promise<{ succ
     });
 
     if (order) {
+      // REQUIREMENT: Delete is ONLY allowed when order status is "cancelled" (status code 5)
+      if (order.orderStatus !== 5) {
+        return {
+          success: false,
+          error: "Orders can only be deleted when their status is 'Cancelled'.",
+        };
+      }
+
       // 1. Delete associated order items
       await prisma.orderItem.deleteMany({
         where: { orderId: order.id },
@@ -644,6 +722,527 @@ export async function deleteOrderAction(orderIdentifier: string): Promise<{ succ
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to delete order",
+    };
+  }
+}
+
+/**
+ * Transfer a Pre-Order to a Regular Order:
+ * 1. Checks that the order exists and is currently a pre-order.
+ * 2. Gated on CURRENT product stock: For every item, verify available stock >= required quantity.
+ *    If any item is insufficient, rejects server-side with detailed error message.
+ * 3. In an atomic transaction:
+ *    - Assigns a NEW order number from the regular sequence (ORD-xxxxx).
+ *    - Updates isPreOrder = false in database and inside shippingAddressJson metadata.
+ *    - Deducts the required stock from each variant.
+ *    - Records audit log in the order's note field.
+ * 4. Revalidates paths.
+ */
+export async function transferToRegularOrderAction(
+  orderIdentifier: string
+): Promise<{ success: boolean; error?: string; newOrderNumber?: string }> {
+  try {
+    const cleanId = orderIdentifier.trim();
+    const isUuid = cleanId.length === 36 && cleanId.includes("-");
+
+    const order = await prisma.order.findFirst({
+      where: isUuid ? { id: cleanId } : { orderNumber: cleanId },
+      include: {
+        customer: true,
+        items: {
+          include: {
+            product: {
+              include: { variants: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return { success: false, error: "Order not found." };
+    }
+
+    let meta: Record<string, unknown> = {};
+    try {
+      if (order.shippingAddressJson) {
+        meta = JSON.parse(order.shippingAddressJson);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    const isCurrentPreOrder = order.isPreOrder || meta.isPreOrder || order.orderStatus === 9 || order.orderStatus === 10;
+    if (!isCurrentPreOrder) {
+      return { success: false, error: "This order is already a regular running order." };
+    }
+
+    // --- REQUIREMENT 3: Stock-Gated Check at Transfer Time ---
+    const insufficientItems: string[] = [];
+    const variantMatches: Array<{
+      item: typeof order.items[0];
+      variant: NonNullable<typeof order.items[0]["product"]>["variants"][0];
+    }> = [];
+
+    for (const item of order.items) {
+      if (!item.product) {
+        insufficientItems.push(`${item.productName}: Product catalog entry not found.`);
+        continue;
+      }
+
+      let matchedVariant: NonNullable<typeof item.product>["variants"][0] | null = null;
+      if (item.variantId) {
+        matchedVariant = item.product.variants.find((v) => v.id === item.variantId) || null;
+      }
+      if (!matchedVariant) {
+        const sizeMatch = item.productName.match(/\(([^)]+)\)$/);
+        const sizeName = sizeMatch ? sizeMatch[1].trim().toLowerCase() : "";
+        matchedVariant = item.product.variants.find((v) =>
+          v.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === sizeName ||
+          v.name.toLowerCase().includes(sizeName)
+        ) || null;
+      }
+      if (!matchedVariant && item.product.variants.length === 1) {
+        matchedVariant = item.product.variants[0];
+      }
+
+      if (!matchedVariant) {
+        insufficientItems.push(`${item.productName}: Variant not found.`);
+        continue;
+      }
+
+      if (matchedVariant.stockQuantity < item.quantity) {
+        insufficientItems.push(
+          `${item.productName} (Available: ${matchedVariant.stockQuantity}, Required: ${item.quantity})`
+        );
+      } else {
+        variantMatches.push({ item, variant: matchedVariant });
+      }
+    }
+
+    if (insufficientItems.length > 0) {
+      return {
+        success: false,
+        error: `Cannot transfer: Insufficient stock for ${insufficientItems.join("; ")}`,
+      };
+    }
+
+    // --- REQUIREMENT 4: Transfer Behavior - ID Switching & Stock Reservation ---
+    const newRegularOrderNumber = await resolveNextOrderNumber();
+    const originalOrderNumber = order.orderNumber;
+
+    meta.isPreOrder = false;
+    meta.transferredFromPreOrderAt = new Date().toISOString();
+    meta.originalPreOrderNumber = originalOrderNumber;
+    const auditNote = `[TRANSFER] Order originally ${originalOrderNumber}, transferred to regular order ${newRegularOrderNumber} on ${new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" })}.`;
+    meta.note = meta.note ? `${meta.note}\n${auditNote}` : auditNote;
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Decrement stock for confirmed/running order reservation
+      for (const { item, variant } of variantMatches) {
+        await tx.productVariant.update({
+          where: { id: variant.id },
+          data: {
+            stockQuantity: {
+              decrement: item.quantity,
+            },
+          },
+        });
+      }
+
+      // 2. Update order record in-place
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          orderNumber: newRegularOrderNumber,
+          isPreOrder: false,
+          orderStatus: order.orderStatus === 9 ? 1 : order.orderStatus, // if preorder (9), move to pending (1)
+          shippingAddressJson: JSON.stringify(meta),
+        },
+      });
+    });
+
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/pre-order");
+    revalidatePath(`/order-confirmation/${newRegularOrderNumber}`);
+
+    return {
+      success: true,
+      newOrderNumber: newRegularOrderNumber,
+    };
+  } catch (error) {
+    console.error("transferToRegularOrderAction error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to transfer to regular order.",
+    };
+  }
+}
+
+/**
+ * Transfer a Regular Pending Order to a Pre-Order:
+ * 1. Checks that the order exists and is currently in "pending" status.
+ *    Server-side validation strictly rejects if order status is anything other than pending (1).
+ * 2. In an atomic transaction:
+ *    - Assigns a NEW order number from the pre-order sequence (PRE-xxxxx).
+ *    - Updates isPreOrder = true in database and inside shippingAddressJson metadata.
+ *    - Updates orderStatus to 9 (preorder) or keeps pending flag.
+ *    - Records audit log in the order note.
+ * 3. Revalidates paths.
+ */
+export async function transferToPreOrderAction(
+  orderIdentifier: string
+): Promise<{ success: boolean; error?: string; newOrderNumber?: string }> {
+  try {
+    const cleanId = orderIdentifier.trim();
+    const isUuid = cleanId.length === 36 && cleanId.includes("-");
+
+    const order = await prisma.order.findFirst({
+      where: isUuid ? { id: cleanId } : { orderNumber: cleanId },
+      include: {
+        customer: true,
+        items: true,
+      },
+    });
+
+    if (!order) {
+      return { success: false, error: "Order not found." };
+    }
+
+    // --- REQUIREMENT 5: Reverse Direction - Regular Pending Order -> Pre-Order ---
+    // Server-side validation: ONLY allowed if order status is "pending" (1)
+    if (order.orderStatus !== 1) {
+      return {
+        success: false,
+        error: "Only orders in 'Pending' status can be transferred to Pre-Order.",
+      };
+    }
+
+    let meta: Record<string, unknown> = {};
+    try {
+      if (order.shippingAddressJson) {
+        meta = JSON.parse(order.shippingAddressJson);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    const isAlreadyPreOrder = Boolean(order.isPreOrder || meta.isPreOrder);
+    if (isAlreadyPreOrder) {
+      return { success: false, error: "This order is already a pre-order." };
+    }
+
+    const newPreOrderNumber = await resolveNextPreOrderNumber();
+    const originalRegularNumber = order.orderNumber;
+
+    meta.isPreOrder = true;
+    meta.transferredToPreOrderAt = new Date().toISOString();
+    meta.originalRegularOrderNumber = originalRegularNumber;
+    const auditNote = `[TRANSFER] Order originally ${originalRegularNumber}, transferred to pre-order ${newPreOrderNumber} on ${new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" })}.`;
+    meta.note = meta.note ? `${meta.note}\n${auditNote}` : auditNote;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          orderNumber: newPreOrderNumber,
+          isPreOrder: true,
+          orderStatus: 9, // PreOrder status enum
+          shippingAddressJson: JSON.stringify(meta),
+        },
+      });
+    });
+
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/pre-order");
+    revalidatePath(`/order-confirmation/${newPreOrderNumber}`);
+
+    return {
+      success: true,
+      newOrderNumber: newPreOrderNumber,
+    };
+  } catch (error) {
+    console.error("transferToPreOrderAction error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to transfer to pre-order.",
+    };
+  }
+}
+
+export interface ReturnedItemInput {
+  slug: string;
+  name: string;
+  size?: string;
+  returnQty: number;
+}
+
+export interface ProcessOrderReturnPayload {
+  orderIdentifier: string;
+  returnType: "full" | "partial" | "reject";
+  restockInventory: boolean;
+  returnedItems: ReturnedItemInput[];
+  reason?: string;
+  actorName?: string;
+}
+
+export interface ProcessOrderReturnResult {
+  success: boolean;
+  error?: string;
+  newStatus?: string;
+  newTotalAmount?: number;
+  newDueAmount?: number;
+  refundAmount?: number;
+  returnedItemsCount?: number;
+  restockedCount?: number;
+}
+
+/**
+ * Processes an order return (Full, Partial, or Reject) in a single atomic Prisma transaction.
+ * 1. Item-wise Partial Return: Only checked items and specified quantities are returned.
+ * 2. Auto-Restock: If restockInventory = true, increments stock in ProductVariant by returnedQty. If false, skips.
+ * 3. Financial Recalculation:
+ *    - Returned goods value = sum(unitPrice * returnQty).
+ *    - Delivery fee is strictly non-refundable (kept in order total).
+ *    - Order total = remaining goods + delivery fee.
+ *    - Recalculates Paid vs Due vs Refund amount.
+ * 4. Status update:
+ *    - Full return: status = 10 ('return')
+ *    - Partial return: status = 13 ('return-process') or 10 ('return')
+ *    - Reject: leaves status unchanged, appends audit note.
+ */
+export async function processOrderReturnAction(
+  payload: ProcessOrderReturnPayload
+): Promise<ProcessOrderReturnResult> {
+  try {
+    const {
+      orderIdentifier,
+      returnType,
+      restockInventory,
+      returnedItems = [],
+      reason = "",
+      actorName = "Staff",
+    } = payload;
+
+    const cleanId = orderIdentifier.trim();
+    const whereCondition =
+      cleanId.length === 36 && cleanId.includes("-")
+        ? { id: cleanId }
+        : { orderNumber: cleanId };
+
+    const order = await prisma.order.findFirst({
+      where: whereCondition,
+      include: {
+        customer: true,
+        items: {
+          include: {
+            product: {
+              include: { variants: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return { success: false, error: "Order not found" };
+    }
+
+    // CASE 1: REJECT RETURN
+    if (returnType === "reject") {
+      let meta: Record<string, unknown> = {};
+      try {
+        if (order.shippingAddressJson) meta = JSON.parse(order.shippingAddressJson);
+      } catch {
+        /* ignore */
+      }
+
+      const timestamp = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
+      const rejectNote = `[RETURN REJECTED] Return request rejected on ${timestamp} by ${actorName}. Reason: ${reason || "No reason given"}.`;
+      meta.note = meta.note ? `${meta.note}\n${rejectNote}` : rejectNote;
+
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          shippingAddressJson: JSON.stringify(meta),
+        },
+      });
+
+      revalidatePath("/admin/orders");
+      return {
+        success: true,
+        newStatus: STATUS_MAP_INT_TO_STR[order.orderStatus] || "confirmed",
+        newTotalAmount: Number(order.totalAmount),
+        newDueAmount: Math.max(0, Number(order.totalAmount) - (order.paymentStatus === 2 ? Number(order.totalAmount) : 0)),
+        refundAmount: 0,
+        returnedItemsCount: 0,
+        restockedCount: 0,
+      };
+    }
+
+    // Validate items to return
+    if (returnedItems.length === 0) {
+      return { success: false, error: "Please select at least one item to return." };
+    }
+
+    // Execute everything in a single atomic transaction
+    const result = await prisma.$transaction(async (tx) => {
+      let totalReturnedMerchandiseValue = 0;
+      let totalRestockedQty = 0;
+      const returnedSummaryList: string[] = [];
+
+      for (const retItem of returnedItems) {
+        if (retItem.returnQty <= 0) continue;
+
+        // Find corresponding line item in order
+        const lineItem = order.items.find((i) => {
+          const rawName = (i.productName || "").toLowerCase();
+          const matchTarget = retItem.name.toLowerCase();
+          return (
+            i.product?.slug === retItem.slug ||
+            rawName.includes(matchTarget) ||
+            matchTarget.includes(rawName)
+          );
+        });
+
+        if (!lineItem) continue;
+
+        const effectiveReturnQty = Math.min(retItem.returnQty, lineItem.quantity);
+        const unitPrice = Number(lineItem.unitPrice) || 0;
+        const lineReturnValue = unitPrice * effectiveReturnQty;
+        totalReturnedMerchandiseValue += lineReturnValue;
+
+        returnedSummaryList.push(`${lineItem.productName} x ${effectiveReturnQty} (৳${lineReturnValue})`);
+
+        // If Restock Inventory is checked, increment stock on matching ProductVariant
+        if (restockInventory && lineItem.product && lineItem.product.variants.length > 0) {
+          let variant = lineItem.variantId
+            ? lineItem.product.variants.find((v) => v.id === lineItem.variantId)
+            : null;
+
+          if (!variant) {
+            const sizeMatch = lineItem.productName.match(/\(([^)]+)\)$/);
+            const sizeName = retItem.size || (sizeMatch ? sizeMatch[1].trim() : "");
+            if (sizeName) {
+              variant = lineItem.product.variants.find(
+                (v) =>
+                  v.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === sizeName.toLowerCase() ||
+                  v.name.toLowerCase().includes(sizeName.toLowerCase())
+              );
+            }
+          }
+
+          if (variant) {
+            await tx.productVariant.update({
+              where: { id: variant.id },
+              data: {
+                stockQuantity: {
+                  increment: effectiveReturnQty,
+                },
+              },
+            });
+            totalRestockedQty += effectiveReturnQty;
+          }
+        }
+      }
+
+      // Financial Recalculation:
+      // Delivery charge is strictly non-refundable (excluded from return refund)
+      const shippingFee = Number(order.shippingFee) || 0;
+      const originalSubTotal = Number(order.subTotal) || 0;
+      const originalDiscount = Number(order.discountAmount) || 0;
+      const originalTotal = Number(order.totalAmount) || 0;
+
+      // New subtotal after removing returned merchandise
+      const newSubTotal = Math.max(0, originalSubTotal - totalReturnedMerchandiseValue);
+      // New total retains shipping fee
+      const newTotalAmount = returnType === "full"
+        ? shippingFee // If full return, customer still owes delivery fee, goods value becomes 0
+        : Math.max(shippingFee, newSubTotal + shippingFee - originalDiscount);
+
+      // Determine Paid vs Due vs Refund
+      const wasPaid = order.paymentStatus === 2;
+      const paidAmount = wasPaid ? originalTotal : 0;
+
+      let refundAmount = 0;
+      let newDueAmount = 0;
+
+      if (paidAmount > newTotalAmount) {
+        refundAmount = paidAmount - newTotalAmount;
+        newDueAmount = 0;
+      } else {
+        newDueAmount = newTotalAmount - paidAmount;
+        refundAmount = 0;
+      }
+
+      // Status resolution
+      const targetStatusInt = returnType === "full" ? 10 : 13; // 10 = return, 13 = return-process
+
+      // Update metadata & notes
+      let meta: Record<string, unknown> = {};
+      try {
+        if (order.shippingAddressJson) meta = JSON.parse(order.shippingAddressJson);
+      } catch {
+        /* ignore */
+      }
+
+      const timestamp = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
+      const returnAudit = [
+        `[RETURN PROCESSED - ${returnType.toUpperCase()}] on ${timestamp} by ${actorName}`,
+        `Items: ${returnedSummaryList.join(", ")}`,
+        `Restocked: ${restockInventory ? `Yes (${totalRestockedQty} units)` : "No (damaged/skipped)"}`,
+        `Returned Value: ৳${totalReturnedMerchandiseValue} (Delivery ৳${shippingFee} retained)`,
+        `New Total: ৳${newTotalAmount}, ${refundAmount > 0 ? `Refund Due: ৳${refundAmount}` : `Remaining Due: ৳${newDueAmount}`}`,
+        reason ? `Reason: ${reason}` : "",
+      ]
+        .filter(Boolean)
+        .join(" | ");
+
+      meta.note = meta.note ? `${meta.note}\n${returnAudit}` : returnAudit;
+      meta.returnSummary = {
+        returnType,
+        restockInventory,
+        returnedValue: totalReturnedMerchandiseValue,
+        retainedDeliveryCharge: shippingFee,
+        newTotal: newTotalAmount,
+        refundAmount,
+        newDueAmount,
+        processedAt: new Date().toISOString(),
+      };
+
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          subTotal: newSubTotal,
+          totalAmount: newTotalAmount,
+          orderStatus: targetStatusInt,
+          paymentStatus: refundAmount > 0 ? 1 : wasPaid ? 2 : 0,
+          shippingAddressJson: JSON.stringify(meta),
+        },
+      });
+
+      return {
+        newStatus: STATUS_MAP_INT_TO_STR[targetStatusInt] || "return",
+        newTotalAmount,
+        newDueAmount,
+        refundAmount,
+        returnedItemsCount: returnedSummaryList.length,
+        restockedCount: totalRestockedQty,
+      };
+    });
+
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/bulk-shipment");
+
+    return {
+      success: true,
+      ...result,
+    };
+  } catch (error) {
+    console.error("processOrderReturnAction error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to process return.",
     };
   }
 }

@@ -35,6 +35,7 @@ export type OrderItem = {
   size: string;
   qty: number;
   price: number;
+  imageUrl?: string;
 };
 
 export type Order = {
@@ -72,6 +73,7 @@ type OrdersContextValue = {
   isLoading: boolean;
   generateNextOrderId: () => string;
   generateNextIncompleteOrderId: () => string;
+  generateNextPreOrderId: () => string;
   addOrder: (order: Order) => Promise<string>;
   saveIncomplete: (order: Order) => Promise<void>;
   removeIncomplete: (id: string) => Promise<void>;
@@ -79,6 +81,8 @@ type OrdersContextValue = {
   updateStatus: (id: string, status: OrderStatus) => Promise<void>;
   updateOrder: (id: string, payload: Partial<Order>) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
+  transferToRegularOrder: (id: string) => Promise<{ success: boolean; error?: string; newOrderNumber?: string }>;
+  transferToPreOrder: (id: string) => Promise<{ success: boolean; error?: string; newOrderNumber?: string }>;
 };
 
 const OrdersContext = createContext<OrdersContextValue | null>(null);
@@ -98,6 +102,12 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   const generateNextIncompleteOrderId = useCallback((): string => {
     const prefix = settings?.orders?.incompleteOrderIdPrefix ?? "INC-";
     const nextNum = settings?.orders?.nextIncompleteOrderNumber ?? 5001;
+    return `${prefix}${nextNum}`;
+  }, [settings]);
+
+  const generateNextPreOrderId = useCallback((): string => {
+    const prefix = settings?.orders?.preOrderIdPrefix ?? "PRE-";
+    const nextNum = settings?.orders?.nextPreOrderNumber ?? 1001;
     return `${prefix}${nextNum}`;
   }, [settings]);
 
@@ -134,14 +144,21 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         console.error("Failed to sync order creation with API:", err);
       }
 
-      // Keep nextOrderNumber in settings aligned with the final adopted id so
-      // subsequent orders keep incrementing from the last one.
-      const prefix = settings?.orders?.orderIdPrefix ?? "ORD-";
-      const currentNum = settings?.orders?.nextOrderNumber ?? 10001;
-      if (finalId.startsWith(prefix)) {
-        const extractedNum = parseInt(finalId.replace(prefix, ""), 10);
-        const nextNum = !isNaN(extractedNum) ? Math.max(currentNum + 1, extractedNum + 1) : currentNum + 1;
+      // Keep nextOrderNumber / nextPreOrderNumber in settings aligned with final adopted id
+      const regPrefix = settings?.orders?.orderIdPrefix ?? "ORD-";
+      const regCurrentNum = settings?.orders?.nextOrderNumber ?? 10001;
+      const prePrefix = settings?.orders?.preOrderIdPrefix ?? "PRE-";
+      const preCurrentNum = settings?.orders?.nextPreOrderNumber ?? 1001;
+
+      if (finalId.startsWith(regPrefix)) {
+        const extractedNum = parseInt(finalId.replace(regPrefix, ""), 10);
+        const nextNum = !isNaN(extractedNum) ? Math.max(regCurrentNum + 1, extractedNum + 1) : regCurrentNum + 1;
         updateSection("orders", { nextOrderNumber: nextNum });
+        saveSettings({ silent: true });
+      } else if (finalId.startsWith(prePrefix)) {
+        const extractedNum = parseInt(finalId.replace(prePrefix, ""), 10);
+        const nextNum = !isNaN(extractedNum) ? Math.max(preCurrentNum + 1, extractedNum + 1) : preCurrentNum + 1;
+        updateSection("orders", { nextPreOrderNumber: nextNum });
         saveSettings({ silent: true });
       }
 
@@ -275,6 +292,52 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     }
   }, [orders]);
 
+  const transferToRegularOrder = useCallback(
+    async (id: string) => {
+      const res = await ordersService.transferToRegularOrder(id);
+      if (res.success && res.newOrderNumber) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === id || o.id.replace(/\D/g, "") === id.replace(/\D/g, "")
+              ? { ...o, id: res.newOrderNumber!, isPreOrder: false }
+              : o
+          )
+        );
+        logSystemAction({
+          category: "ORDER",
+          action: "Pre-Order Transferred to Regular Order",
+          targetId: res.newOrderNumber,
+          details: `Pre-order #${id} successfully transferred to regular running order #${res.newOrderNumber}.`,
+        });
+      }
+      return res;
+    },
+    []
+  );
+
+  const transferToPreOrder = useCallback(
+    async (id: string) => {
+      const res = await ordersService.transferToPreOrder(id);
+      if (res.success && res.newOrderNumber) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === id || o.id.replace(/\D/g, "") === id.replace(/\D/g, "")
+              ? { ...o, id: res.newOrderNumber!, isPreOrder: true, status: "pending" as OrderStatus }
+              : o
+          )
+        );
+        logSystemAction({
+          category: "ORDER",
+          action: "Order Transferred to Pre-Order",
+          targetId: res.newOrderNumber,
+          details: `Regular pending order #${id} transferred to pre-order #${res.newOrderNumber}.`,
+        });
+      }
+      return res;
+    },
+    []
+  );
+
   const value = useMemo<OrdersContextValue>(
     () => ({
       orders,
@@ -282,6 +345,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       isLoading,
       generateNextOrderId,
       generateNextIncompleteOrderId,
+      generateNextPreOrderId,
       addOrder,
       saveIncomplete,
       removeIncomplete,
@@ -289,6 +353,8 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       updateStatus,
       updateOrder,
       deleteOrder,
+      transferToRegularOrder,
+      transferToPreOrder,
     }),
     [
       orders,
@@ -296,6 +362,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       isLoading,
       generateNextOrderId,
       generateNextIncompleteOrderId,
+      generateNextPreOrderId,
       addOrder,
       saveIncomplete,
       removeIncomplete,
@@ -303,6 +370,8 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       updateStatus,
       updateOrder,
       deleteOrder,
+      transferToRegularOrder,
+      transferToPreOrder,
     ]
   );
 

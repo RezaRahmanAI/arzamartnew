@@ -29,6 +29,7 @@ import {
   LandingSection,
   DEFAULT_LANDING_SECTIONS,
   RelatedProductItem,
+  CLPReview,
 } from "@/lib/api/services/custom-landing-page.service";
 import { products as staticProducts } from "@/lib/shop-data";
 import { useProducts } from "@/lib/products-store";
@@ -44,6 +45,7 @@ import {
 import { SystemSettings } from "@/types/settings";
 import { type Order } from "@/lib/orders";
 import { calculateQuantityOfferDiscount } from "@/lib/offer-calculator";
+import { useCart } from "@/lib/cart";
 
 interface UnifiedProduct {
   id: string;
@@ -58,6 +60,50 @@ interface UnifiedProduct {
   images?: { imageUrl: string; isMain: boolean }[];
   variants?: { id: string; name: string; priceOverride?: number; stockQuantity?: number }[];
   isPreOrder?: boolean;
+}
+
+interface TextStyleValue {
+  fontFamily?: "sans" | "serif" | "mono" | "display";
+  fontSize?: "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  fontWeight?: "normal" | "medium" | "semibold" | "bold" | "black";
+  color?: string;
+  opacity?: number;
+}
+
+function getTextCssProperties(style?: TextStyleValue): React.CSSProperties {
+  if (!style) return {};
+  const css: React.CSSProperties = {};
+  if (style.color) css.color = style.color;
+  if (style.opacity !== undefined) css.opacity = style.opacity / 100;
+  if (style.fontSize) {
+    const sizeMap: Record<string, string> = {
+      xs: "0.75rem",
+      sm: "0.875rem",
+      base: "1rem",
+      lg: "1.125rem",
+      xl: "1.25rem",
+      "2xl": "1.5rem",
+      "3xl": "1.875rem",
+      "4xl": "2.25rem",
+    };
+    if (sizeMap[style.fontSize]) css.fontSize = sizeMap[style.fontSize];
+  }
+  if (style.fontWeight) {
+    const weightMap: Record<string, number> = {
+      normal: 400,
+      medium: 500,
+      semibold: 600,
+      bold: 700,
+      black: 900,
+    };
+    if (weightMap[style.fontWeight]) css.fontWeight = weightMap[style.fontWeight];
+  }
+  if (style.fontFamily) {
+    if (style.fontFamily === "serif") css.fontFamily = "ui-serif, Georgia, Cambria, serif";
+    else if (style.fontFamily === "mono") css.fontFamily = "ui-monospace, monospace";
+    else if (style.fontFamily === "sans") css.fontFamily = "ui-sans-serif, system-ui, sans-serif";
+  }
+  return css;
 }
 
 interface SelectedCartItem {
@@ -83,11 +129,13 @@ export default function CustomLandingPageRoute({
   const searchParams = useSearchParams();
   const isPreview = searchParams.get("preview") === "true";
   const { products: cachedProducts } = useProducts();
+  const cart = useCart();
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<LandingPageData | null>(null);
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [allStoreProducts, setAllStoreProducts] = useState<UnifiedProduct[]>([]);
+  const [heroActiveImg, setHeroActiveImg] = useState<string>("");
 
   // Multi-Size Selection State (keyed by `${productId}__${size}`)
   const [productSelections, setProductSelections] = useState<ProductSelectionState>({});
@@ -223,6 +271,13 @@ export default function CustomLandingPageRoute({
               product: mainProd,
             },
           });
+
+          const initialHeroImg =
+            pageData.config?.customHeroImages?.[0] ||
+            pageData.config?.customHeroImageUrl ||
+            mainProd.imageUrl ||
+            "";
+          setHeroActiveImg(initialHeroImg);
         }
 
         // Populate allStoreProducts from cached products (no API call)
@@ -890,13 +945,27 @@ export default function CustomLandingPageRoute({
               const heroBgColor = (sec.settings?.backgroundColor as string) || config?.customHeroBgColor || "#9333ea";
               const isDefaultPurple = !sec.settings?.backgroundColor && (!config?.customHeroBgColor || config.customHeroBgColor.toLowerCase() === "#9333ea" || config.customHeroBgColor.toLowerCase() === "#a855f7");
 
+              // Gallery images: prefer config.customHeroImages, fallback to customHeroImageUrl, then product images
+              const heroGalleryImages = (config?.customHeroImages && config.customHeroImages.length > 0)
+                ? config.customHeroImages
+                : (config?.customHeroImageUrl
+                    ? [config.customHeroImageUrl]
+                    : (product.images && product.images.length > 0
+                        ? product.images.map((img) => img.imageUrl)
+                        : (product.imageUrl ? [product.imageUrl] : [])));
+
+              const displayedHeroImg = heroActiveImg || heroGalleryImages[0] || "";
+
+              const isHeroDescVisible = config?.isCustomHeroDescriptionVisible ?? true;
+              const titleStyle = getTextCssProperties(sec.settings?.textStyle as TextStyleValue | undefined);
+
               return (
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
                   className="py-12 md:py-16 px-4 md:px-8 text-white relative overflow-hidden transition-colors"
                   style={{
-                    backgroundColor: heroBgColor,
+                    background: heroBgColor,
                     backgroundImage: isDefaultPurple
                       ? "radial-gradient(circle at 20% 50%, rgba(217, 70, 239, 0.3) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.4) 0%, transparent 60%)"
                       : undefined,
@@ -911,15 +980,20 @@ export default function CustomLandingPageRoute({
                             {config.productDetailsTitle}
                           </span>
                         )}
-                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight tracking-tight drop-shadow-sm">
+                        <h2
+                          className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight tracking-tight drop-shadow-sm"
+                          style={titleStyle}
+                        >
                           🔥 {config?.featuredProductName || product.name}
                         </h2>
                       </div>
 
                       {/* Description / Feature Points */}
-                      <div className="text-base sm:text-lg text-white font-medium leading-relaxed whitespace-pre-line bg-black/25 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-white/20 shadow-md">
-                        {config?.customHeroDescription || product.shortDescription || product.description || "✨ সফট ও কমফোর্টেবল\n✨ স্মার্ট ও এলিগ্যান্ট ডিজাইন\n✨ Regular Fit — ডেইলি ইউজ ও আউটিং এর জন্য পারফেক্ট\n✨ দীর্ঘ সময় পরলেও আরামদায়ক ও স্টাইলিশ লুক"}
-                      </div>
+                      {isHeroDescVisible && (
+                        <div className="text-base sm:text-lg text-white font-medium leading-relaxed whitespace-pre-line bg-black/25 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-white/20 shadow-md">
+                          {config?.customHeroDescription || product.shortDescription || product.description || "✨ সফট ও কমফোর্টেবল\n✨ স্মার্ট ও এলিগ্যান্ট ডিজাইন\n✨ Regular Fit — ডেইলি ইউজ ও আউটিং এর জন্য পারফেক্ট\n✨ দীর্ঘ সময় পরলেও আরামদায়ক ও স্টাইলিশ লুক"}
+                        </div>
+                      )}
 
                       {/* CTA Order Button */}
                       <div className="pt-2">
@@ -934,12 +1008,12 @@ export default function CustomLandingPageRoute({
                       </div>
                     </div>
 
-                    {/* Right: Product Showcase Poster/Image */}
-                    <div className="order-1 md:order-2 flex justify-center">
+                    {/* Right: Product Showcase Poster/Gallery */}
+                    <div className="order-1 md:order-2 flex flex-col items-center gap-3">
                       <div className="relative rounded-2xl overflow-hidden border-2 border-white/40 shadow-2xl bg-black/20 backdrop-blur-xs aspect-[4/5] sm:aspect-square max-w-md w-full">
-                        {(config?.customHeroImageUrl || product.imageUrl) ? (
+                        {displayedHeroImg ? (
                           <img
-                            src={getImageUrl(config?.customHeroImageUrl || product.imageUrl, "large")}
+                            src={getImageUrl(displayedHeroImg, "large")}
                             alt={config?.featuredProductName || product.name}
                             width={600}
                             height={600}
@@ -947,7 +1021,7 @@ export default function CustomLandingPageRoute({
                             fetchpriority="high"
                             loading="eager"
                             decoding="async"
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover transition-all duration-300"
                             onError={handleImageError}
                           />
                         ) : (
@@ -966,6 +1040,33 @@ export default function CustomLandingPageRoute({
                           </div>
                         )}
                       </div>
+
+                      {/* Gallery Thumbnails Carousel */}
+                      {heroGalleryImages.length > 1 && (
+                        <div className="flex items-center gap-2 overflow-x-auto max-w-md py-1 px-0.5">
+                          {heroGalleryImages.map((img, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setHeroActiveImg(img)}
+                              className={`size-14 rounded-xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                                (displayedHeroImg === img)
+                                  ? "border-white ring-2 ring-white/50 scale-105"
+                                  : "border-white/40 opacity-70 hover:opacity-100"
+                              }`}
+                            >
+                              <img
+                                src={getImageUrl(img, "thumb")}
+                                alt={`Thumbnail ${idx + 1}`}
+                                width={56}
+                                height={56}
+                                className="w-full h-full object-cover"
+                                onError={handleImageError}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </section>
@@ -974,22 +1075,33 @@ export default function CustomLandingPageRoute({
 
             // Previous Discount CTA Design
             case "discount-cta": {
+              const freeDeliveryThreshold = config?.freeShippingThresholdQuantity || 0;
+              const customFreeDeliveryText = config?.freeDeliveryCtaText
+                ? config.freeDeliveryCtaText.replace(/\{qty\}/g, String(freeDeliveryThreshold))
+                : (freeDeliveryThreshold > 0
+                    ? `যেকোনো ${freeDeliveryThreshold}টি প্রোডাক্ট অর্ডার করলেই ফ্রি হোম ডেলিভারি!`
+                    : "সীমিত সময়ের জন্য বিশেষ ছাড়ের সুযোগ গ্রহণ করুন।");
+
+              const discountHeading = config?.discountCtaText || config?.promoText || "🔥 আজকের স্পেশাল কম্বো অফার!";
+              const ctaStyle = getTextCssProperties(sec.settings?.textStyle as TextStyleValue | undefined);
+
               return (
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
                   className="py-10 px-4 bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-700 text-white text-center transition-colors"
-                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string, backgroundImage: "none" } : undefined}
+                  style={sec.settings?.backgroundColor ? { background: sec.settings.backgroundColor as string } : undefined}
                 >
                   <div className="max-w-2xl mx-auto space-y-3.5">
-                    <h3 className="text-2xl md:text-3xl font-black tracking-tight">
-                      {config?.promoText || "🔥 আজকের স্পেশাল কম্বো অফার!"}
+                    <h3
+                      className="text-2xl md:text-3xl font-black tracking-tight"
+                      style={ctaStyle}
+                    >
+                      {discountHeading}
                     </h3>
 
                     <p className="text-sm sm:text-base md:text-lg text-emerald-50 font-bold leading-relaxed">
-                      {config?.freeShippingThresholdQuantity
-                        ? `যেকোনো ${config.freeShippingThresholdQuantity}টি প্রোডাক্ট অর্ডার করলেই ফ্রি হোম ডেলিভারি!`
-                        : "সীমিত সময়ের জন্য বিশেষ ছাড়ের সুযোগ গ্রহণ করুন।"}
+                      {customFreeDeliveryText}
                     </p>
                     <div className="pt-2">
                       <button
@@ -1007,12 +1119,13 @@ export default function CustomLandingPageRoute({
 
             // Previous Trust Banner Design
             case "trust-banner": {
+              const tbBg = sec.settings?.backgroundColor as string;
               return (
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
                   className="py-9 px-4 md:px-8 bg-card transition-colors"
-                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
+                  style={tbBg ? { background: tbBg } : undefined}
                 >
                   <div className="max-w-4xl mx-auto p-6 md:p-7 bg-muted/60 rounded-2xl border border-border/80 flex flex-col md:flex-row items-center gap-5 text-center md:text-left shadow-xs">
                     <div className="size-16 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
@@ -1032,12 +1145,13 @@ export default function CustomLandingPageRoute({
 
             // Previous Info Banner Design
             case "info-banner": {
+              const ibBg = sec.settings?.backgroundColor as string;
               return (
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
                   className="py-7 px-4 md:px-8 bg-amber-500/15 border-y border-amber-500/30 text-center transition-colors"
-                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
+                  style={ibBg ? { background: ibBg } : undefined}
                 >
                   <div className="max-w-3xl mx-auto flex items-center justify-center gap-3 text-amber-950 dark:text-amber-100">
                     <ShieldCheck className="size-6 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -1051,12 +1165,13 @@ export default function CustomLandingPageRoute({
 
             // Product Selection: Keeping New Card Design & Interactive Size/Qty logic
             case "product-select": {
+              const psBg = sec.settings?.backgroundColor as string;
               return (
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
                   className="py-14 md:py-20 px-4 md:px-8 bg-background border-b border-border transition-colors"
-                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
+                  style={psBg ? { background: psBg } : undefined}
                 >
                   <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-10 md:mb-12">
@@ -1265,6 +1380,12 @@ export default function CustomLandingPageRoute({
                                     const currentQty = getQtyForSize(p.id, activeSize);
                                     const newQty = currentQty > 0 ? currentQty + 1 : 1;
                                     updateSizeQuantity(p, activeSize, newQty);
+                                    // Sync with universal shopping cart
+                                    cart.add({
+                                      slug: p.slug || p.id,
+                                      size: activeSize,
+                                      qty: 1,
+                                    });
                                     toast.success(`${p.name} (${activeSize}) কার্টে যুক্ত হয়েছে!`, {
                                       description: `মোট পরিমাণ: ${newQty}টি · দাম: ৳${(cardPrice * newQty).toLocaleString()}`,
                                     });
@@ -1288,12 +1409,42 @@ export default function CustomLandingPageRoute({
 
             // Previous Reviews Design
             case "reviews": {
+              const defaultReviews: CLPReview[] = [
+                {
+                  id: "def-1",
+                  name: "তানভীর হাসান",
+                  rating: 5,
+                  comment: "কোয়ালিটি খুবই ভালো! সময়মতো ডেলিভারি পেয়েছি এবং কাপড়ের ফিনিশিং প্রিমিয়াম ছিল।",
+                  verified: true,
+                },
+                {
+                  id: "def-2",
+                  name: "ফারহানা আক্তার",
+                  rating: 5,
+                  comment: "ছবিতে যেমন দেখেছি হুবহু তেমনই পেয়েছি। রিটার্ন সুবিধার ভরসা থাকায় নিশ্চিন্তে অর্ডার করেছিলাম।",
+                  verified: true,
+                },
+                {
+                  id: "def-3",
+                  name: "মো: রাশেদুল ইসলাম",
+                  rating: 5,
+                  comment: "ক্যাশ অন ডেলিভারিতে চেক করে নেওয়ার সুবিধাটা দারুণ। সার্ভিস ও ব্যবহার খুব চমৎকার!",
+                  verified: true,
+                },
+              ];
+
+              const reviewItems = (config?.reviews && config.reviews.length > 0)
+                ? config.reviews
+                : defaultReviews;
+
+              const reviewBg = sec.settings?.backgroundColor as string;
+
               return (
                 <section
                   key={sec.id}
                   id={`section-${sec.id}`}
                   className="py-12 px-4 md:px-8 bg-card transition-colors"
-                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
+                  style={reviewBg ? { background: reviewBg } : undefined}
                 >
                   <div className="max-w-4xl mx-auto space-y-6">
                     <div className="text-center space-y-1.5">
@@ -1310,51 +1461,44 @@ export default function CustomLandingPageRoute({
                       </p>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="p-5 rounded-2xl bg-muted/60 border border-border space-y-2.5 shadow-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-extrabold text-sm text-foreground">তানভীর হাসান</span>
-                          <span className="text-xs text-emerald-600 font-extrabold">Verified Buyer</span>
-                        </div>
-                        <div className="flex gap-1 text-amber-400">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className="size-3.5 fill-current" />
-                          ))}
-                        </div>
-                        <p className="text-sm font-medium text-foreground/90 leading-relaxed">
-                          "কোয়ালিটি খুবই ভালো! সময়মতো ডেলিভারি পেয়েছি এবং কাপড়ের ফিনিশিং প্রিমিয়াম ছিল।"
-                        </p>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {reviewItems.map((rev) => (
+                        <div
+                          key={rev.id}
+                          className="p-5 rounded-2xl bg-muted/60 border border-border space-y-2.5 shadow-xs flex flex-col justify-between"
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-extrabold text-sm text-foreground">{rev.name}</span>
+                              {rev.verified !== false && (
+                                <span className="text-xs text-emerald-600 font-extrabold">Verified Buyer</span>
+                              )}
+                            </div>
+                            <div className="flex gap-1 text-amber-400">
+                              {[...Array(Math.min(5, Math.max(1, rev.rating || 5)))].map((_, i) => (
+                                <Star key={i} className="size-3.5 fill-current" />
+                              ))}
+                            </div>
+                            <p className="text-sm font-medium text-foreground/90 leading-relaxed">
+                              "{rev.comment}"
+                            </p>
+                          </div>
 
-                      <div className="p-5 rounded-2xl bg-muted/60 border border-border space-y-2.5 shadow-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-extrabold text-sm text-foreground">ফারহানা আক্তার</span>
-                          <span className="text-xs text-emerald-600 font-extrabold">Verified Buyer</span>
+                          {/* Customer Image / Photo Proof */}
+                          {rev.imageUrl && (
+                            <div className="pt-2">
+                              <div className="relative size-20 rounded-xl overflow-hidden border border-border bg-black/10">
+                                <img
+                                  src={getImageUrl(rev.imageUrl, "thumb")}
+                                  alt={`${rev.name} review proof`}
+                                  className="w-full h-full object-cover"
+                                  onError={handleImageError}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex gap-1 text-amber-400">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className="size-3.5 fill-current" />
-                          ))}
-                        </div>
-                        <p className="text-sm font-medium text-foreground/90 leading-relaxed">
-                          "ছবিতে যেমন দেখেছি হুবহু তেমনই পেয়েছি। রিটার্ন সুবিধার ভরসা থাকায় নিশ্চিন্তে অর্ডার করেছিলাম।"
-                        </p>
-                      </div>
-
-                      <div className="p-5 rounded-2xl bg-muted/60 border border-border space-y-2.5 shadow-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-extrabold text-sm text-foreground">মো: রাশেদুল ইসলাম</span>
-                          <span className="text-xs text-emerald-600 font-extrabold">Verified Buyer</span>
-                        </div>
-                        <div className="flex gap-1 text-amber-400">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className="size-3.5 fill-current" />
-                          ))}
-                        </div>
-                        <p className="text-sm font-medium text-foreground/90 leading-relaxed">
-                          "ক্যাশ অন ডেলিভারিতে চেক করে নেওয়ার সুবিধাটা দারুণ। সার্ভিস ও ব্যবহার খুব চমৎকার!"
-                        </p>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </section>
@@ -1374,12 +1518,13 @@ export default function CustomLandingPageRoute({
 
             // Previous Order Form Design (Compact 2-Column on Desktop/Tablet with Cart on Right)
             case "order-form": {
+              const ofBg = sec.settings?.backgroundColor as string;
               return (
                 <section
                   key={sec.id}
                   id="section-order-form"
                   className="py-12 px-4 md:px-8 bg-muted/30 transition-colors"
-                  style={sec.settings?.backgroundColor ? { backgroundColor: sec.settings.backgroundColor as string } : undefined}
+                  style={ofBg ? { background: ofBg } : undefined}
                 >
                   <div className="max-w-5xl mx-auto bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
                     {/* Form Header */}
@@ -1957,6 +2102,12 @@ export default function CustomLandingPageRoute({
                       modalSelectedSize,
                       modalQty
                     );
+                    // Sync with universal shopping cart
+                    cart.add({
+                      slug: selectedProductForDetails.slug || selectedProductForDetails.id,
+                      size: modalSelectedSize || "Standard",
+                      qty: modalQty,
+                    });
                     setShowDetailsModal(false);
                     toast.success(
                       `${selectedProductForDetails.name} (${modalSelectedSize || "Standard"}) অর্ডারে সফলভাবে যুক্ত হয়েছে!`,

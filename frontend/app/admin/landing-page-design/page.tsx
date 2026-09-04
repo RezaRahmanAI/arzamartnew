@@ -250,11 +250,11 @@ function DesignerContent() {
       <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card flex-shrink-0">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/products"
+            href="/admin/landing-pages"
             className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="size-4" />
-            <span>Products</span>
+            <span>Landing Pages</span>
           </Link>
           <span className="text-border">|</span>
           <div className="flex items-center gap-2">

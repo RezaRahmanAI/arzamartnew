@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { useStaffStore, StaffPermissions, StaffRole } from "@/lib/staff-store";
+import { useStaffStore, getStaffList, StaffPermissions, StaffRole } from "@/lib/staff-store";
 import { useCustomers, CustomerMaster } from "@/lib/customers-store";
 import { customersService } from "@/lib/api/services/customers.service";
 import { toast } from "sonner";
@@ -338,7 +338,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      const foundStaff = staffList.find(
+      const currentStaffList = getStaffList();
+      const foundStaff = currentStaffList.find(
         (s) =>
           (s.email.toLowerCase().trim() === cleanEmail || s.name.toLowerCase().trim() === cleanEmail) &&
           (s.password === cleanPass || s.password === pass || cleanPass === "admin123")
@@ -367,7 +368,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success("Logged into Admin Panel", { description: `Welcome back, ${foundStaff.name} (${foundStaff.role})` });
       return true;
     },
-    [staffList, saveUserSession]
+    [saveUserSession]
   );
 
   const logout = useCallback(() => {

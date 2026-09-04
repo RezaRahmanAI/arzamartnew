@@ -26,6 +26,8 @@ export interface CreateProductInput {
   sizes?: string[];
   sizePrices?: Record<string, number>;
   sizeStock?: Record<string, number>;
+  sizeMeasurements?: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }>;
+  sizeTemplateId?: string | null;
   description?: string;
   shortDescription?: string;
   discountNote?: string;
@@ -50,6 +52,8 @@ export interface UpdateProductInput {
   sizes?: string[];
   sizePrices?: Record<string, number>;
   sizeStock?: Record<string, number>;
+  sizeMeasurements?: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }>;
+  sizeTemplateId?: string | null;
   description?: string;
   shortDescription?: string;
   discountNote?: string;
@@ -211,6 +215,7 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
           basePrice,
           discountPrice,
           badge: finalBadge || null,
+          sizeTemplateId: input.sizeTemplateId || null,
           isBundle: input.isBundle ?? false,
           bundleProducts: bundleJson,
           isFeatured: false,
@@ -239,6 +244,7 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
         const sizeName = sizes[i];
         const priceOverride = input.sizePrices?.[sizeName] ?? null;
         const stockQuantity = input.sizeStock?.[sizeName] ?? 0;
+        const measurement = input.sizeMeasurements?.[sizeName];
 
         await tx.productVariant.create({
           data: {
@@ -247,6 +253,10 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
             sku: `${sku}-${sizeName}`,
             priceOverride,
             stockQuantity,
+            chest: measurement?.chest || null,
+            length: measurement?.length || null,
+            waist: measurement?.waist || null,
+            sleeve: measurement?.sleeve || null,
             isActive: true,
           },
         });
@@ -342,6 +352,7 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
           bundleProducts: bundleJson,
           isActive: input.isActive !== undefined ? input.isActive : existing.isActive,
           categoryId,
+          sizeTemplateId: input.sizeTemplateId !== undefined ? (input.sizeTemplateId || null) : existing.sizeTemplateId,
         },
       });
 
@@ -366,11 +377,18 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
 
       // Update Variants/Sizes if provided
       if (input.sizes && input.sizes.length > 0) {
-        // Map existing variant stocks by clean size name so we don't lose stock on product edit
+        // Map existing variant stocks and measurements by clean size name
         const existingStockMap: Record<string, number> = {};
+        const existingMeasurementsMap: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }> = {};
         (existing.variants || []).forEach((v) => {
           const clean = v.name.replace(/^Size:\s*/i, "").trim();
           existingStockMap[clean] = v.stockQuantity;
+          existingMeasurementsMap[clean] = {
+            chest: v.chest,
+            length: v.length,
+            waist: v.waist,
+            sleeve: v.sleeve,
+          };
         });
 
         await tx.productVariant.deleteMany({
@@ -385,6 +403,9 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
               ? input.sizeStock[sizeName]
               : (existingStockMap[sizeName] ?? 0);
 
+          const inputMeas = input.sizeMeasurements?.[sizeName];
+          const fallbackMeas = existingMeasurementsMap[sizeName];
+
           await tx.productVariant.create({
             data: {
               productId: existing.id,
@@ -392,6 +413,10 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
               sku: `${existing.sku}-${sizeName}`,
               priceOverride,
               stockQuantity,
+              chest: inputMeas?.chest !== undefined ? (inputMeas.chest || null) : (fallbackMeas?.chest || null),
+              length: inputMeas?.length !== undefined ? (inputMeas.length || null) : (fallbackMeas?.length || null),
+              waist: inputMeas?.waist !== undefined ? (inputMeas.waist || null) : (fallbackMeas?.waist || null),
+              sleeve: inputMeas?.sleeve !== undefined ? (inputMeas.sleeve || null) : (fallbackMeas?.sleeve || null),
               isActive: true,
             },
           });

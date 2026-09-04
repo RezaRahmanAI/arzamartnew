@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Package,
+  Trash2,
 } from "lucide-react";
 import { formatBDT } from "@/lib/shop-data";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ import {
   createCourierAction,
   updateCourierAction,
   toggleCourierActiveAction,
+  deleteCourierAction,
   type CourierDto,
 } from "@/actions/couriers.actions";
 
@@ -182,6 +184,27 @@ export default function CourierManagementPage() {
       }
     } catch {
       toast.error("Error updating status");
+    }
+  };
+
+  const handleDeleteCourier = async (c: CourierDto) => {
+    if (!confirm(`Are you sure you want to delete or deactivate courier "${c.name}"?`)) {
+      return;
+    }
+    try {
+      const res = await deleteCourierAction(c.id);
+      if (res.success) {
+        if (res.error) {
+          toast.info(res.error);
+        } else {
+          toast.success(`Courier "${c.name}" deleted successfully.`);
+        }
+        await loadCouriers();
+      } else {
+        toast.error(res.error || "Failed to delete courier");
+      }
+    } catch {
+      toast.error("Error deleting courier");
     }
   };
 
@@ -457,12 +480,21 @@ export default function CourierManagementPage() {
                         onClick={() => handleToggleActive(c)}
                         className={`h-7 text-xs px-2.5 gap-1 ${
                           c.isActive
-                            ? "text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
+                            ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700 border-amber-200"
                             : "bg-emerald-600 hover:bg-emerald-700 text-white"
                         }`}
                         title={c.isActive ? "Deactivate Courier" : "Activate Courier"}
                       >
                         <Power className="size-3" /> {c.isActive ? "Disable" : "Enable"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteCourier(c)}
+                        className="h-7 text-xs px-2.5 gap-1 text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
+                        title="Delete or Deactivate Courier"
+                      >
+                        <Trash2 className="size-3" /> Delete
                       </Button>
                     </div>
                   </TableCell>

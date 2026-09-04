@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw, Search, Ruler, Sparkles } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
+import { getSizeTemplatesAction, SizeTemplateDto } from "@/actions/size-templates.actions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +48,8 @@ type FormState = {
   offerRuleId: string;
   badge: string;
   sizePrices: Record<string, number>;
+  sizeMeasurements: Record<string, { chest?: string; length?: string; waist?: string; sleeve?: string }>;
+  sizeTemplateId: string;
   videoUrl: string;
   returnPolicy: string;
   images: string[];
@@ -70,6 +73,8 @@ const emptyForm: FormState = {
   offerRuleId: "",
   badge: "",
   sizePrices: {},
+  sizeMeasurements: {},
+  sizeTemplateId: "",
   videoUrl: "",
   returnPolicy: "",
   images: [],
@@ -106,6 +111,13 @@ export default function AdminProducts() {
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>("ALL");
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sizeTemplates, setSizeTemplates] = useState<SizeTemplateDto[]>([]);
+
+  useEffect(() => {
+    getSizeTemplatesAction()
+      .then((data) => setSizeTemplates(data))
+      .catch((err) => console.error("Failed to load size templates:", err));
+  }, []);
 
   // Group parent categories and sub-categories
   const parentCategories = useMemo(() => {
@@ -304,6 +316,20 @@ export default function AdminProducts() {
       offerRuleId: p.offerRuleId || "",
       badge: (p.badge ?? "").replace(/\|?PREORDER_ENABLED/g, "").trim(),
       sizePrices: p.sizePrices ?? {},
+      sizeMeasurements: p.sizeMeasurements
+        ? Object.fromEntries(
+            Object.entries(p.sizeMeasurements).map(([s, m]) => [
+              s,
+              {
+                chest: m.chest || "",
+                length: m.length || "",
+                waist: m.waist || "",
+                sleeve: m.sleeve || "",
+              },
+            ])
+          )
+        : {},
+      sizeTemplateId: p.sizeTemplateId || "",
       videoUrl: p.videoUrl ?? "",
       returnPolicy: p.returnPolicy ?? "",
       images: p.images ?? [],
@@ -321,6 +347,61 @@ export default function AdminProducts() {
 
   const setSizePrice = (size: string, price: number) =>
     setForm((f) => ({ ...f, sizePrices: { ...f.sizePrices, [size]: price } }));
+
+  const setSizeMeasurementField = (size: string, field: "chest" | "length" | "waist" | "sleeve", value: string) => {
+    setForm((f) => {
+      const prevMeas = f.sizeMeasurements[size] || {};
+      return {
+        ...f,
+        sizeMeasurements: {
+          ...f.sizeMeasurements,
+          [size]: {
+            ...prevMeas,
+            [field]: value,
+          },
+        },
+      };
+    });
+  };
+
+  const handleApplySizeTemplate = (templateId: string) => {
+    if (!templateId) {
+      update("sizeTemplateId", "");
+      return;
+    }
+
+    const template = sizeTemplates.find((t) => t.id === templateId);
+    if (!template) return;
+
+    // 1. Extract sizes from template entries
+    const templateSizes = template.entries.map((e) => e.size);
+    const newSizesStr = templateSizes.join(", ");
+
+    // 2. Copy measurements onto form state (COPY behavior)
+    const copiedMeasurements: Record<string, { chest?: string; length?: string; waist?: string; sleeve?: string }> = {};
+    template.entries.forEach((e) => {
+      copiedMeasurements[e.size] = {
+        chest: e.chest || "",
+        length: e.length || "",
+        waist: e.waist || "",
+        sleeve: e.sleeve || "",
+      };
+    });
+
+    setForm((f) => ({
+      ...f,
+      sizeTemplateId: templateId,
+      sizes: newSizesStr,
+      sizeMeasurements: {
+        ...f.sizeMeasurements,
+        ...copiedMeasurements,
+      },
+    }));
+
+    toast.success(`Applied "${template.name}" template!`, {
+      description: `${template.entries.length} sizes and measurements copied to product. You can still adjust individual values if needed.`,
+    });
+  };
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
@@ -376,6 +457,8 @@ export default function AdminProducts() {
       offerDiscount: selectedOffer?.discountAmount || undefined,
       badge: form.badge || undefined,
       sizePrices: Object.keys(sizePrices).length > 0 ? sizePrices : undefined,
+      sizeMeasurements: Object.keys(form.sizeMeasurements).length > 0 ? form.sizeMeasurements : undefined,
+      sizeTemplateId: form.sizeTemplateId || undefined,
       videoUrl: form.videoUrl || undefined,
       returnPolicy: form.returnPolicy || undefined,
       images: form.images.length > 0 ? form.images : undefined,
@@ -1037,6 +1120,36 @@ export default function AdminProducts() {
               />
             </div>
 
+            {/* Size Template Selector */}
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                  <Ruler className="size-4 text-primary" />
+                  <span>Size Template (সাইজ টেমপ্লেট নির্বাচন করুন)</span>
+                </div>
+                {form.sizeTemplateId && (
+                  <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded border border-primary/20">
+                    Template Applied
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Select a pre-configured size template to instantly auto-fill sizes and exact measurements (Chest, Length). You can still adjust individual size measurements below.
+              </p>
+              <select
+                value={form.sizeTemplateId}
+                onChange={(e) => handleApplySizeTemplate(e.target.value)}
+                className="h-9 w-full rounded-md border border-border bg-background px-3 text-xs font-semibold"
+              >
+                <option value="">-- No Template / Custom Sizing --</option>
+                {sizeTemplates.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {tpl.name} ({tpl.category || "General"}) — {tpl.entries.map((e) => e.size).join(", ")}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="sizes">Sizes (comma separated)</Label>
@@ -1057,6 +1170,76 @@ export default function AdminProducts() {
                 />
               </div>
             </div>
+
+            {/* Size-Wise Measurements Table (Chest, Length, Waist) */}
+            {sizesArray.length > 0 && (
+              <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Ruler className="size-3.5 text-primary" />
+                      Size-Wise Measurements (Inches &quot;)
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Customer will see these exact dimensions when selecting a size on the product page.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+                    <div className="col-span-2">Size</div>
+                    <div className="col-span-3">Chest (&quot;)</div>
+                    <div className="col-span-3">Length (&quot;)</div>
+                    <div className="col-span-2">Waist (&quot;)</div>
+                    <div className="col-span-2">Sleeve (&quot;)</div>
+                  </div>
+
+                  {sizesArray.map((s) => {
+                    const meas = form.sizeMeasurements[s] || {};
+                    return (
+                      <div key={s} className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-2 font-mono text-xs font-bold text-foreground">
+                          {s}
+                        </div>
+                        <div className="col-span-3">
+                          <Input
+                            placeholder='e.g. 40"'
+                            value={meas.chest ?? ""}
+                            onChange={(e) => setSizeMeasurementField(s, "chest", e.target.value)}
+                            className="h-8 text-xs bg-background"
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Input
+                            placeholder='e.g. 28"'
+                            value={meas.length ?? ""}
+                            onChange={(e) => setSizeMeasurementField(s, "length", e.target.value)}
+                            className="h-8 text-xs bg-background"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Input
+                            placeholder='e.g. 32"'
+                            value={meas.waist ?? ""}
+                            onChange={(e) => setSizeMeasurementField(s, "waist", e.target.value)}
+                            className="h-8 text-xs bg-background"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Input
+                            placeholder='e.g. 8"'
+                            value={meas.sleeve ?? ""}
+                            onChange={(e) => setSizeMeasurementField(s, "sleeve", e.target.value)}
+                            className="h-8 text-xs bg-background"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Accept Pre-Order Toggle */}
             <div className="rounded-xl border border-border/60 bg-secondary/20 p-3.5 space-y-2">

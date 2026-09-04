@@ -7,6 +7,8 @@ import {
   updateOrderAction,
   saveIncompleteOrderAction,
   deleteOrderAction,
+  transferToRegularOrderAction,
+  transferToPreOrderAction,
 } from "@/actions/orders.actions";
 
 const ORDERS_KEY = "arza-orders-v1";
@@ -81,12 +83,14 @@ class OrdersService {
     }
   }
 
-  public async getAll(): Promise<{ orders: Order[]; incomplete: Order[] }> {
+  public async getAll(options?: { type?: "all" | "regular" | "preorder"; includePreOrders?: boolean }): Promise<{ orders: Order[]; incomplete: Order[] }> {
     try {
-      const dbResult = await getOrdersAction();
+      const dbResult = await getOrdersAction(options);
       if (dbResult && (dbResult.orders?.length > 0 || dbResult.incomplete?.length > 0)) {
-        this.saveLocalOrders(dbResult.orders);
-        this.saveLocalIncomplete(dbResult.incomplete);
+        if (!options?.type || options.type === "all") {
+          this.saveLocalOrders(dbResult.orders);
+          this.saveLocalIncomplete(dbResult.incomplete);
+        }
         return dbResult;
       }
       return this.getLocalOrders();
@@ -126,6 +130,8 @@ class OrdersService {
         source: order.source,
         sourcePageName: order.sourcePageName,
         socialMediaSourceName: order.socialMediaSourceName,
+        courierName: order.courierName || undefined,
+        courierTrackingNumber: order.courierTrackingNumber || undefined,
       });
 
       if (res.success && res.orderNumber) {
@@ -263,6 +269,52 @@ class OrdersService {
       return res.success;
     } catch {
       return false;
+    }
+  }
+
+  public async transferToRegularOrder(
+    id: string
+  ): Promise<{ success: boolean; error?: string; newOrderNumber?: string }> {
+    try {
+      const res = await transferToRegularOrderAction(id);
+      if (res.success && res.newOrderNumber) {
+        const { orders } = this.getLocalOrders();
+        const updated = orders.map((o) =>
+          o.id === id || o.id.replace(/\D/g, "") === id.replace(/\D/g, "")
+            ? { ...o, id: res.newOrderNumber!, isPreOrder: false }
+            : o
+        );
+        this.saveLocalOrders(updated);
+      }
+      return res;
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Failed to transfer order",
+      };
+    }
+  }
+
+  public async transferToPreOrder(
+    id: string
+  ): Promise<{ success: boolean; error?: string; newOrderNumber?: string }> {
+    try {
+      const res = await transferToPreOrderAction(id);
+      if (res.success && res.newOrderNumber) {
+        const { orders } = this.getLocalOrders();
+        const updated = orders.map((o) =>
+          o.id === id || o.id.replace(/\D/g, "") === id.replace(/\D/g, "")
+            ? { ...o, id: res.newOrderNumber!, isPreOrder: true, status: "pending" as OrderStatus }
+            : o
+        );
+        this.saveLocalOrders(updated);
+      }
+      return res;
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Failed to transfer order",
+      };
     }
   }
 }

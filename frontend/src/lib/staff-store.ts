@@ -136,6 +136,11 @@ function notify() {
   listeners.forEach((l) => l());
 }
 
+export function getStaffList(): StaffMember[] {
+  ensureInitialized();
+  return staffListState;
+}
+
 export function useStaffStore() {
   ensureInitialized();
   const [list, setList] = useState<StaffMember[]>(staffListState);

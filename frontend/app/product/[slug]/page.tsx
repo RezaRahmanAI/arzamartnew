@@ -13,6 +13,7 @@ import { useProducts } from "@/lib/products-store";
 import { useSettings } from "@/context/settings-context";
 import { formatBDT, getSizePrice, getSizeStock, products as staticProducts } from "@/lib/shop-data";
 import { getImageUrl, handleImageError, FALLBACK_IMAGE } from "@/lib/utils";
+import { ProductSizeMeasurements } from "@/components/product-size-measurements";
 
 
 
@@ -358,6 +359,14 @@ export default function ProductPage() {
                 )}
               </p>
             )}
+
+            {/* Exact Size Measurement Display (instant client switch, zero network request, smooth transition) */}
+            {size && (
+              <ProductSizeMeasurements
+                selectedSize={size}
+                measurements={product.sizeMeasurements?.[size]}
+              />
+            )}
           </div>
 
           {(() => {
@@ -485,8 +494,10 @@ export default function ProductPage() {
 
       <div className="mt-6">
         {activeTab === "description" && (
-          <div className="prose max-w-none text-sm leading-relaxed text-muted-foreground">
-            <p>{product.description}</p>
+          <div className="prose max-w-none text-sm leading-relaxed text-foreground/90 font-normal">
+            <p className="whitespace-pre-line text-foreground/90 leading-relaxed text-[14px]">
+              {product.description}
+            </p>
           </div>
         )}
 

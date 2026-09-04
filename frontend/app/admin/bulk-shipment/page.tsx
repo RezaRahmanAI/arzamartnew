@@ -50,6 +50,7 @@ import {
 import {
   getActiveCouriersAction,
 } from "@/actions/couriers.actions";
+import { CourierSyncErrorsModal } from "@/components/admin/courier-sync-errors-modal";
 
 export default function BulkShipmentPage() {
   const router = useRouter();
@@ -63,6 +64,7 @@ export default function BulkShipmentPage() {
   // Batches State
   const [batches, setBatches] = useState<ShipmentBatchDto[]>([]);
   const [isLoadingBatches, setIsLoadingBatches] = useState(true);
+  const [activeErrorBatch, setActiveErrorBatch] = useState<ShipmentBatchDto | null>(null);
 
   // Active Couriers
   const [activeCouriers, setActiveCouriers] = useState<Array<{ id: string; name: string; code: string }>>([]);
@@ -474,6 +476,7 @@ export default function BulkShipmentPage() {
                     <TableHead>Courier Partner</TableHead>
                     <TableHead className="text-center">Orders Count</TableHead>
                     <TableHead className="text-right">Total Shipment Value</TableHead>
+                    <TableHead className="text-center">Sync Progress</TableHead>
                     <TableHead className="text-center">Delivered</TableHead>
                     <TableHead className="text-center">In Transit</TableHead>
                     <TableHead className="text-center">Returned / Failed</TableHead>
@@ -482,70 +485,96 @@ export default function BulkShipmentPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {batches.map((b) => (
-                    <TableRow key={b.id} className="group">
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-extrabold text-foreground">
-                            {b.batchNumber}
-                          </span>
-                        </div>
-                      </TableCell>
+                  {batches.map((b) => {
+                    const synced = b.syncedCount ?? Math.max(0, b.totalOrders - (b.errorCount || 0));
+                    const errorCount = b.errorCount ?? (b.errorItems?.length || 0);
 
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="size-6 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-[10px] shrink-0 uppercase">
-                            {b.courierCode.slice(0, 2)}
+                    return (
+                      <TableRow key={b.id} className="group">
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-extrabold text-foreground">
+                              {b.batchNumber}
+                            </span>
                           </div>
-                          <span className="font-bold text-xs text-foreground">{b.courierName}</span>
-                        </div>
-                      </TableCell>
+                        </TableCell>
 
-                      <TableCell className="text-center font-bold text-xs">
-                        {b.totalOrders}
-                      </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="size-6 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-[10px] shrink-0 uppercase">
+                              {b.courierCode.slice(0, 2)}
+                            </div>
+                            <span className="font-bold text-xs text-foreground">{b.courierName}</span>
+                          </div>
+                        </TableCell>
 
-                      <TableCell className="text-right font-black text-xs text-foreground">
-                        {formatBDT(b.totalShipmentValue)}
-                      </TableCell>
+                        <TableCell className="text-center font-bold text-xs">
+                          {b.totalOrders}
+                        </TableCell>
 
-                      <TableCell className="text-center">
-                        <span className="font-bold text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200">
-                          {b.deliveredCount}
-                        </span>
-                      </TableCell>
+                        <TableCell className="text-right font-black text-xs text-foreground">
+                          {formatBDT(b.totalShipmentValue)}
+                        </TableCell>
 
-                      <TableCell className="text-center">
-                        <span className="font-bold text-xs text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-md border border-blue-200">
-                          {b.inTransitCount}
-                        </span>
-                      </TableCell>
+                        {/* Live Sync Progress Column with Clickable Errors Badge */}
+                        <TableCell className="text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="font-bold text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                              {synced}/{b.totalOrders} Synced
+                            </span>
 
-                      <TableCell className="text-center">
-                        <span className="font-bold text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200">
-                          {b.returnedCount}
-                        </span>
-                      </TableCell>
+                            {errorCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setActiveErrorBatch(b)}
+                                className="inline-flex items-center gap-1 text-[11px] font-extrabold text-rose-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 px-2 py-0.5 rounded-full border border-rose-200/80 cursor-pointer shadow-2xs transition-all hover:scale-105 active:scale-95"
+                                title="Click to view and correct failed courier sync orders"
+                              >
+                                <AlertCircle className="size-3 text-rose-600" />
+                                <span>Errors: {errorCount}</span>
+                              </button>
+                            )}
+                          </div>
+                        </TableCell>
 
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(b.createdAt).toLocaleDateString()}
-                      </TableCell>
+                        <TableCell className="text-center">
+                          <span className="font-bold text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200">
+                            {b.deliveredCount}
+                          </span>
+                        </TableCell>
 
-                      <TableCell className="text-right">
-                        <Button asChild size="sm" variant="outline" className="h-7 text-xs px-2.5 gap-1">
-                          <Link href={`/admin/bulk-shipment/${b.id}`}>
-                            <span>View Batch</span>
-                            <ArrowRight className="size-3" />
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        <TableCell className="text-center">
+                          <span className="font-bold text-xs text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-md border border-blue-200">
+                            {b.inTransitCount}
+                          </span>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <span className="font-bold text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200">
+                            {b.returnedCount}
+                          </span>
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(b.createdAt).toLocaleDateString()}
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <Button asChild size="sm" variant="outline" className="h-7 text-xs px-2.5 gap-1">
+                            <Link href={`/admin/bulk-shipment/${b.id}`}>
+                              <span>View Batch</span>
+                              <ArrowRight className="size-3" />
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
 
                   {batches.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="py-16 text-center text-muted-foreground text-xs">
-                        No shipment batches created yet. Go to "Eligible Orders" tab to create one.
+                      <TableCell colSpan={10} className="py-16 text-center text-muted-foreground text-xs">
+                        No shipment batches created yet. Go to &quot;Eligible Orders&quot; tab to create one.
                       </TableCell>
                     </TableRow>
                   )}
@@ -555,6 +584,30 @@ export default function BulkShipmentPage() {
           </div>
         </div>
       )}
+
+      {/* Courier Sync Errors Modal */}
+      <CourierSyncErrorsModal
+        batch={activeErrorBatch}
+        isOpen={!!activeErrorBatch}
+        onClose={() => setActiveErrorBatch(null)}
+        onSuccessRetry={(batchId, orderId) => {
+          // Live update the batch counts without a page reload
+          setBatches((prev) =>
+            prev.map((b) => {
+              if (b.id !== batchId) return b;
+              const nextErrors = (b.errorItems || []).filter((i) => i.orderId !== orderId);
+              const nextErrorCount = Math.max(0, (b.errorCount || 1) - 1);
+              const nextSyncedCount = (b.syncedCount || 0) + 1;
+              return {
+                ...b,
+                errorCount: nextErrorCount,
+                syncedCount: nextSyncedCount,
+                errorItems: nextErrors,
+              };
+            })
+          );
+        }}
+      />
     </div>
   );
 }

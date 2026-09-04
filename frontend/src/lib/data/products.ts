@@ -19,9 +19,21 @@ export function mapPrismaProduct(p: {
   averageRating: Prisma.Decimal | number | string;
   reviewCount: number;
   badge: string | null;
+  sizeTemplateId?: string | null;
   category?: { id: number; name: string; slug: string; parentCategoryId?: number | null; parentCategory?: { id: number; name: string; slug: string } | null } | null;
   images?: { id: number; imageUrl: string; isMain: boolean; displayOrder: number }[];
-  variants?: { id: string; name: string; sku: string; priceOverride: Prisma.Decimal | number | string | null; stockQuantity: number; isActive: boolean }[];
+  variants?: {
+    id: string;
+    name: string;
+    sku: string;
+    priceOverride: Prisma.Decimal | number | string | null;
+    stockQuantity: number;
+    chest?: string | null;
+    length?: string | null;
+    waist?: string | null;
+    sleeve?: string | null;
+    isActive: boolean;
+  }[];
 }): Product {
   const basePrice = Number(p.basePrice) || 0;
   const discountPrice = p.discountPrice !== null && p.discountPrice !== undefined ? Number(p.discountPrice) : null;
@@ -48,11 +60,21 @@ export function mapPrismaProduct(p: {
 
   const sizePrices: Record<string, number> = {};
   const sizeStock: Record<string, number> = {};
+  const sizeMeasurements: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }> = {};
 
   variants.forEach((v) => {
     const cleanSize = cleanSizeLabel(v.name);
     sizePrices[cleanSize] = v.priceOverride !== null && v.priceOverride !== undefined ? Number(v.priceOverride) : activePrice;
     sizeStock[cleanSize] = v.stockQuantity;
+
+    if (v.chest || v.length || v.waist || v.sleeve) {
+      sizeMeasurements[cleanSize] = {
+        chest: v.chest || null,
+        length: v.length || null,
+        waist: v.waist || null,
+        sleeve: v.sleeve || null,
+      };
+    }
   });
 
   let parsedBundleProducts: string[] | undefined = undefined;
@@ -108,6 +130,8 @@ export function mapPrismaProduct(p: {
     sizes: sizes.length > 0 ? sizes : ["M", "L", "XL", "XXL"],
     sizePrices,
     sizeStock,
+    sizeMeasurements: Object.keys(sizeMeasurements).length > 0 ? sizeMeasurements : undefined,
+    sizeTemplateId: p.sizeTemplateId ?? undefined,
     description: p.fullDescription || p.shortDescription || "",
     shortDescription: p.shortDescription || "",
     discountNote: p.shortDescription || undefined,
