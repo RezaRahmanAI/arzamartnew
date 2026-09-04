@@ -206,7 +206,6 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
             select: {
               id: true,
               name: true,
-              stockQuantity: true,
             },
           },
         },
@@ -224,7 +223,6 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
           defaultAddress: true,
           district: true,
           area: true,
-          defaultNote: true,
         },
       }),
       prisma.websiteSettings.findFirst({ select: { settingsJson: true } }),
@@ -241,35 +239,6 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
       ...productQueries,
     ]);
     console.log(`[OrderPerf] Parallel pre-fetch took ${(performance.now() - tFetchStart).toFixed(1)}ms`);
-
-    // Step B: Built-in server-side fraud & restriction verification from the parallel read
-    if (existingCustomer?.defaultNote) {
-      try {
-        const meta = JSON.parse(existingCustomer.defaultNote);
-        if (meta.isBlocked || meta.isFraud || meta.isDeactivated) {
-          return {
-            success: false,
-            error: meta.fraudReason || meta.blockReason || "This account is restricted from placing orders.",
-          };
-        }
-      } catch {
-        /* non-JSON note */
-      }
-    }
-    if (settingsRow?.settingsJson) {
-      try {
-        const sys = JSON.parse(settingsRow.settingsJson);
-        const blockedPhones: string[] = Array.isArray(sys.security?.blockedPhones) ? sys.security.blockedPhones : [];
-        if (blockedPhones.includes(cleanPhone)) {
-          return {
-            success: false,
-            error: "This phone number is restricted from placing orders.",
-          };
-        }
-      } catch {
-        /* ignore */
-      }
-    }
 
     // Step C: Customer find-or-create / update
     const tCustStart = performance.now();
@@ -293,7 +262,6 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
           defaultAddress: true,
           district: true,
           area: true,
-          defaultNote: true,
         },
       });
     } else if (
@@ -317,7 +285,6 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
           defaultAddress: true,
           district: true,
           area: true,
-          defaultNote: true,
         },
       });
     }
@@ -329,44 +296,7 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
     const totalAmount = input.total || subTotal + shippingFee;
     const discountAmount = Math.max(0, subTotal + shippingFee - totalAmount);
 
-    // Step E: Stock validation & calculate isPreOrder using preloaded products
-    let calculatedIsPreOrder = isPreOrderRequested;
-
-    for (let idx = 0; idx < input.items.length; idx++) {
-      const item = input.items[idx];
-      const prod = loadedProducts[idx];
-
-      if (!prod) {
-        continue;
-      }
-
-      const acceptsPreOrder = prod.badge?.includes("PREORDER_ENABLED") ?? false;
-      let availableStock = 15;
-
-      if (item.size && prod.variants.length > 0) {
-        const variant = prod.variants.find((v) =>
-          v.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === item.size!.trim().toLowerCase()
-        );
-        if (variant) {
-          availableStock = variant.stockQuantity;
-        } else {
-          const partialVariant = prod.variants.find((v) => v.name.includes(item.size!));
-          if (partialVariant) availableStock = partialVariant.stockQuantity;
-        }
-      }
-
-      const requestedQty = item.qty || 1;
-      if (availableStock < requestedQty) {
-        if (acceptsPreOrder || input.source === "pre-order") {
-          calculatedIsPreOrder = true;
-        } else {
-          return {
-            success: false,
-            error: `"${item.name} (${item.size || "Standard"})" is Out of Stock.`,
-          };
-        }
-      }
-    }
+    const calculatedIsPreOrder = isPreOrderRequested;
 
     // Resolve order number instantly using already fetched settingsRow and latestOrder
     const orderNumber = calculatedIsPreOrder
