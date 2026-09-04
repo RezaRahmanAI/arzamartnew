@@ -66,9 +66,6 @@ export default function ContactPage() {
             </div>
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Phone & WhatsApp</h3>
             <p className="text-sm font-bold text-foreground">{contact.supportPhone || "+880 1800 000000"}</p>
-            {contact.salesPhone && contact.salesPhone !== contact.supportPhone && (
-              <p className="text-xs text-muted-foreground">Sales: {contact.salesPhone}</p>
-            )}
           </div>
 
           <div className="bg-card border border-border rounded-xl p-5 space-y-2 shadow-xs">
@@ -76,10 +73,7 @@ export default function ContactPage() {
               <Mail className="size-4.5" />
             </div>
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address</h3>
-            <p className="text-sm font-bold text-foreground break-all">{contact.emailAddress || "support@arzamart.com"}</p>
-            {contact.supportEmail && contact.supportEmail !== contact.emailAddress && (
-              <p className="text-xs text-muted-foreground break-all">{contact.supportEmail}</p>
-            )}
+            <p className="text-sm font-bold text-foreground break-all">{contact.supportEmail || "support@arzamart.com"}</p>
           </div>
 
           <div className="bg-card border border-border rounded-xl p-5 space-y-2 shadow-xs">

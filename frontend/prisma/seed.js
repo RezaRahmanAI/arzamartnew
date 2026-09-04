@@ -345,7 +345,6 @@ async function main() {
     const defaultSettings = {
       general: {
         websiteName: "ARZA",
-        websiteShortName: "ARZA",
         tagline: "Everyday Fashion in Bangladesh",
         description: "Cotton tees, linen shirts, panjabi and more. Cash on delivery nationwide.",
         websiteStatus: "live",
@@ -372,12 +371,8 @@ async function main() {
         fontFamily: "DM Sans, sans-serif",
       },
       contact: {
-        companyName: "ARZA Fashion",
-        ownerName: "Arza Management",
         supportPhone: "+880 1800 000000",
-        salesPhone: "+880 1800 000000",
         whatsAppNumber: "+880 1800 000000",
-        emailAddress: "support@arzamart.com",
         supportEmail: "support@arzamart.com",
         officeAddress: "Dhaka, Bangladesh",
         googleMapEmbedUrl: "",

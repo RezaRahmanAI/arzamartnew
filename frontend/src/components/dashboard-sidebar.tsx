@@ -76,7 +76,7 @@ interface NavGroup {
 export function DashboardSidebar() {
   const pathname = usePathname();
   const { settings } = useSettings();
-  const brandName = settings?.general?.websiteShortName || settings?.general?.websiteName || "Arza";
+  const brandName = settings?.general?.websiteName || "Arza";
 
   let pendingOrdersCount = 0;
   let incompleteOrdersCount = 0;

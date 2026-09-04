@@ -92,7 +92,6 @@ export function OrderInvoiceModal({
   const contactPhone =
     settings?.contact?.supportPhone ||
     settings?.contact?.whatsAppNumber ||
-    settings?.contact?.salesPhone ||
     "+880 1800 000000";
   const deliveryPartner = order.courierName || "Standard Courier";
 

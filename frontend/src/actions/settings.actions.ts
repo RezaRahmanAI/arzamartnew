@@ -21,7 +21,7 @@ export async function updateSettingsAction(newSettings: SystemSettings): Promise
 
     const siteName = newSettings.general?.websiteName || "Arza Fashion";
     const logoUrl = newSettings.branding?.headerLogo || newSettings.branding?.lightLogo || "/images/logo.png";
-    const supportEmail = newSettings.contact?.supportEmail || newSettings.contact?.emailAddress || "support@arza.com";
+    const supportEmail = newSettings.contact?.supportEmail || "support@arza.com";
     const supportPhone = newSettings.contact?.supportPhone || "01700000000";
     const currencySymbol = newSettings.general?.currencySymbol || "TK";
     const metaTitle = newSettings.seo?.defaultMetaTitle || "Arza Fashion";

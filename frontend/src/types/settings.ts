@@ -1,6 +1,5 @@
 export interface GeneralSettings {
   websiteName: string;
-  websiteShortName: string;
   tagline: string;
   description: string;
   websiteStatus: "live" | "maintenance";
@@ -32,12 +31,8 @@ export interface BrandingSettings {
 }
 
 export interface ContactSettings {
-  companyName: string;
-  ownerName: string;
   supportPhone: string;
-  salesPhone: string;
   whatsAppNumber: string;
-  emailAddress: string;
   supportEmail: string;
   officeAddress: string;
   googleMapEmbedUrl: string;
@@ -204,7 +199,6 @@ export interface AuditLogEntry {
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   general: {
     websiteName: "ARZAMART",
-    websiteShortName: "ARZAMART",
     tagline: "Everyday Fashion in Bangladesh",
     description: "Cotton tees, linen shirts, panjabi and more. Cash on delivery nationwide.",
     websiteStatus: "live",
@@ -234,12 +228,8 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     toastInfoColor: "#3b82f6",
   },
   contact: {
-    companyName: "ARZA Fashion",
-    ownerName: "Arza Management",
     supportPhone: "+880 1800 000000",
-    salesPhone: "+880 1800 000000",
     whatsAppNumber: "+880 1800 000000",
-    emailAddress: "support@arzamart.com",
     supportEmail: "support@arzamart.com",
     officeAddress: "House #12, Road #4, Dhanmondi, Dhaka-1205, Bangladesh",
     googleMapEmbedUrl: "",

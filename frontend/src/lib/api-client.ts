@@ -104,7 +104,7 @@ export async function fetchWebsiteSettings(): Promise<ApiSettings | null> {
     return {
       siteName: s.general?.websiteName || "Arza Fashion",
       logoUrl: s.branding?.headerLogo || s.branding?.lightLogo || "/images/logo.png",
-      supportEmail: s.contact?.supportEmail || s.contact?.emailAddress || "support@arza.com",
+      supportEmail: s.contact?.supportEmail || "support@arza.com",
       supportPhone: s.contact?.supportPhone || "01700000000",
       metaTitle: s.seo?.defaultMetaTitle || "Arza Fashion",
       metaDescription: s.seo?.defaultMetaDescription || "Arza Fashion Store",

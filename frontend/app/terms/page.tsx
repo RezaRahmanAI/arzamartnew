@@ -96,7 +96,7 @@ export default function TermsPage() {
             </p>
             <div className="bg-secondary/30 p-4 rounded-xl border border-border space-y-1 text-xs font-medium">
               <p><strong>Hotline:</strong> {contact.supportPhone || "+880 1800 000000"}</p>
-              <p><strong>Email:</strong> {contact.emailAddress || "support@arzamart.com"}</p>
+              <p><strong>Email:</strong> {contact.supportEmail || "support@arzamart.com"}</p>
               <p><strong>Address:</strong> {contact.officeAddress || "Dhaka, Bangladesh"}</p>
             </div>
           </section>

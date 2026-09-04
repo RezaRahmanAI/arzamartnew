@@ -113,7 +113,7 @@ export function SiteFooter() {
             <MapPin className="size-4 text-primary shrink-0 mt-0.5" /> {contact?.officeAddress || "Dhaka, Bangladesh"}
           </p>
           <p className="mt-2 flex items-center gap-2 text-sm text-ink-foreground/70">
-            <Mail className="size-4 text-primary shrink-0" /> {contact?.emailAddress || "hello@arza.example"}
+            <Mail className="size-4 text-primary shrink-0" /> {contact?.supportEmail || "hello@arza.example"}
           </p>
         </div>
       </div>
