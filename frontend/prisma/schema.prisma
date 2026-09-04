@@ -103,6 +103,7 @@ model Product {
   isActive         Boolean   @default(true) @map("IsActive")
   isBundle         Boolean   @default(false) @map("IsBundle")
   bundleProducts   String?   @map("BundleProducts") @db.NVarChar(2000)
+  offerRuleIds     String?   @map("OfferRuleIds") @db.NVarChar(Max)
   averageRating    Decimal   @default(0) @map("AverageRating") @db.Decimal(3, 2)
   reviewCount      Int       @default(0) @map("ReviewCount")
   badge            String?   @map("Badge") @db.NVarChar(100)

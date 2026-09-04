@@ -22,6 +22,7 @@ export interface RawApiInitProduct {
   badge?: string;
   isBundle?: boolean;
   bundleProducts?: string[];
+  offerRuleIds?: string[];
   variants?: { id?: string; name: string; sku?: string; priceOverride?: number; stockQuantity?: number }[];
   sizes?: string[];
   sizePrices?: Record<string, number>;
@@ -111,6 +112,7 @@ class InitService {
       badge: p.badge,
       isBundle: p.isBundle ?? false,
       bundleProducts: p.bundleProducts ?? undefined,
+      offerRuleIds: p.offerRuleIds ?? undefined,
       sizePrices: p.variants && Array.isArray(p.variants) && p.variants.length > 0
         ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.priceOverride ?? basePrice]))
         : p.sizePrices || {},

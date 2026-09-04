@@ -745,8 +745,8 @@ export default function AdminSettingsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-secondary/20 rounded-lg border border-border">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-bold text-foreground">Enable Free Shipping</div>
-                      <div className="text-[11px] text-muted-foreground">Auto-apply free delivery on orders above threshold</div>
+                      <div className="text-xs font-bold text-foreground">Enable Free Shipping Offers</div>
+                      <div className="text-[11px] text-muted-foreground">Master switch — allows free-delivery quantity offers to apply at checkout</div>
                     </div>
                     <Switch
                       checked={draftSettings.shipping.enableFreeShipping}
@@ -764,16 +764,6 @@ export default function AdminSettingsPage() {
                       onCheckedChange={(checked) => updateSection("shipping", { cashOnDeliveryAvailable: checked })}
                     />
                   </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Free Shipping Order Amount Threshold (৳)</Label>
-                  <Input
-                    type="number"
-                    value={draftSettings.shipping.freeShippingThreshold}
-                    onChange={(e) => updateSection("shipping", { freeShippingThreshold: Number(e.target.value) })}
-                    className="h-9 text-xs"
-                  />
                 </div>
 
                 {/* Custom Shipping Rules Table */}
@@ -997,7 +987,7 @@ export default function AdminSettingsPage() {
                         <span>Quantity Offers & Discount Config (কোয়ান্টিটি অফার ও ডিসকাউন্ট)</span>
                       </h4>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Create global discount/free delivery offers based on quantity (e.g. 2 pcs free delivery, 2 pcs 200 tk discount). Products can select these offers.
+                        Create global discount/free delivery offers based on quantity (e.g. 2 pcs free delivery, 2 pcs 200 tk discount). Scope each rule to Normal Products and/or Combo Products. Products can be assigned these offers from the product edit page.
                       </p>
                     </div>
                     <Button
@@ -1012,6 +1002,7 @@ export default function AdminSettingsPage() {
                           discountAmount: 0,
                           title: "২ পিস নিলে ডেলিভারি চার্জ ফ্রি!",
                           active: true,
+                          applicableTo: ["normal", "combo"] as ("normal" | "combo")[],
                         };
                         updateSection("shipping", { quantityOffers: [...currentOffers, newOffer] });
                         toast.success("New offer rule added!");
@@ -1138,6 +1129,40 @@ export default function AdminSettingsPage() {
                               className="h-8 text-xs"
                             />
                           </div>
+                        </div>
+
+                        {/* Applies To scoping */}
+                        <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-border/40">
+                          <Label className="text-[11px] font-semibold text-muted-foreground">Applies to:</Label>
+                          {(["normal", "combo"] as const).map((channel) => {
+                            const checked = (offer.applicableTo || []).includes(channel);
+                            return (
+                              <label key={channel} className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  className="size-3.5 accent-primary"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const current = offer.applicableTo || [];
+                                    const nextSet = e.target.checked
+                                      ? Array.from(new Set([...current, channel]))
+                                      : current.filter((c) => c !== channel);
+                                    const updated = [...(draftSettings.shipping.quantityOffers || [])];
+                                    updated[idx] = { ...offer, applicableTo: nextSet };
+                                    updateSection("shipping", { quantityOffers: updated });
+                                  }}
+                                />
+                                <span className="text-xs font-medium text-foreground">
+                                  {channel === "normal" ? "Normal Product" : "Combo Product"}
+                                </span>
+                              </label>
+                            );
+                          })}
+                          {(offer.applicableTo || []).length === 0 && (
+                            <span className="text-[11px] text-amber-600 font-semibold">
+                              (No channel selected — this rule will not apply anywhere)
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}

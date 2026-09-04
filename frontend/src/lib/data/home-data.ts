@@ -17,7 +17,6 @@ export interface HomePageData {
   settings: {
     brandName: string;
     currencySymbol: string;
-    freeShippingThreshold: number;
     enableFreeShipping: boolean;
     enableCOD: boolean;
   };
@@ -58,7 +57,6 @@ export async function fetchHomePageData(): Promise<HomePageData> {
 
     const brandName = settingsObj?.general?.websiteName || "Arza";
     const currencySymbol = settingsObj?.general?.currencySymbol || "৳";
-    const freeShippingThreshold = settingsObj?.shipping?.freeShippingThreshold ?? 5000;
     const enableFreeShipping = settingsObj?.shipping?.enableFreeShipping ?? true;
     const enableCOD = settingsObj?.orders?.enableCOD ?? true;
 
@@ -87,7 +85,6 @@ export async function fetchHomePageData(): Promise<HomePageData> {
       settings: {
         brandName,
         currencySymbol,
-        freeShippingThreshold,
         enableFreeShipping,
         enableCOD,
       },
@@ -102,7 +99,6 @@ export async function fetchHomePageData(): Promise<HomePageData> {
       settings: {
         brandName: "Arza",
         currencySymbol: "৳",
-        freeShippingThreshold: 5000,
         enableFreeShipping: true,
         enableCOD: true,
       },

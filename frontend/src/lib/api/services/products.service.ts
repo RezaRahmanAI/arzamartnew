@@ -51,6 +51,7 @@ class ProductsService {
       badge: product.badge,
       isBundle: product.isBundle,
       bundleProducts: product.bundleProducts,
+      offerRuleIds: product.offerRuleIds,
       isActive: product.isActive,
     });
 
@@ -83,6 +84,7 @@ class ProductsService {
       badge: updated.badge,
       isBundle: updated.isBundle,
       bundleProducts: updated.bundleProducts,
+      offerRuleIds: updated.offerRuleIds,
       isActive: updated.isActive,
     });
 

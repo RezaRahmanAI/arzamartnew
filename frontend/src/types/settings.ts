@@ -54,12 +54,12 @@ export interface QuantityOfferRule {
   discountAmount?: number;
   title: string;
   active: boolean;
+  applicableTo: ("normal" | "combo")[];
 }
 
 export interface ShippingSettings {
   rules: ShippingRule[];
   defaultShippingMethodId: string;
-  freeShippingThreshold: number;
   enableFreeShipping: boolean;
   cashOnDeliveryAvailable: boolean;
   quantityOffers?: QuantityOfferRule[];
@@ -236,17 +236,17 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   },
   shipping: {
     rules: [
-      { id: "inside-dhaka", name: "Inside Dhaka (ঢাকার ভিতরে)", charge: 60, estimatedDeliveryTime: "24-48 Hours", status: "active", displayOrder: 1 },
-      { id: "outside-dhaka", name: "Outside Dhaka (ঢাকার বাইরে)", charge: 120, estimatedDeliveryTime: "2-3 Days", status: "active", displayOrder: 2 },
+      { id: "inside-dhaka", name: "Inside Dhaka (ঢাকার ভিতরে)", charge: 70, estimatedDeliveryTime: "24-48 Hours", status: "active", displayOrder: 1 },
+      { id: "dhaka-sub-area", name: "Dhaka Sub-Area (ঢাকার সাব-এরিয়া)", charge: 120, estimatedDeliveryTime: "24-72 Hours", status: "active", displayOrder: 2 },
+      { id: "outside-dhaka", name: "Outside Dhaka (ঢাকার বাইরে)", charge: 150, estimatedDeliveryTime: "2-3 Days", status: "active", displayOrder: 3 },
     ],
     defaultShippingMethodId: "inside-dhaka",
-    freeShippingThreshold: 2000,
     enableFreeShipping: true,
     cashOnDeliveryAvailable: true,
     quantityOffers: [
-      { id: "free-delivery-2", minQty: 2, offerType: "free_delivery", title: "২ পিস নিলে ডেলিভারি চার্জ ফ্রি!", active: true },
-      { id: "discount-200-2", minQty: 2, offerType: "fixed_discount", discountAmount: 200, title: "২ পিস নিলে ২০০ টাকা ছাড়!", active: true },
-      { id: "discount-300-3", minQty: 3, offerType: "fixed_discount", discountAmount: 300, title: "৩ পিস নিলে ৩০০ টাকা ছাড়!", active: true },
+      { id: "free-delivery-2", minQty: 2, offerType: "free_delivery", title: "২ পিস নিলে ডেলিভারি চার্জ ফ্রি!", active: true, applicableTo: ["normal", "combo"] },
+      { id: "discount-200-2", minQty: 2, offerType: "fixed_discount", discountAmount: 200, title: "২ পিস নিলে ২০০ টাকা ছাড়!", active: true, applicableTo: ["normal", "combo"] },
+      { id: "discount-300-3", minQty: 3, offerType: "fixed_discount", discountAmount: 300, title: "৩ পিস নিলে ৩০০ টাকা ছাড়!", active: true, applicableTo: ["normal", "combo"] },
     ],
   },
   socialMedia: {

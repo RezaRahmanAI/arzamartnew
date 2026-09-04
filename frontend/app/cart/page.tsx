@@ -23,8 +23,6 @@ export default function CartPage() {
   const { settings } = useSettings();
 
   // Delivery logic from centralized settings & quantity offers
-  const freeShippingThreshold = settings?.shipping?.freeShippingThreshold ?? 5000;
-  const enableFreeShipping = settings?.shipping?.enableFreeShipping ?? true;
   const defaultCharge = settings?.shipping?.rules?.[0]?.charge ?? 70;
 
   const offerResult = calculateQuantityOfferDiscount({
@@ -32,13 +30,14 @@ export default function CartPage() {
       qty: l.qty,
       price: getSizePrice(l.product, l.size),
       product: l.product,
-      offerRuleId: l.product.offerRuleId,
+      offerRuleIds: l.product.offerRuleIds,
+      isCombo: !!l.product.isBundle,
     })),
     settings,
     baseDeliveryCharge: defaultCharge,
   });
 
-  const isFreeDelivery = offerResult.isFreeDelivery || (enableFreeShipping && subtotal >= freeShippingThreshold);
+  const isFreeDelivery = offerResult.isFreeDelivery;
   const delivery = subtotal === 0 ? 0 : isFreeDelivery ? 0 : defaultCharge;
   const quantityDiscount = offerResult.discountAmount;
   const totalAmount = Math.max(0, subtotal - quantityDiscount + delivery);
@@ -175,15 +174,23 @@ export default function CartPage() {
 
               {quantityDiscount > 0 && (
                 <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                  <dt className="flex items-center gap-1 font-medium">
+                  <dt className="flex items-center gap-1.5 font-medium">
                     <span>Special Discount</span>
                     {offerResult.appliedOfferTitle && (
-                      <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 px-1 rounded">
-                        {offerResult.appliedOfferTitle}
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                        Applied: {offerResult.appliedOfferTitle}
                       </span>
                     )}
                   </dt>
                   <dd className="font-bold">- {formatBDT(quantityDiscount)}</dd>
+                </div>
+              )}
+
+              {offerResult.isFreeDelivery && delivery === 0 && quantityDiscount === 0 && (
+                <div className="flex items-center gap-2 text-[11px] text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 rounded-md px-2 py-1.5">
+                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  <span>Applied offer: {offerResult.appliedOfferTitle}</span>
                 </div>
               )}
 
@@ -192,7 +199,7 @@ export default function CartPage() {
                 <dd className="font-semibold">
                   {delivery === 0 ? (
                     <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                      Free {offerResult.isFreeDelivery && "(Offer)"}
+                      Free {offerResult.isFreeDelivery && "(Offer Applied)"}
                     </span>
                   ) : (
                     formatBDT(delivery)

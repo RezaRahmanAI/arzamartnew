@@ -263,19 +263,25 @@ export default function ProductPage() {
           </div>
           {/* Promotional / Special Discount Box under price */}
           {(() => {
-            // Check global settings for matching offer rule or product custom discount note
-            const globalOffer = product.offerRuleId
-              ? settings?.shipping?.quantityOffers?.find((o) => o.id === product.offerRuleId && o.active)
-              : null;
+            const offerIds = product.offerRuleIds || [];
+            const applicableOffers = offerIds
+              .map((id: string) => settings?.shipping?.quantityOffers?.find((o) => o.id === id && o.active))
+              .filter(Boolean);
 
-            const offerText = globalOffer?.title || product.discountNote || product.offerTitle;
+            const offerTexts: string[] = applicableOffers.length > 0
+              ? applicableOffers.map((o) => o!.title)
+              : (product.discountNote ? [product.discountNote] : product.offerTitle ? [product.offerTitle] : []);
 
-            if (!offerText) return null;
+            if (offerTexts.length === 0) return null;
 
             return (
-              <div className="mt-3.5 inline-flex items-center gap-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 px-3.5 py-2 text-xs font-bold text-amber-800 dark:text-amber-300 shadow-xs">
-                <span className="flex size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                <span className="leading-snug">{offerText}</span>
+              <div className="mt-3.5 space-y-1.5">
+                {offerTexts.map((text, i) => (
+                  <div key={i} className="inline-flex items-center gap-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 px-3.5 py-2 text-xs font-bold text-amber-800 dark:text-amber-300 shadow-xs">
+                    <span className="flex size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                    <span className="leading-snug">{text}</span>
+                  </div>
+                ))}
               </div>
             );
           })()}

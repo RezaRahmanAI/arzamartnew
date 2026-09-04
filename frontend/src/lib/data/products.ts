@@ -16,6 +16,7 @@ export function mapPrismaProduct(p: {
   isActive: boolean;
   isBundle: boolean;
   bundleProducts: string | null;
+  offerRuleIds: string | null;
   averageRating: Prisma.Decimal | number | string;
   reviewCount: number;
   badge: string | null;
@@ -86,6 +87,18 @@ export function mapPrismaProduct(p: {
     }
   }
 
+  let parsedOfferRuleIds: string[] | undefined = undefined;
+  if (p.offerRuleIds) {
+    try {
+      const parsed = JSON.parse(p.offerRuleIds);
+      if (Array.isArray(parsed)) {
+        parsedOfferRuleIds = parsed.filter((x) => typeof x === "string");
+      }
+    } catch {
+      parsedOfferRuleIds = p.offerRuleIds.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+
   // Determine main category and subcategory from DB hierarchy
   let mainCategorySlug = "t-shirts";
   let subCategorySlug: string | undefined = undefined;
@@ -138,6 +151,7 @@ export function mapPrismaProduct(p: {
     badge: p.badge || undefined,
     isBundle: p.isBundle,
     bundleProducts: parsedBundleProducts,
+    offerRuleIds: parsedOfferRuleIds,
     isActive: p.isActive,
     acceptPreOrder: p.badge?.includes("PREORDER_ENABLED") ?? false,
   };

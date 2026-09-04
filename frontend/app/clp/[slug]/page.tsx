@@ -613,7 +613,7 @@ export default function CustomLandingPageRoute({
       items: selectedProductList.map((item) => ({
         qty: item.quantity,
         price: getItemPrice(item.product, item.selectedSize),
-        offerRuleId: undefined, // Evaluated via universal/global rules
+        offerRuleIds: undefined, // Evaluated via universal/global rules
       })),
       settings,
       baseDeliveryCharge: rawZoneCharge,

@@ -379,13 +379,18 @@ async function main() {
       },
       shipping: {
         rules: [
-          { id: "inside-dhaka", name: "Inside Dhaka", charge: 60, estimatedDeliveryTime: "24-48 Hours", status: "active", displayOrder: 1 },
-          { id: "outside-dhaka", name: "Outside Dhaka", charge: 120, estimatedDeliveryTime: "2-3 Days", status: "active", displayOrder: 2 },
+          { id: "inside-dhaka", name: "Inside Dhaka", charge: 70, estimatedDeliveryTime: "24-48 Hours", status: "active", displayOrder: 1 },
+          { id: "dhaka-sub-area", name: "Dhaka Sub-Area", charge: 120, estimatedDeliveryTime: "24-72 Hours", status: "active", displayOrder: 2 },
+          { id: "outside-dhaka", name: "Outside Dhaka", charge: 150, estimatedDeliveryTime: "2-3 Days", status: "active", displayOrder: 3 },
         ],
         defaultShippingMethodId: "inside-dhaka",
-        freeShippingThreshold: 1500,
         enableFreeShipping: true,
         cashOnDeliveryAvailable: true,
+        quantityOffers: [
+          { id: "free-delivery-2", minQty: 2, offerType: "free_delivery", title: "২ পিস নিলে ডেলিভারি চার্জ ফ্রি!", active: true, applicableTo: ["normal", "combo"] },
+          { id: "discount-200-2", minQty: 2, offerType: "fixed_discount", discountAmount: 200, title: "২ পিস নিলে ২০০ টাকা ছাড়!", active: true, applicableTo: ["normal", "combo"] },
+          { id: "discount-300-3", minQty: 3, offerType: "fixed_discount", discountAmount: 300, title: "৩ পিস নিলে ৩০০ টাকা ছাড়!", active: true, applicableTo: ["normal", "combo"] },
+        ],
       },
       navigation: {
         headerMenu: [

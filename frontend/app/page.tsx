@@ -13,11 +13,11 @@ export default async function HomePage() {
   const data = await fetchHomePageData();
 
   const { settings, offerBanner, categories, products, banners } = data;
-  const { brandName, currencySymbol, freeShippingThreshold, enableFreeShipping, enableCOD } = settings;
+  const { brandName, enableFreeShipping, enableCOD } = settings;
 
   const perks = [
     ...(enableFreeShipping
-      ? [{ icon: "Truck" as const, title: "Free delivery", text: `On orders over ${freeShippingThreshold.toLocaleString("en-US")} ${currencySymbol}` }]
+      ? [{ icon: "Truck" as const, title: "Free delivery on bundles", text: `Buy multiple items and unlock free delivery via our quantity offers` }]
       : [{ icon: "Truck" as const, title: "Fast delivery", text: "Nationwide shipping available" }]),
     { icon: "RotateCcw" as const, title: "7-day exchange", text: "Wrong size? No problem" },
     ...(enableCOD

@@ -34,6 +34,7 @@ export interface CreateProductInput {
   badge?: string;
   isBundle?: boolean;
   bundleProducts?: string[];
+  offerRuleIds?: string[];
   isActive?: boolean;
   acceptPreOrder?: boolean;
 }
@@ -60,6 +61,7 @@ export interface UpdateProductInput {
   badge?: string;
   isBundle?: boolean;
   bundleProducts?: string[];
+  offerRuleIds?: string[];
   isActive?: boolean;
   acceptPreOrder?: boolean;
 }
@@ -194,6 +196,10 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
       ? JSON.stringify(input.bundleProducts)
       : null;
 
+    const offerRuleIdsJson = input.offerRuleIds && input.offerRuleIds.length > 0
+      ? JSON.stringify(input.offerRuleIds)
+      : null;
+
     let finalBadge = input.badge?.trim() || "";
     if (input.acceptPreOrder) {
       finalBadge = finalBadge ? `${finalBadge}|PREORDER_ENABLED` : "PREORDER_ENABLED";
@@ -218,6 +224,7 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
           sizeTemplateId: input.sizeTemplateId || null,
           isBundle: input.isBundle ?? false,
           bundleProducts: bundleJson,
+          offerRuleIds: offerRuleIdsJson,
           isFeatured: false,
           isActive: input.isActive ?? true,
           averageRating: 5.0,
@@ -327,6 +334,10 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
       ? JSON.stringify(input.bundleProducts)
       : existing.bundleProducts;
 
+    const offerRuleIdsJson = input.offerRuleIds !== undefined
+      ? (input.offerRuleIds.length > 0 ? JSON.stringify(input.offerRuleIds) : null)
+      : existing.offerRuleIds;
+
     let updatedBadge = input.badge !== undefined ? input.badge?.trim() || "" : (existing.badge || "");
     if (input.acceptPreOrder !== undefined) {
       const cleanWithoutTag = updatedBadge.replace(/\|?PREORDER_ENABLED/g, "").trim();
@@ -350,6 +361,7 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
           badge: updatedBadge || null,
           isBundle: input.isBundle !== undefined ? input.isBundle : existing.isBundle,
           bundleProducts: bundleJson,
+          offerRuleIds: offerRuleIdsJson,
           isActive: input.isActive !== undefined ? input.isActive : existing.isActive,
           categoryId,
           sizeTemplateId: input.sizeTemplateId !== undefined ? (input.sizeTemplateId || null) : existing.sizeTemplateId,

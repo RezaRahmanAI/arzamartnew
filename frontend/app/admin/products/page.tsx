@@ -45,7 +45,7 @@ type FormState = {
   sizes: string;
   description: string;
   discountNote: string;
-  offerRuleId: string;
+  offerRuleIds: string[];
   badge: string;
   sizePrices: Record<string, number>;
   sizeMeasurements: Record<string, { chest?: string; length?: string; waist?: string; sleeve?: string }>;
@@ -70,7 +70,7 @@ const emptyForm: FormState = {
   sizes: "M, L, XL, XXL",
   description: "",
   discountNote: "",
-  offerRuleId: "",
+  offerRuleIds: [],
   badge: "",
   sizePrices: {},
   sizeMeasurements: {},
@@ -313,7 +313,7 @@ export default function AdminProducts() {
       sizes: p.sizes.join(", "),
       description: p.description || "",
       discountNote: p.discountNote || p.shortDescription || "",
-      offerRuleId: p.offerRuleId || "",
+      offerRuleIds: p.offerRuleIds || [],
       badge: (p.badge ?? "").replace(/\|?PREORDER_ENABLED/g, "").trim(),
       sizePrices: p.sizePrices ?? {},
       sizeMeasurements: p.sizeMeasurements
@@ -426,10 +426,11 @@ export default function AdminProducts() {
       ? categories.find((c) => c.slug === form.subcategory || (c.id && String(c.id) === form.subcategory))
       : null;
 
-    // Resolve offer rule if selected
-    const selectedOffer = form.offerRuleId
-      ? quantityOffers.find(o => o.id === form.offerRuleId)
-      : null;
+    // Resolve the first selected offer rule (for cached banner text + min qty hints)
+    const selectedOffers = form.offerRuleIds
+      .map((id) => quantityOffers.find((o) => o.id === id))
+      .filter(Boolean) as NonNullable<typeof quantityOffers[number]>[];
+    const selectedOffer = selectedOffers[0] || null;
 
     const discountNoteFinal = form.discountNote || selectedOffer?.title || undefined;
 
@@ -450,7 +451,7 @@ export default function AdminProducts() {
       description: form.description || "No description yet.",
       discountNote: discountNoteFinal,
       shortDescription: discountNoteFinal,
-      offerRuleId: form.offerRuleId || undefined,
+      offerRuleIds: form.offerRuleIds.length > 0 ? form.offerRuleIds : undefined,
       offerTitle: selectedOffer?.title || undefined,
       offerType: selectedOffer?.offerType || undefined,
       offerMinQty: selectedOffer?.minQty || undefined,
@@ -1281,34 +1282,72 @@ export default function AdminProducts() {
 
             {/* Quantity-Based Offer Selector & Custom Banner */}
             <div className="rounded-xl border border-border/70 bg-primary/5 p-3.5 space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="offerRule" className="text-xs font-bold text-foreground">
-                  Quantity Offer Rule (কোয়ান্টিটি অফার নির্বাচন করুন)
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-foreground">
+                  Applicable Quantity Offers (প্রযোজ্য কোয়ান্টিটি অফার)
                 </Label>
-                <select
-                  id="offerRule"
-                  value={form.offerRuleId}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    update("offerRuleId", selectedId);
-                    if (selectedId) {
-                      const found = quantityOffers.find((o) => o.id === selectedId);
-                      if (found) {
-                        update("discountNote", found.title);
-                      }
-                    }
-                  }}
-                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium"
-                >
-                  <option value="">-- No Offer Selected (কোনো অফার নেই) --</option>
-                  {quantityOffers.map((offer) => (
-                    <option key={offer.id} value={offer.id}>
-                      {offer.title} ({offer.minQty} pcs - {offer.offerType === "free_delivery" ? "Free Delivery" : `৳${offer.discountAmount} Off`})
-                    </option>
-                  ))}
-                </select>
+                {quantityOffers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">
+                    No active offers available. Create offers in Settings → Shipping Settings first.
+                  </p>
+                ) : (
+                  <div className="space-y-2 rounded-lg border border-border bg-background p-2">
+                    {quantityOffers.map((offer) => {
+                      const channelLabels: string[] = [];
+                      if (offer.applicableTo?.includes("normal")) channelLabels.push("Normal");
+                      if (offer.applicableTo?.includes("combo")) channelLabels.push("Combo");
+                      const scopedToChannel = offer.applicableTo && offer.applicableTo.length > 0;
+                      const disabled = !scopedToChannel || (form.isBundle
+                        ? !offer.applicableTo?.includes("combo")
+                        : !offer.applicableTo?.includes("normal"));
+                      const checked = form.offerRuleIds.includes(offer.id);
+                      return (
+                        <label
+                          key={offer.id}
+                          className={`flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-secondary/40 ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                          title={
+                            !scopedToChannel
+                              ? "This offer has no channel scoping configured."
+                              : disabled
+                                ? `This offer only applies to ${channelLabels.join(" & ")} products, not to ${form.isBundle ? "combos" : "normal products"}.`
+                                : undefined
+                          }
+                        >
+                          <input
+                            type="checkbox"
+                            className="size-3.5 mt-0.5 accent-primary"
+                            disabled={disabled}
+                            checked={checked}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? Array.from(new Set([...form.offerRuleIds, offer.id]))
+                                : form.offerRuleIds.filter((id) => id !== offer.id);
+                              update("offerRuleIds", next);
+                              // Auto-fill banner text from first selected offer if banner field is empty
+                              if (next.length > 0 && !form.discountNote) {
+                                const first = quantityOffers.find((o) => o.id === next[0]);
+                                if (first) update("discountNote", first.title);
+                              }
+                            }}
+                          />
+                          <div className="flex-1">
+                            <div className="text-xs font-semibold text-foreground">{offer.title}</div>
+                            <div className="text-[11px] text-muted-foreground">
+                              Min {offer.minQty} pcs · {offer.offerType === "free_delivery" ? "Free Delivery" : offer.offerType === "percentage_discount" ? `${offer.discountAmount}% Off` : `৳${offer.discountAmount} Off`}
+                              {scopedToChannel && (
+                                <span className="ml-1.5 text-primary font-medium">
+                                  ({channelLabels.join(" / ")})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
                 <p className="text-[11px] text-muted-foreground">
-                  সেটিংস এ কনফিগার করা গ্লোবাল অফার ড্রপডাউন থেকে সিলেক্ট করুন (বা নিচের ঘরে নিজের মতো লিখেও দিতে পারেন)।
+                  Tick the offers that should apply to this {form.isBundle ? "combo" : "product"}. Disabled offers don't match this product's channel (Normal / Combo).
                 </p>
               </div>
 
