@@ -371,7 +371,11 @@ export default function AdminProducts() {
     }
 
     const template = sizeTemplates.find((t) => t.id === templateId);
-    if (!template) return;
+    if (!template) {
+      // Templates list not loaded yet — just remember the id
+      update("sizeTemplateId", templateId);
+      return;
+    }
 
     // 1. Extract sizes from template entries
     const templateSizes = template.entries.map((e) => e.size);
@@ -1131,7 +1135,8 @@ export default function AdminProducts() {
                 Select a pre-configured size template to instantly auto-fill sizes and exact measurements (Chest, Length). You can still adjust individual size measurements below.
               </p>
               <select
-                value={form.sizeTemplateId}
+                key={`size-template-${sizeTemplates.length}`}
+                value={form.sizeTemplateId || ""}
                 onChange={(e) => handleApplySizeTemplate(e.target.value)}
                 className="h-9 w-full rounded-md border border-border bg-background px-3 text-xs font-semibold"
               >
