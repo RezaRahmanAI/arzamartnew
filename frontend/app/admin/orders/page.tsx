@@ -1259,13 +1259,13 @@ export default function AdminOrders() {
               <TableHead>Name</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Courier</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead className="text-right">Paid</TableHead>
-              <TableHead className="text-right">Due</TableHead>
               <TableHead>Social Media</TableHead>
               <TableHead>Page Name</TableHead>
+              <TableHead className="text-right">Due</TableHead>
               <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Courier</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1395,40 +1395,6 @@ export default function AdminOrders() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
-                  <TableCell>
-                    {o.courierName ? (
-                      <div className="space-y-0.5 max-w-[140px]">
-                        <div className="flex items-center gap-1">
-                          <Link
-                            href={o.shipmentBatchId ? `/admin/bulk-shipment/${o.shipmentBatchId}` : "/admin/bulk-shipment"}
-                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1 truncate"
-                            title={`View Shipment Batch: ${o.courierName}`}
-                          >
-                            <Truck className="size-3 shrink-0 text-primary" />
-                            <span className="truncate">{o.courierName}</span>
-                          </Link>
-                        </div>
-                        {o.courierTrackingNumber ? (
-                          <span
-                            onClick={() => {
-                              navigator.clipboard.writeText(o.courierTrackingNumber!);
-                              toast.success(`Copied Tracking: ${o.courierTrackingNumber}`);
-                            }}
-                            className="font-mono text-[10px] text-muted-foreground hover:text-foreground cursor-pointer bg-muted/60 px-1.5 py-0.5 rounded inline-block"
-                            title="Click to copy tracking number"
-                          >
-                            {o.courierTrackingNumber}
-                          </span>
-                        ) : o.shipmentStatus ? (
-                          <span className="text-[10px] capitalize text-muted-foreground block">
-                            ({o.shipmentStatus.replace(/_/g, " ")})
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground font-mono">-</span>
-                    )}
-                  </TableCell>
                   <TableCell className="text-right font-bold text-xs tracking-tight">{formatBDT(totalAmount)}</TableCell>
 
                   {/* Paid cell with interactive edit popover */}
@@ -1509,6 +1475,27 @@ export default function AdminOrders() {
                         </Button>
                       </PopoverContent>
                     </Popover>
+                  </TableCell>
+
+                  <TableCell>
+                    {sourceInfo.isWebsite ? (
+                      <div className="flex items-center gap-1.5 text-xs text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-2 py-1 rounded-md font-medium w-fit">
+                        <Globe className="h-3.5 w-3.5 text-slate-500" /> <span>Website</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-xs text-pink-700 bg-pink-50 dark:bg-pink-950/40 dark:text-pink-300 border border-pink-200/60 px-2 py-1 rounded-md font-semibold w-fit">
+                        <Share2 className="h-3.5 w-3.5 text-pink-500" /> <span className="truncate max-w-[110px]">{sourceInfo.socialMedia}</span>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {sourceInfo.isWebsite || sourceInfo.pageName === "-" ? (
+                      <span className="text-xs text-muted-foreground font-mono">-</span>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200/60 px-2 py-1 rounded-md font-semibold w-fit max-w-[140px] truncate">
+                        <Layers className="h-3.5 w-3.5 text-blue-500" /> <span className="truncate">{sourceInfo.pageName}</span>
+                      </div>
+                    )}
                   </TableCell>
 
                   {/* Due cell with interactive edit popover */}
@@ -1595,26 +1582,6 @@ export default function AdminOrders() {
                     </Popover>
                   </TableCell>
 
-                  <TableCell>
-                    {sourceInfo.isWebsite ? (
-                      <div className="flex items-center gap-1.5 text-xs text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-2 py-1 rounded-md font-medium w-fit">
-                        <Globe className="h-3.5 w-3.5 text-slate-500" /> <span>Website</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-xs text-pink-700 bg-pink-50 dark:bg-pink-950/40 dark:text-pink-300 border border-pink-200/60 px-2 py-1 rounded-md font-semibold w-fit">
-                        <Share2 className="h-3.5 w-3.5 text-pink-500" /> <span className="truncate max-w-[110px]">{sourceInfo.socialMedia}</span>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {sourceInfo.isWebsite || sourceInfo.pageName === "-" ? (
-                      <span className="text-xs text-muted-foreground font-mono">-</span>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200/60 px-2 py-1 rounded-md font-semibold w-fit max-w-[140px] truncate">
-                        <Layers className="h-3.5 w-3.5 text-blue-500" /> <span className="truncate">{sourceInfo.pageName}</span>
-                      </div>
-                    )}
-                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-col items-end gap-1.5 min-w-[240px]">
                       <div className="flex flex-wrap justify-end gap-1.5">
@@ -1805,13 +1772,47 @@ export default function AdminOrders() {
                       </div>
                     </div>
                   </TableCell>
+                  <TableCell>
+                    {o.courierName ? (
+                      <div className="space-y-0.5 max-w-[140px]">
+                        <div className="flex items-center gap-1">
+                          <Link
+                            href={o.shipmentBatchId ? `/admin/bulk-shipment/${o.shipmentBatchId}` : "/admin/bulk-shipment"}
+                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1 truncate"
+                            title={`View Shipment Batch: ${o.courierName}`}
+                          >
+                            <Truck className="size-3 shrink-0 text-primary" />
+                            <span className="truncate">{o.courierName}</span>
+                          </Link>
+                        </div>
+                        {o.courierTrackingNumber ? (
+                          <span
+                            onClick={() => {
+                              navigator.clipboard.writeText(o.courierTrackingNumber!);
+                              toast.success(`Copied Tracking: ${o.courierTrackingNumber}`);
+                            }}
+                            className="font-mono text-[10px] text-muted-foreground hover:text-foreground cursor-pointer bg-muted/60 px-1.5 py-0.5 rounded inline-block"
+                            title="Click to copy tracking number"
+                          >
+                            {o.courierTrackingNumber}
+                          </span>
+                        ) : o.shipmentStatus ? (
+                          <span className="text-[10px] capitalize text-muted-foreground block">
+                            ({o.shipmentStatus.replace(/_/g, " ")})
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground font-mono">-</span>
+                    )}
+                  </TableCell>
                 </TableRow>
               );
             })}
             
             {paginatedOrders.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="py-20 text-center">
+                <TableCell colSpan={12} className="py-20 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center text-muted-foreground opacity-60">
                       <PackageX className="h-7 w-7" />
