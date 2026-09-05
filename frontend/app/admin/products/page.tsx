@@ -442,8 +442,9 @@ export default function AdminProducts() {
       if (sp !== undefined && sp > 0) sizePrices[s] = sp;
     });
 
-    const firstVal = Object.values(sizePrices)[0] || 0;
-    const basePrice = sizes[0] ? (sizePrices[sizes[0]] || firstVal) : firstVal;
+    const formSellingPrice = Number(form.price) || 0;
+    const firstVal = Object.values(sizePrices)[0] || formSellingPrice;
+    const basePrice = (sizes[0] && sizePrices[sizes[0]]) ? sizePrices[sizes[0]] : firstVal;
 
     // Resolve exact database IDs from category store
     const mainCatObj = categories.find((c) => c.slug === form.category || (c.id && String(c.id) === form.category));
@@ -468,9 +469,9 @@ export default function AdminProducts() {
       subcategoryId: subCatObj?.id,
       categoryName: mainCatObj?.name,
       subcategoryName: subCatObj?.name,
-      price: basePrice,
+      price: basePrice || formSellingPrice,
       compareAt: Number(form.compareAt) > 0 ? Number(form.compareAt) : undefined,
-      mrp: Number(form.compareAt) > 0 ? Number(form.compareAt) : undefined,
+      mrp: Number(form.compareAt) > 0 ? Number(form.compareAt) : 0,
       image: form.image || FALLBACK_IMAGE,
       sizes,
       description: form.description || "No description yet.",
@@ -1127,16 +1128,30 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="compareAt">MRP / Original Price (৳)</Label>
-              <Input
-                id="compareAt"
-                type="number"
-                min="0"
-                value={form.compareAt || ""}
-                onChange={(e) => update("compareAt", Number(e.target.value))}
-                placeholder="990"
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="price">Selling Price / Regular Price (৳) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  value={form.price || ""}
+                  onChange={(e) => update("price", Number(e.target.value))}
+                  placeholder="790"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="compareAt">MRP / Original Price (৳)</Label>
+                <Input
+                  id="compareAt"
+                  type="number"
+                  min="0"
+                  value={form.compareAt || ""}
+                  onChange={(e) => update("compareAt", Number(e.target.value))}
+                  placeholder="990"
+                />
+              </div>
             </div>
 
             {/* Size Template Selector */}

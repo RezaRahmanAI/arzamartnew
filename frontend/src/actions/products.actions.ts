@@ -189,8 +189,10 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
     }
 
     const sku = `SKU-${Date.now().toString().slice(-6)}`;
-    const basePrice = input.mrp || input.price || 0;
-    const discountPrice = input.compareAt && input.compareAt > input.price ? input.price : null;
+    const sellingPrice = input.price !== undefined && input.price > 0 ? input.price : 0;
+    const rawMrp = input.mrp !== undefined ? input.mrp : (input.compareAt !== undefined ? input.compareAt : 0);
+    const basePrice = rawMrp > 0 && rawMrp > sellingPrice ? rawMrp : sellingPrice;
+    const discountPrice = rawMrp > 0 && rawMrp > sellingPrice ? sellingPrice : null;
 
     const bundleJson = input.bundleProducts && input.bundleProducts.length > 0
       ? JSON.stringify(input.bundleProducts)
@@ -327,8 +329,30 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
       }
     }
 
-    const basePrice = input.mrp !== undefined ? input.mrp : input.price !== undefined ? input.price : existing.basePrice;
-    const discountPrice = input.compareAt && input.price && input.compareAt > input.price ? input.price : null;
+    const existingSellingPrice = existing.discountPrice ? Number(existing.discountPrice) : Number(existing.basePrice);
+    const sellingPrice = input.price !== undefined && input.price > 0 ? input.price : existingSellingPrice;
+    const rawMrp = input.mrp !== undefined ? input.mrp : (input.compareAt !== undefined ? input.compareAt : null);
+
+    let basePrice: number;
+    let discountPrice: number | null;
+
+    if (rawMrp !== null) {
+      if (rawMrp > 0 && rawMrp > sellingPrice) {
+        basePrice = rawMrp;
+        discountPrice = sellingPrice;
+      } else {
+        basePrice = sellingPrice;
+        discountPrice = null;
+      }
+    } else {
+      if (existing.discountPrice && Number(existing.discountPrice) > 0 && Number(existing.basePrice) > sellingPrice) {
+        basePrice = Number(existing.basePrice);
+        discountPrice = sellingPrice;
+      } else {
+        basePrice = sellingPrice;
+        discountPrice = null;
+      }
+    }
 
     const bundleJson = input.bundleProducts !== undefined
       ? JSON.stringify(input.bundleProducts)
@@ -412,12 +436,11 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
           const hasExplicitSizePricing =
             input.sizePrices && Object.keys(input.sizePrices).length > 0;
           const explicitPrice = input.sizePrices?.[sizeName];
-          // If size price equals the effective base price, treat as null so the
-          // variant falls back to BasePrice and updates to the base price are
-          // reflected immediately on the storefront.
+          // If size price equals the effective selling price, treat as null so the
+          // variant falls back to the product's selling price.
           const priceOverride =
             hasExplicitSizePricing && explicitPrice !== undefined && explicitPrice !== null
-              ? (Number(explicitPrice) !== Number(basePrice) ? Number(explicitPrice) : null)
+              ? (Number(explicitPrice) !== Number(sellingPrice) ? Number(explicitPrice) : null)
               : null;
           const stockQuantity =
             input.sizeStock?.[sizeName] !== undefined
