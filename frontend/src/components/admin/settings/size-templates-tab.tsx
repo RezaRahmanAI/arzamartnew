@@ -16,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -66,9 +65,9 @@ const BOTTOMWEAR_DEFAULTS: TemplateRowForm[] = [
   { size: "36", waist: "36", length: "42", chest: "44", sleeve: "15" },
 ];
 
-export function isBottomwearCategory(category?: string | null): boolean {
-  if (!category) return false;
-  const c = category.toLowerCase();
+export function isBottomwearCategory(nameOrCategory?: string | null): boolean {
+  if (!nameOrCategory) return false;
+  const c = nameOrCategory.toLowerCase();
   return (
     c.includes("pant") ||
     c.includes("bottom") ||
@@ -84,6 +83,15 @@ export function isBottomwearCategory(category?: string | null): boolean {
   );
 }
 
+export function isBottomwearTemplate(template: SizeTemplateDto | null | undefined): boolean {
+  if (!template) return false;
+  if (isBottomwearCategory(template.name)) return true;
+  // If waist is populated on entries but chest is absent or smaller, or pants sizes like numeric 28, 30, 32
+  const firstEntry = template.entries?.[0];
+  if (firstEntry?.waist && !firstEntry?.chest) return true;
+  return false;
+}
+
 export function SizeTemplatesTab() {
   const [templates, setTemplates] = useState<SizeTemplateDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -94,8 +102,6 @@ export function SizeTemplatesTab() {
   const [editingTemplate, setEditingTemplate] = useState<SizeTemplateDto | null>(null);
   const [templateType, setTemplateType] = useState<"topwear" | "bottomwear">("topwear");
   const [name, setName] = useState<string>("");
-  const [category, setCategory] = useState<string>("T-Shirts");
-  const [description, setDescription] = useState<string>("");
   const [rows, setRows] = useState<TemplateRowForm[]>(TOPWEAR_DEFAULTS);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
@@ -123,20 +129,13 @@ export function SizeTemplatesTab() {
   const filteredTemplates = useMemo(() => {
     if (!searchQuery.trim()) return templates;
     const q = searchQuery.toLowerCase().trim();
-    return templates.filter(
-      (t) =>
-        t.name.toLowerCase().includes(q) ||
-        (t.category && t.category.toLowerCase().includes(q)) ||
-        (t.description && t.description.toLowerCase().includes(q))
-    );
+    return templates.filter((t) => t.name.toLowerCase().includes(q));
   }, [templates, searchQuery]);
 
   const openCreateModal = () => {
     setEditingTemplate(null);
     setTemplateType("topwear");
     setName("");
-    setCategory("T-Shirts");
-    setDescription("");
     setRows(TOPWEAR_DEFAULTS);
     setIsModalOpen(true);
   };
@@ -146,10 +145,8 @@ export function SizeTemplatesTab() {
     setTemplateType(newType);
     if (!editingTemplate) {
       if (newType === "bottomwear") {
-        setCategory("Pants / Bottomwear");
         setRows(BOTTOMWEAR_DEFAULTS);
       } else {
-        setCategory("T-Shirts");
         setRows(TOPWEAR_DEFAULTS);
       }
     }
@@ -157,11 +154,9 @@ export function SizeTemplatesTab() {
 
   const openEditModal = (t: SizeTemplateDto) => {
     setEditingTemplate(t);
-    const isBottom = isBottomwearCategory(t.category) || isBottomwearCategory(t.name);
+    const isBottom = isBottomwearTemplate(t);
     setTemplateType(isBottom ? "bottomwear" : "topwear");
     setName(t.name);
-    setCategory(t.category || (isBottom ? "Pants / Bottomwear" : "T-Shirts"));
-    setDescription(t.description || "");
     const mappedRows: TemplateRowForm[] = (t.entries || []).map((e) => ({
       size: e.size,
       chest: e.chest || "",
@@ -217,8 +212,6 @@ export function SizeTemplatesTab() {
       if (editingTemplate) {
         const res = await updateSizeTemplateAction(editingTemplate.id, {
           name: name.trim(),
-          category: category.trim() || undefined,
-          description: description.trim() || undefined,
           entries: validEntries,
         });
         if (res.success) {
@@ -231,8 +224,6 @@ export function SizeTemplatesTab() {
       } else {
         const res = await createSizeTemplateAction({
           name: name.trim(),
-          category: category.trim() || undefined,
-          description: description.trim() || undefined,
           entries: validEntries,
         });
         if (res.success) {
@@ -350,7 +341,6 @@ export function SizeTemplatesTab() {
             <TableHeader>
               <TableRow className="bg-muted/40">
                 <TableHead className="text-xs font-bold">Template Name</TableHead>
-                <TableHead className="text-xs font-bold">Category</TableHead>
                 <TableHead className="text-xs font-bold">Sizes Defined</TableHead>
                 <TableHead className="text-xs font-bold">Measurements Preview</TableHead>
                 <TableHead className="text-center text-xs font-bold">Products Using</TableHead>
@@ -361,19 +351,7 @@ export function SizeTemplatesTab() {
               {filteredTemplates.map((t) => (
                 <TableRow key={t.id} className="hover:bg-muted/30">
                   <TableCell className="font-semibold text-xs text-foreground">
-                    <div className="space-y-0.5">
-                      <span className="font-bold text-foreground block">{t.name}</span>
-                      {t.description && (
-                        <span className="text-[11px] text-muted-foreground line-clamp-1">
-                          {t.description}
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-secondary text-secondary-foreground">
-                      {t.category || "General"}
-                    </span>
+                    <span className="font-bold text-foreground block">{t.name}</span>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
@@ -390,7 +368,7 @@ export function SizeTemplatesTab() {
                   <TableCell>
                     <div className="text-[11px] text-muted-foreground space-y-0.5 font-mono">
                       {(() => {
-                        const isBottom = isBottomwearCategory(t.category) || isBottomwearCategory(t.name);
+                        const isBottom = isBottomwearTemplate(t);
                         return t.entries.slice(0, 3).map((e, idx) => (
                           <span key={idx} className="block truncate">
                             <strong className="text-foreground">{e.size}:</strong>{" "}
@@ -500,53 +478,21 @@ export function SizeTemplatesTab() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="template-name" className="text-xs font-bold">
-                  Template Name *
-                </Label>
-                <Input
-                  id="template-name"
-                  placeholder={
-                    templateType === "topwear"
-                      ? "e.g. T-Shirt Standard, Panjabi Regular..."
-                      : "e.g. Chinos Pants, Slim Fit Denim, Pajama..."
-                  }
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="h-9 text-xs"
-                  required
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="template-category" className="text-xs font-bold">
-                  Category Tag (Optional)
-                </Label>
-                <Input
-                  id="template-category"
-                  placeholder={templateType === "topwear" ? "e.g. T-Shirts, Shirts, Panjabi" : "e.g. Pants, Chinos, Denim"}
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="h-9 text-xs"
-                />
-              </div>
-            </div>
-
             <div className="space-y-1">
-              <Label htmlFor="template-desc" className="text-xs font-semibold text-muted-foreground">
-                Description / Internal Notes
+              <Label htmlFor="template-name" className="text-xs font-bold">
+                Template Name *
               </Label>
-              <Textarea
-                id="template-desc"
+              <Input
+                id="template-name"
                 placeholder={
                   templateType === "topwear"
-                    ? "e.g. Standard 100% cotton comb tee measurements in inches."
-                    : "e.g. Stretch chinos measurements in inches."
+                    ? "e.g. T-Shirt Standard, Panjabi Regular..."
+                    : "e.g. Chinos Pants, Slim Fit Denim, Pajama..."
                 }
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-                className="text-xs"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-9 text-xs"
+                required
               />
             </div>
 

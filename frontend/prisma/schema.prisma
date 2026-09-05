@@ -502,8 +502,6 @@ model ShipmentStatusHistory {
 model SizeTemplate {
   id           String              @id @default(uuid()) @map("Id") @db.UniqueIdentifier
   name         String              @map("Name") @db.NVarChar(150)
-  category     String?             @map("Category") @db.NVarChar(100)
-  description  String?             @map("Description") @db.NVarChar(500)
   createdAtUtc DateTime            @default(now()) @map("CreatedAtUtc")
   updatedAtUtc DateTime?           @updatedAt @map("UpdatedAtUtc")
 

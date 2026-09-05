@@ -1164,7 +1164,7 @@ export default function AdminProducts() {
                 <option value="">-- No Template / Custom Sizing --</option>
                 {sizeTemplates.map((tpl) => (
                   <option key={tpl.id} value={tpl.id}>
-                    {tpl.name} ({tpl.category || "General"}) — {tpl.entries.map((e) => e.size).join(", ")}
+                    {tpl.name} — {tpl.entries.map((e) => e.size).join(", ")}
                   </option>
                 ))}
               </select>
@@ -1196,7 +1196,6 @@ export default function AdminProducts() {
               const currentTpl = sizeTemplates.find((t) => t.id === form.sizeTemplateId);
               const isBottomwear =
                 isBottomwearCategory(form.category) ||
-                isBottomwearCategory(currentTpl?.category) ||
                 isBottomwearCategory(currentTpl?.name) ||
                 isBottomwearCategory(form.name);
 

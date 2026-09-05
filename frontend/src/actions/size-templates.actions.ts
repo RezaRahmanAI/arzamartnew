@@ -16,8 +16,6 @@ export interface SizeTemplateEntryDto {
 export interface SizeTemplateDto {
   id: string;
   name: string;
-  category?: string | null;
-  description?: string | null;
   createdAtUtc?: Date | string;
   updatedAtUtc?: Date | string | null;
   entries: SizeTemplateEntryDto[];
@@ -26,8 +24,6 @@ export interface SizeTemplateDto {
 
 export interface SaveSizeTemplateInput {
   name: string;
-  category?: string;
-  description?: string;
   entries: Array<{
     size: string;
     chest?: string;
@@ -55,8 +51,6 @@ export async function getSizeTemplatesAction(): Promise<SizeTemplateDto[]> {
     return templates.map((t) => ({
       id: t.id,
       name: t.name,
-      category: t.category,
-      description: t.description,
       createdAtUtc: t.createdAtUtc.toISOString(),
       updatedAtUtc: t.updatedAtUtc?.toISOString() || null,
       entries: t.entries.map((e) => ({
@@ -95,8 +89,6 @@ export async function getSizeTemplateByIdAction(id: string): Promise<SizeTemplat
     return {
       id: t.id,
       name: t.name,
-      category: t.category,
-      description: t.description,
       createdAtUtc: t.createdAtUtc.toISOString(),
       updatedAtUtc: t.updatedAtUtc?.toISOString() || null,
       entries: t.entries.map((e) => ({
@@ -129,8 +121,6 @@ export async function createSizeTemplateAction(
       const template = await tx.sizeTemplate.create({
         data: {
           name,
-          category: input.category?.trim() || null,
-          description: input.description?.trim() || null,
         },
       });
 
@@ -187,8 +177,6 @@ export async function updateSizeTemplateAction(
         where: { id },
         data: {
           name,
-          category: input.category?.trim() || null,
-          description: input.description?.trim() || null,
         },
       });
 
