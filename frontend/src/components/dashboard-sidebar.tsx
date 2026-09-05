@@ -112,6 +112,7 @@ export function DashboardSidebar() {
       icon: Boxes,
       items: [
         { title: "All Products", url: "/admin/products", icon: Boxes },
+        { title: "Size Templates", url: "/admin/size-templates", icon: Ruler },
         { title: "Categories", url: "/admin/categories", icon: FolderOpen },
         { title: "Sub-Categories", url: "/admin/sub-categories", icon: Layers },
       ],
@@ -141,7 +142,6 @@ export function DashboardSidebar() {
       items: [
         { title: "General Settings", url: "/admin/settings?tab=general", icon: Globe },
         { title: "Branding & Appearance", url: "/admin/settings?tab=branding", icon: Palette },
-        { title: "Size Templates", url: "/admin/settings?tab=sizeTemplates", icon: Ruler },
         { title: "Shipping Settings", url: "/admin/settings?tab=shipping", icon: Truck },
         { title: "Social Media Links", url: "/admin/settings?tab=socialMedia", icon: Share2 },
         { title: "Business Information", url: "/admin/settings?tab=business", icon: Building2 },

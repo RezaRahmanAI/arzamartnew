@@ -56,7 +56,7 @@ export interface SizeTemplateFormProps {
 export function SizeTemplateForm({
   initialTemplate = null,
   initialType = "topwear",
-  backHref = "/admin/settings?tab=sizeTemplates",
+  backHref = "/admin/size-templates",
 }: SizeTemplateFormProps) {
   const router = useRouter();
   const editing = Boolean(initialTemplate?.id);

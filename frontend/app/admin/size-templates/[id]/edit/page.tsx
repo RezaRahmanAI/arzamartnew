@@ -59,7 +59,7 @@ export default function EditSizeTemplatePage() {
         <div className="mt-3">
           <button
             type="button"
-            onClick={() => router.push("/admin/settings?tab=sizeTemplates")}
+            onClick={() => router.push("/admin/size-templates")}
             className="text-xs underline"
           >
             Back to templates

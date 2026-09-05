@@ -95,11 +95,11 @@ export function SizeTemplatesTab() {
   }, [templates, searchQuery]);
 
   const handleCreate = () => {
-    router.push("/admin/settings/size-templates/new");
+    router.push("/admin/size-templates/new");
   };
 
   const handleEdit = (t: SizeTemplateDto) => {
-    router.push(`/admin/settings/size-templates/${t.id}/edit`);
+    router.push(`/admin/size-templates/${t.id}/edit`);
   };
 
   const handleDeleteTemplate = async () => {

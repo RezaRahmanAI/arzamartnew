@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useSettings } from "@/context/settings-context";
 import { SystemSettings, ShippingRule } from "@/types/settings";
 import { getSystemAuditLogs } from "@/lib/audit-logger";
@@ -34,9 +35,7 @@ import {
   AlertTriangle,
   ChevronDown,
   Eye,
-  Ruler,
 } from "lucide-react";
-import { SizeTemplatesTab } from "@/components/admin/settings/size-templates-tab";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -57,7 +56,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type SettingsCategoryKey = keyof SystemSettings | "auditLogs" | "sizeTemplates";
+type SettingsCategoryKey = keyof SystemSettings | "auditLogs";
 
 interface CategoryTab {
   key: SettingsCategoryKey;
@@ -69,7 +68,6 @@ interface CategoryTab {
 const CATEGORIES: CategoryTab[] = [
   { key: "general", label: "General Settings", description: "Website identity, currency, status, locale & contact information", icon: Globe },
   { key: "branding", label: "Branding & Appearance", description: "Logos, color palette, typography & theme styling", icon: Palette },
-  { key: "sizeTemplates", label: "Size Templates", description: "Standard sizing, chest & length templates for products", icon: Ruler },
   { key: "shipping", label: "Shipping Settings", description: "Shipping rates, delivery rules & COD availability", icon: Truck },
   { key: "socialMedia", label: "Social Media Links", description: "Social accounts, messenger & channel handles", icon: Share2 },
   { key: "business", label: "Business Information", description: "Trade license, BIN, VAT & legal tax details", icon: Building2 },
@@ -97,13 +95,21 @@ export default function AdminSettingsPage() {
   } = useSettings();
 
   const searchParams = useSearchParams();
+  const router = useRouter();
   const tabParam = searchParams.get("tab") as SettingsCategoryKey | null;
   const activeTab: SettingsCategoryKey = tabParam && CATEGORIES.some((c) => c.key === tabParam) ? tabParam : "general";
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [resetScope, setResetScope] = useState<"current" | "all">("current");
 
+  // Legacy URL redirect: /admin/settings?tab=sizeTemplates -> /admin/size-templates
+  useEffect(() => {
+    if (searchParams.get("tab") === "sizeTemplates") {
+      router.replace("/admin/size-templates");
+    }
+  }, [searchParams, router]);
+
   const currentCategory = CATEGORIES.find((c) => c.key === activeTab);
-  const isSystemSettingsTab = activeTab !== "auditLogs" && activeTab !== "sizeTemplates";
+  const isSystemSettingsTab = activeTab !== "auditLogs";
 
   const handleConfirmReset = async () => {
     setResetModalOpen(false);
@@ -2046,13 +2052,6 @@ export default function AdminSettingsPage() {
                     );
                   })()}
                 </div>
-              </div>
-            )}
-
-            {/* SIZE TEMPLATES SECTION */}
-            {activeTab === "sizeTemplates" && (
-              <div className="space-y-4">
-                <SizeTemplatesTab />
               </div>
             )}
           </div>
