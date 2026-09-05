@@ -280,33 +280,58 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
     const tFetchStart = performance.now();
     const isPreOrderRequested = input.source === "pre-order" || input.status === "preorder";
 
-    const productQueries = input.items.map((item) => {
-      const isUuid = item.slug && item.slug.length === 36 && item.slug.includes("-");
-      return prisma.product.findFirst({
-        where: {
-          OR: [
-            ...(item.productId ? [{ id: item.productId }] : []),
-            ...(isUuid ? [{ id: item.slug }] : []),
-            ...(item.slug ? [{ slug: item.slug }] : []),
-            ...(item.name ? [{ name: item.name }] : []),
-          ],
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          badge: true,
-          variants: {
-            select: {
-              id: true,
-              name: true,
+    // Batch product queries: if all items have valid productId, use a single findMany(in: [...])
+    const explicitProductIds = input.items
+      .map((item) => item.productId)
+      .filter((id): id is string => !!id && id.length === 36 && id.includes("-"));
+
+    const allItemsHaveValidId = explicitProductIds.length === input.items.length && input.items.length > 0;
+
+    const productFetchPromise = allItemsHaveValidId
+      ? prisma.product.findMany({
+          where: { id: { in: explicitProductIds } },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            badge: true,
+            variants: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
           },
-        },
-      });
-    });
+        })
+      : Promise.all(
+          input.items.map((item) => {
+            const isUuid = item.slug && item.slug.length === 36 && item.slug.includes("-");
+            return prisma.product.findFirst({
+              where: {
+                OR: [
+                  ...(item.productId ? [{ id: item.productId }] : []),
+                  ...(isUuid ? [{ id: item.slug }] : []),
+                  ...(item.slug ? [{ slug: item.slug }] : []),
+                  ...(item.name ? [{ name: item.name }] : []),
+                ],
+              },
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                badge: true,
+                variants: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            });
+          })
+        );
 
-    const [cachedSettings, latestRegOrder, latestPreOrder, ...loadedProducts] = await Promise.all([
+    const [cachedSettings, latestRegOrder, latestPreOrder, rawLoadedProducts] = await Promise.all([
       getCachedWebsiteSettingsJson(),
       prisma.order.findFirst({
         where: { orderNumber: { startsWith: "ORD-" } },
@@ -318,8 +343,25 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
         orderBy: { createdAtUtc: "desc" },
         select: { orderNumber: true },
       }),
-      ...productQueries,
+      productFetchPromise,
     ]);
+
+    // Normalize loaded products into an array matching input.items order
+    type LoadedProductType = {
+      id: string;
+      name: string;
+      slug: string;
+      badge: string | null;
+      variants: Array<{ id: string; name: string }>;
+    } | null;
+
+    const loadedProducts: LoadedProductType[] = allItemsHaveValidId
+      ? input.items.map((item) => {
+          const list = rawLoadedProducts as NonNullable<LoadedProductType>[];
+          return list.find((p) => p.id === item.productId) ?? null;
+        })
+      : (rawLoadedProducts as LoadedProductType[]);
+
     console.log(`[OrderPerf] Parallel pre-fetch took ${(performance.now() - tFetchStart).toFixed(1)}ms`);
 
     // Step B: Resolve subTotal, discount, delivery
@@ -357,86 +399,66 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
     const trustedCustomerId = isTrustedCustomerId(input.customerId) ? input.customerId : undefined;
     const isGuestOrder = !trustedCustomerId;
 
-    // Step D: Atomic transaction (Order + OrderItems only). For guest orders the
-    // customer is NOT looked up or created here — the order is persisted with the
-    // phone attached (guestPhone) and linked to a customer in the background.
-    const tTxStart = performance.now();
-    const createdOrder = await prisma.$transaction(async (tx) => {
-      // Build items payload for single nested create
-      const itemsCreatePayload: Array<{
-        productId: string;
-        variantId?: string;
-        productName: string;
-        unitPrice: number;
-        quantity: number;
-      }> = [];
+    // Step D: Order + OrderItems creation.
+    // Build items payload for single nested create
+    const itemsCreatePayload: Array<{
+      productId: string;
+      variantId?: string;
+      productName: string;
+      unitPrice: number;
+      quantity: number;
+    }> = [];
 
-      const variantDecrements: Array<{ variantId: string; qty: number }> = [];
+    for (let idx = 0; idx < input.items.length; idx++) {
+      const item = input.items[idx];
+      const prod = loadedProducts[idx];
+      const productId = prod?.id;
 
-      for (let idx = 0; idx < input.items.length; idx++) {
-        const item = input.items[idx];
-        const prod = loadedProducts[idx];
-        const productId = prod?.id;
-
-        let matchedVariantId: string | undefined = undefined;
-        if (prod && item.size && prod.variants.length > 0) {
-          const v = prod.variants.find(
-            (varItem) =>
-              varItem.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === item.size!.trim().toLowerCase()
-          );
-          if (v) matchedVariantId = v.id;
-        }
-
-        if (productId) {
-          itemsCreatePayload.push({
-            productId,
-            variantId: matchedVariantId,
-            productName: item.size ? `${item.name} (${item.size})` : item.name,
-            unitPrice: item.price,
-            quantity: item.qty || 1,
-          });
-
-          if (input.status === "confirmed" && matchedVariantId) {
-            variantDecrements.push({ variantId: matchedVariantId, qty: item.qty || 1 });
-          }
-        }
+      let matchedVariantId: string | undefined = undefined;
+      if (prod && item.size && prod.variants.length > 0) {
+        const v = prod.variants.find(
+          (varItem) =>
+            varItem.name.replace(/^Size:\s*/i, "").trim().toLowerCase() === item.size!.trim().toLowerCase()
+        );
+        if (v) matchedVariantId = v.id;
       }
 
-      // Single nested create: creates order and all order items in ONE round-trip
-      const ord = await tx.order.create({
-        data: {
-          orderNumber,
-          customerId: trustedCustomerId ?? null,
-          guestPhone: isGuestOrder ? cleanPhone : null,
-          subTotal,
-          discountAmount,
-          shippingFee,
-          totalAmount,
-          orderStatus: statusInt,
-          paymentStatus: 0, // 0 = Unpaid
-          shippingAddressJson: fullAddressJson,
-          couponCode: null,
-          isPreOrder: calculatedIsPreOrder,
-          items: {
-            create: itemsCreatePayload,
-          },
-        },
-        include: {
-          items: true,
-        },
-      });
-
-      // Stock decrement only if order is directly confirmed
-      for (const dec of variantDecrements) {
-        await tx.productVariant.update({
-          where: { id: dec.variantId },
-          data: { stockQuantity: { decrement: dec.qty } },
+      if (productId) {
+        itemsCreatePayload.push({
+          productId,
+          variantId: matchedVariantId,
+          productName: item.size ? `${item.name} (${item.size})` : item.name,
+          unitPrice: item.price,
+          quantity: item.qty || 1,
         });
       }
+    }
 
-      return ord;
+    const orderDataPayload = {
+      orderNumber,
+      customerId: trustedCustomerId ?? null,
+      guestPhone: isGuestOrder ? cleanPhone : null,
+      subTotal,
+      discountAmount,
+      shippingFee,
+      totalAmount,
+      orderStatus: statusInt,
+      paymentStatus: 0, // 0 = Unpaid
+      shippingAddressJson: fullAddressJson,
+      couponCode: null,
+      isPreOrder: calculatedIsPreOrder,
+      items: {
+        create: itemsCreatePayload,
+      },
+    };
+
+    const tCreateStart = performance.now();
+    // Direct atomic nested create — zero stock hits during order creation
+    const createdOrder = await prisma.order.create({
+      data: orderDataPayload,
+      select: { id: true, orderNumber: true },
     });
-    console.log(`[OrderPerf] Transaction (Order + OrderItems) took ${(performance.now() - tTxStart).toFixed(1)}ms`);
+    console.log(`[OrderPerf] Direct atomic nested create took ${(performance.now() - tCreateStart).toFixed(1)}ms`);
 
     // Step G: Non-blocking background work scheduled AFTER the response is sent —
     // cleanup, cache revalidation, and async guest-customer linking. None of this

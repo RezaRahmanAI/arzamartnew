@@ -252,23 +252,17 @@ export default function CheckoutPage() {
 
     try {
       const zoneLabel = DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে";
-      const customerMaster = findOrCreateByPhone(cleanPhone, {
-        fullName: cleanName,
-        address: cleanAddress,
-        district: zoneLabel,
-      });
-
-      // Auto-login the customer so their order is linked to their profile
-      try {
-        loginAsCustomer(customerMaster);
-      } catch (loginErr) {
-        console.warn("Auto-login error (non-fatal):", loginErr);
-      }
+      // FIX 4: Use authenticated session UUID customerId if available.
+      // Otherwise, leave undefined so the backend cleanly creates the guest order and links in background.
+      const authenticatedCustomerId =
+        user?.role === "customer" && user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)
+          ? user.id
+          : undefined;
 
       const orderId = draftId ?? generateNextOrderId();
       const order: Order = {
         id: orderId,
-        customerId: customerMaster.customerId,
+        customerId: authenticatedCustomerId,
         customer: cleanName,
         phone: cleanPhone,
         address: cleanAddress,
@@ -276,7 +270,9 @@ export default function CheckoutPage() {
         area: zoneLabel,
         note: note.trim(),
         payment: "Cash on delivery",
+        // FIX 1: Pass productId directly from cart line items
         items: detailedLines.map((l) => ({
+          productId: l.product.id,
           slug: l.slug,
           name: l.product.name,
           size: l.size,

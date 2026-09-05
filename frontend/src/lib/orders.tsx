@@ -30,6 +30,7 @@ export type OrderStatus =
   | "return-process";
 
 export type OrderItem = {
+  productId?: string;
   slug: string;
   name: string;
   size: string;
@@ -144,34 +145,39 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         console.error("Failed to sync order creation with API:", err);
       }
 
-      // Keep nextOrderNumber / nextPreOrderNumber in settings aligned with final adopted id
-      const regPrefix = settings?.orders?.orderIdPrefix ?? "ORD-";
-      const regCurrentNum = settings?.orders?.nextOrderNumber ?? 10001;
-      const prePrefix = settings?.orders?.preOrderIdPrefix ?? "PRE-";
-      const preCurrentNum = settings?.orders?.nextPreOrderNumber ?? 1001;
+      // FIX 5: Defer settings updates and audit logging so the customer
+      // immediately sees the confirmation / invoice screen without UI thread jank.
+      setTimeout(() => {
+        try {
+          const regPrefix = settings?.orders?.orderIdPrefix ?? "ORD-";
+          const regCurrentNum = settings?.orders?.nextOrderNumber ?? 10001;
+          const prePrefix = settings?.orders?.preOrderIdPrefix ?? "PRE-";
+          const preCurrentNum = settings?.orders?.nextPreOrderNumber ?? 1001;
 
-      if (finalId.startsWith(regPrefix)) {
-        const extractedNum = parseInt(finalId.replace(regPrefix, ""), 10);
-        const nextNum = !isNaN(extractedNum) ? Math.max(regCurrentNum + 1, extractedNum + 1) : regCurrentNum + 1;
-        updateSection("orders", { nextOrderNumber: nextNum });
-        // Update settings in background non-blockingly so customer is not stalled
-        Promise.resolve().then(() => saveSettings({ silent: true })).catch(() => {});
-      } else if (finalId.startsWith(prePrefix)) {
-        const extractedNum = parseInt(finalId.replace(prePrefix, ""), 10);
-        const nextNum = !isNaN(extractedNum) ? Math.max(preCurrentNum + 1, extractedNum + 1) : preCurrentNum + 1;
-        updateSection("orders", { nextPreOrderNumber: nextNum });
-        // Update settings in background non-blockingly so customer is not stalled
-        Promise.resolve().then(() => saveSettings({ silent: true })).catch(() => {});
-      }
+          if (finalId.startsWith(regPrefix)) {
+            const extractedNum = parseInt(finalId.replace(regPrefix, ""), 10);
+            const nextNum = !isNaN(extractedNum) ? Math.max(regCurrentNum + 1, extractedNum + 1) : regCurrentNum + 1;
+            updateSection("orders", { nextOrderNumber: nextNum });
+            Promise.resolve().then(() => saveSettings({ silent: true })).catch(() => {});
+          } else if (finalId.startsWith(prePrefix)) {
+            const extractedNum = parseInt(finalId.replace(prePrefix, ""), 10);
+            const nextNum = !isNaN(extractedNum) ? Math.max(preCurrentNum + 1, extractedNum + 1) : preCurrentNum + 1;
+            updateSection("orders", { nextPreOrderNumber: nextNum });
+            Promise.resolve().then(() => saveSettings({ silent: true })).catch(() => {});
+          }
 
-      // Record immutable audit log for order creation
-      logSystemAction({
-        category: "ORDER",
-        action: order.source === "manual" ? "Manual Order Created" : "New Order Placed",
-        targetId: finalId,
-        targetName: order.customer,
-        details: `Order #${finalId} created with total ৳${order.total} (${order.items.length} items) for customer ${order.customer} (${order.phone}). Status: ${order.status}`,
-      });
+          // Record immutable audit log for order creation
+          logSystemAction({
+            category: "ORDER",
+            action: order.source === "manual" ? "Manual Order Created" : "New Order Placed",
+            targetId: finalId,
+            targetName: order.customer,
+            details: `Order #${finalId} created with total ৳${order.total} (${order.items.length} items) for customer ${order.customer} (${order.phone}). Status: ${order.status}`,
+          });
+        } catch {
+          /* background task error safety */
+        }
+      }, 0);
 
       return finalId;
     },

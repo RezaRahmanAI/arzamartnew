@@ -118,6 +118,7 @@ class OrdersService {
         note: order.note,
         payment: order.payment,
         items: order.items.map((i) => ({
+          productId: i.productId,
           slug: i.slug,
           name: i.name,
           size: i.size,
