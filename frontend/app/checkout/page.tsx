@@ -8,8 +8,8 @@ import { CheckCircle2, FileText, Loader2, ShoppingBag } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { formatBDT, getSizePrice } from "@/lib/shop-data";
 import { useOrders, type Order } from "@/lib/orders";
+import { ordersService } from "@/lib/api/services/orders.service";
 import { useSettings } from "@/context/settings-context";
-import { useCustomers } from "@/lib/customers-store";
 import { useAuth } from "@/context/auth-context";
 import { getSavedNotesStore, saveNotesStore, type NoteRecord } from "@/components/admin/order-notes-modal";
 
@@ -22,9 +22,8 @@ import { calculateQuantityOfferDiscount } from "@/lib/offer-calculator";
 
 export default function CheckoutPage() {
   const { detailedLines, subtotal, clear } = useCart();
-  const { addOrder, saveIncomplete, removeIncomplete, generateNextOrderId, generateNextIncompleteOrderId } = useOrders();
-  const { findOrCreateByPhone, findCustomerByPhone } = useCustomers();
-  const { loginAsCustomer, user } = useAuth();
+  const { saveIncomplete, generateNextIncompleteOrderId } = useOrders();
+  const { user } = useAuth();
   const { settings } = useSettings();
   const router = useRouter();
   const [placing, setPlacing] = useState(false);
@@ -46,12 +45,11 @@ export default function CheckoutPage() {
     try {
       const raw = window.localStorage.getItem(CHECKOUT_PROFILE_KEY);
       const saved = raw ? JSON.parse(raw) : null;
-      const master = user?.phone ? findCustomerByPhone(user.phone) : null;
 
-      const restoredName = (saved?.name as string) || master?.fullName || "";
-      const restoredPhone = (saved?.phone as string) || master?.mobileNumber || "";
-      const restoredAddress = (saved?.address as string) || master?.address || "";
-      const restoredNote = (saved?.note as string) || master?.defaultNote || "";
+      const restoredName = (saved?.name as string) || user?.name || "";
+      const restoredPhone = (saved?.phone as string) || user?.phone || "";
+      const restoredAddress = (saved?.address as string) || user?.address || "";
+      const restoredNote = (saved?.note as string) || "";
 
       setName(restoredName);
       setPhone(restoredPhone);
@@ -64,7 +62,7 @@ export default function CheckoutPage() {
     } catch {
       /* ignore */
     }
-  }, [user?.phone, findCustomerByPhone]);
+  }, [user]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -236,7 +234,7 @@ export default function CheckoutPage() {
 
     if (!cleanPhone || !/^01[0-9]{9}$/.test(cleanPhone)) {
       toast.error("সঠিক মোবাইল নাম্বার দিন", {
-        description: "১১ ডিজিটের সঠিক মোবাইল নাম্বার লিখুন (যেমন: 017XXXXXXXX)।",
+        description: "১১ ডিজিটের সঠিক মোবাইল নাম্বার লিখুন (যেমন: 01XXXXXXXXX)।",
       });
       return;
     }
@@ -248,45 +246,92 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (detailedLines.length === 0) {
+      toast.error("কার্ট খালি", { description: "কমপক্ষে একটি পণ্য কার্টে যোগ করুন।" });
+      return;
+    }
+
     setPlacing(true);
 
     try {
       const zoneLabel = DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে";
-      // FIX 4: Use authenticated session UUID customerId if available.
-      // Otherwise, leave undefined so the backend cleanly creates the guest order and links in background.
+      // Authenticated session UUID customerId if available
       const authenticatedCustomerId =
         user?.role === "customer" && user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)
           ? user.id
           : undefined;
 
-      const orderId = draftId ?? generateNextOrderId();
-      const order: Order = {
-        id: orderId,
+      // CLP EXACT PAYLOAD STRUCTURE (Multi-product & multi-size pre-resolved)
+      const payload = {
         customerId: authenticatedCustomerId,
-        customer: cleanName,
-        phone: cleanPhone,
-        address: cleanAddress,
+        customerName: cleanName,
+        customerPhone: cleanPhone,
+        shippingAddress: cleanAddress,
         city: zoneLabel,
         area: zoneLabel,
-        note: note.trim(),
-        payment: "Cash on delivery",
-        // FIX 1: Pass productId directly from cart line items
-        items: detailedLines.map((l) => ({
-          productId: l.product.id,
-          slug: l.slug,
-          name: l.product.name,
-          size: l.size,
-          qty: l.qty,
-          price: getSizePrice(l.product, l.size),
-        })),
-        total: grandTotal,
-        delivery,
-        status: "pending",
-        date: new Date().toISOString().slice(0, 10),
-        source: "checkout",
+        deliveryCharge: delivery,
+        subtotal,
+        totalAmount: grandTotal,
+        paymentMethod: "Cash on delivery",
+        notes: note.trim(),
+        items: detailedLines.map((l) => {
+          const unitPrice = getSizePrice(l.product, l.size);
+          return {
+            productId: l.product.id,
+            productName: l.product.name,
+            unitPrice,
+            quantity: l.qty,
+            size: l.size || "Standard",
+            variantName: l.size || "Standard",
+            totalPrice: unitPrice * l.qty,
+          };
+        }),
       };
 
-      const finalOrderId = await addOrder(order);
+      // CLP direct submission call: no client-side customer lookup
+      const res = await ordersService.createOrder(payload);
+      const finalOrderId = res?.orderNumber || `ORD-${Date.now()}`;
+
+      // Clean up incomplete draft if order is placed
+      if (draftId) {
+        ordersService.removeIncomplete(draftId);
+      }
+
+      // Save local order cache so order-confirmation page has it immediately
+      try {
+        const localOrder: Order = {
+          id: finalOrderId,
+          customerId: authenticatedCustomerId,
+          customer: cleanName,
+          phone: cleanPhone,
+          address: cleanAddress,
+          city: zoneLabel,
+          area: zoneLabel,
+          note: note.trim(),
+          payment: "Cash on delivery",
+          status: "pending",
+          date: new Date().toISOString().slice(0, 10),
+          total: grandTotal,
+          delivery,
+          source: "checkout",
+          items: detailedLines.map((l) => ({
+            productId: l.product.id,
+            name: l.product.name,
+            slug: String(l.slug || l.product.slug || l.product.id || "product"),
+            size: l.size || "Standard",
+            qty: l.qty,
+            price: getSizePrice(l.product, l.size),
+          })),
+        };
+        const rawOrders = window.localStorage.getItem("arza-orders-v1");
+        const ordersList = rawOrders ? JSON.parse(rawOrders) : [];
+        window.localStorage.setItem(
+          "arza-orders-v1",
+          JSON.stringify([localOrder, ...ordersList.filter((o: Order) => o.id !== finalOrderId)])
+        );
+      } catch {
+        /* storage fallback */
+      }
 
       // Persist checkout note into localStorage notes store for admin Notes modal
       const checkoutNote = note.trim();
@@ -307,7 +352,6 @@ export default function CheckoutPage() {
         }
       }
 
-      if (draftId) removeIncomplete(draftId);
       clear();
       setPlacedCustomerName(cleanName);
       setPlacedOrderId(finalOrderId);
@@ -315,6 +359,9 @@ export default function CheckoutPage() {
       toast.success("Order placed!", {
         description: `Thanks ${cleanName}, order ${finalOrderId} is confirmed. We'll call to verify.`,
       });
+
+      // CLP instant redirect behavior
+      router.push(`/order-confirmation/${finalOrderId}`);
     } catch (error) {
       console.error("Order submission failed:", error);
       toast.error("অর্ডার সম্পন্ন করা যায়নি", {

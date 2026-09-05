@@ -15,6 +15,7 @@ const ORDERS_KEY = "arza-orders-v1";
 const INCOMPLETE_KEY = "arza-incomplete-orders-v1";
 
 export interface CreateOrderPayload {
+  customerId?: string;
   customerName?: string;
   customer?: string;
   customerPhone?: string;
@@ -150,6 +151,7 @@ class OrdersService {
   public async createOrder(orderPayload: CreateOrderPayload): Promise<{ orderNumber?: string }> {
     try {
       const res = await createOrderAction({
+        customerId: orderPayload.customerId,
         customer: orderPayload.customerName || orderPayload.customer || "Customer",
         phone: orderPayload.customerPhone || orderPayload.phone || "",
         address: orderPayload.shippingAddress || orderPayload.address || "",
