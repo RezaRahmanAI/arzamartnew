@@ -272,10 +272,10 @@ export function SiteHeader() {
           </Link>
 
           <Link
-            href="/checkout"
-            aria-label="Cart & Checkout"
+            href="/cart"
+            aria-label="Cart"
             className="relative rounded-md p-2 text-foreground transition-colors hover:bg-secondary hidden sm:inline-flex"
-            title="Cart & Checkout"
+            title="Cart"
           >
             <ShoppingCart className="size-5" />
             {mounted && count > 0 && (
