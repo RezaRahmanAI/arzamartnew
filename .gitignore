@@ -44,6 +44,9 @@ lerna-debug.log*
 # Dependencies
 node_modules/
 
+# TypeScript build info
+*.tsbuildinfo
+
 # Environment & Config Secrets
 .env
 .env*.local
