@@ -1294,7 +1294,7 @@ export default function AdminOrders() {
               }
 
               return (
-                <TableRow key={o.id} className="group">
+                <TableRow key={o.id}>
                   <TableCell className="w-[40px] px-3">
                     <input
                       type="checkbox"
@@ -1311,14 +1311,14 @@ export default function AdminOrders() {
                   </TableCell>
                   <TableCell>
                     <div
-                      className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors select-none group/id"
+                      className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors select-none"
                       onClick={() => copyOrderId(cleanId)}
                       title={`Click to copy Order ID: ${cleanId}`}
                     >
                       <span className={`font-mono text-xs font-semibold ${o.isPreOrder ? "text-indigo-600 font-bold" : ""}`}>
                         {cleanId}
                       </span>
-                      <Copy className="h-3 w-3 opacity-0 group-hover/id:opacity-100 text-muted-foreground" />
+                      <Copy className="h-3 w-3 text-muted-foreground/60 hover:text-primary shrink-0" />
                     </div>
                   </TableCell>
                   <TableCell className="text-xs">
@@ -1341,11 +1341,11 @@ export default function AdminOrders() {
                             href={`/admin/customers/${encodeURIComponent(o.phone)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-medium hover:underline hover:text-primary transition-colors truncate group-hover:flex group-hover:items-center group-hover:gap-1"
+                            className="font-medium hover:underline hover:text-primary transition-colors truncate inline-flex items-center gap-1"
                             title={`Open ${o.customer}'s profile in new tab`}
                           >
                             <span className="truncate">{o.customer}</span>
-                            <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 shrink-0" />
+                            <ExternalLink className="h-3 w-3 text-muted-foreground/60 shrink-0" />
                           </Link>
                           {showPendingNoteIcon && (
                             <button
@@ -1366,12 +1366,12 @@ export default function AdminOrders() {
                   </TableCell>
                   <TableCell>
                     <div
-                      className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors select-none group/phone"
+                      className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors select-none"
                       onClick={() => copyCustomerPhone(o.phone)}
                       title="Click to copy phone number"
                     >
-                      <span className="text-xs text-muted-foreground group-hover/phone:text-primary font-medium">{o.phone}</span>
-                      <Copy className="h-3 w-3 opacity-0 group-hover/phone:opacity-100 transition-opacity text-primary" />
+                      <span className="text-xs text-muted-foreground hover:text-primary font-medium">{o.phone}</span>
+                      <Copy className="h-3 w-3 text-muted-foreground/60 hover:text-primary shrink-0" />
                     </div>
                   </TableCell>
                   <TableCell>
