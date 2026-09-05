@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter, notFound } from "next/navigation";
-import { Minus, Plus, RotateCcw, ShoppingBag, Truck, Star, ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { Minus, Plus, RotateCcw, ShoppingBag, Truck, Star, ChevronLeft, ChevronRight, Heart, Tag, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { ProductCard } from "@/components/product-card";
@@ -270,24 +270,61 @@ export default function ProductPage() {
           {/* Promotional / Special Discount Box under price */}
           {(() => {
             const offerIds = product.offerRuleIds || [];
-            const applicableOffers = offerIds
-              .map((id: string) => settings?.shipping?.quantityOffers?.find((o) => o.id === id && o.active))
-              .filter(Boolean);
+            const allOffers = settings?.shipping?.quantityOffers || [];
+            const productChannel: "normal" | "combo" = product.isBundle ? "combo" : "normal";
 
-            const offerTexts: string[] = applicableOffers.length > 0
-              ? applicableOffers.map((o) => o!.title)
+            const assignedOffers = offerIds
+              .map((id: string) => allOffers.find((o) => o.id === id && o.active))
+              .filter(Boolean) as { id: string; title: string }[];
+
+            const assignedIds = new Set(assignedOffers.map((o) => o.id));
+            const applicableRules = allOffers.filter(
+              (o) =>
+                o.active &&
+                o.applicableTo?.includes(productChannel) &&
+                !assignedIds.has(o.id)
+            );
+
+            const assignedTexts = assignedOffers.length > 0
+              ? assignedOffers.map((o) => o.title)
               : (product.discountNote ? [product.discountNote] : product.offerTitle ? [product.offerTitle] : []);
 
-            if (offerTexts.length === 0) return null;
+            if (assignedTexts.length === 0 && applicableRules.length === 0) return null;
 
             return (
-              <div className="mt-3.5 space-y-1.5">
-                {offerTexts.map((text, i) => (
-                  <div key={i} className="inline-flex items-center gap-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 px-3.5 py-2 text-xs font-bold text-amber-800 dark:text-amber-300 shadow-xs">
-                    <span className="flex size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                    <span className="leading-snug">{text}</span>
+              <div className="mt-3.5 space-y-2">
+                {assignedTexts.length > 0 && (
+                  <div className="space-y-1.5">
+                    {assignedTexts.map((text, i) => (
+                      <div key={i} className="inline-flex items-center gap-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 px-3.5 py-2 text-xs font-bold text-amber-800 dark:text-amber-300 shadow-xs">
+                        <span className="flex size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                        <span className="leading-snug">{text}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+                {applicableRules.length > 0 && (
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 p-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                      <Tag className="size-3" />
+                      Available Quantity Offers
+                    </div>
+                    {applicableRules.map((rule) => (
+                      <div
+                        key={rule.id}
+                        className="flex items-center gap-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300"
+                      >
+                        <Sparkles className="size-3 text-emerald-600 shrink-0" />
+                        <span>
+                          {rule.title}{" "}
+                          <span className="text-muted-foreground font-normal">
+                            (Buy {rule.minQty}+)
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })()}
