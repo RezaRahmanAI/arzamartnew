@@ -23,6 +23,7 @@ export interface RawApiInitProduct {
   isBundle?: boolean;
   bundleProducts?: string[];
   offerRuleIds?: string[];
+  sizeTemplateId?: string | null;
   variants?: { id?: string; name: string; sku?: string; priceOverride?: number; stockQuantity?: number }[];
   sizes?: string[];
   sizePrices?: Record<string, number>;
@@ -84,7 +85,7 @@ export interface AppInitData {
   timestamp: number;
 }
 
-export const APP_INIT_STORAGE_KEY = "arzamart_app_init_cache_v4";
+export const APP_INIT_STORAGE_KEY = "arzamart_app_init_cache_v5";
 
 class InitService {
   private mapRawProductToFrontend(p: RawApiInitProduct): Product {
@@ -113,6 +114,7 @@ class InitService {
       isBundle: p.isBundle ?? false,
       bundleProducts: p.bundleProducts ?? undefined,
       offerRuleIds: p.offerRuleIds ?? undefined,
+      sizeTemplateId: p.sizeTemplateId ?? undefined,
       sizePrices: p.variants && Array.isArray(p.variants) && p.variants.length > 0
         ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.priceOverride ?? basePrice]))
         : p.sizePrices || {},
