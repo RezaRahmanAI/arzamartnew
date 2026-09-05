@@ -116,6 +116,7 @@ export default function BulkShippedPage() {
         setSelectedCourierId(data[0].id);
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Always keep scanner input focused for fast warehouse scanning

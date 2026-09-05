@@ -210,6 +210,7 @@ export function DashboardSidebar() {
         setOpenGroups((prev) => ({ ...prev, [group.title]: true }));
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, isGroupActive]);
 
   const toggleGroup = (title: string) => {

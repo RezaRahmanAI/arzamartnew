@@ -233,7 +233,6 @@ export function OrderInvoiceModal({
                       <td className="border border-[#555] p-1 text-center align-middle">
                         <div className="w-[38px] h-[38px] bg-gray-50 flex items-center justify-center mx-auto rounded-sm border border-gray-200 overflow-hidden text-gray-400">
                           {prodImage ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                               src={getImageUrl(prodImage, "thumb")}
                               alt={item.name}

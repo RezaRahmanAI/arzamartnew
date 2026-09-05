@@ -63,7 +63,7 @@ export function SiteHeader() {
         if (!aStart && bStart) return 1;
         return aName.localeCompare(bName);
       });
-  }, [query, products, initialProducts]);
+  }, [query, products]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

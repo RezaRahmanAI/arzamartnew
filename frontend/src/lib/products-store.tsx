@@ -62,10 +62,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       details: `Product "${product.name}" created in category "${product.category}" with price ৳${product.price}.`,
     });
     try {
-      const result = await productsService.create(product);
-      if (!result || (result as any).success === false) {
-        throw new Error((result as any)?.error || "Failed to create product");
-      }
+      await productsService.create(product);
       const fresh = await productsService.getAll();
       if (fresh && fresh.length > 0) {
         setProducts(fresh);
@@ -91,10 +88,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       details: `Product "${updated.name}" (${slug}) details/pricing updated. Price: ৳${updated.price}`,
     });
     try {
-      const result = await productsService.update(slug, updated);
-      if (!result || (result as any).success === false) {
-        throw new Error((result as any)?.error || "Failed to update product");
-      }
+      await productsService.update(slug, updated);
       const fresh = await productsService.getAll();
       if (fresh && fresh.length > 0) {
         setProducts(fresh);

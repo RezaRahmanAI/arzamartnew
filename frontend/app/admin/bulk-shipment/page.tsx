@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -77,7 +77,7 @@ export default function BulkShipmentPage() {
   const [districtFilter, setDistrictFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoadingOrders(true);
     setIsLoadingBatches(true);
 
@@ -97,11 +97,11 @@ export default function BulkShipmentPage() {
 
     setIsLoadingOrders(false);
     setIsLoadingBatches(false);
-  };
+  }, [selectedCourierId]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   // Filtered Orders
   const filteredOrders = useMemo(() => {

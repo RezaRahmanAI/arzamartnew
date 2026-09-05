@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState, useMemo } from "react";
+import { use, useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -103,17 +103,17 @@ export default function BatchDetailsPage({ params }: BatchPageProps) {
   const [statusReason, setStatusReason] = useState("");
   const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
 
-  const loadBatchDetails = async () => {
+  const loadBatchDetails = useCallback(async () => {
     setIsLoading(true);
     const data = await getShipmentBatchDetailsAction(batchId);
     setBatch(data.batch);
     setShipments(data.shipments);
     setIsLoading(false);
-  };
+  }, [batchId]);
 
   useEffect(() => {
     loadBatchDetails();
-  }, [batchId]);
+  }, [batchId, loadBatchDetails]);
 
   const copyText = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
