@@ -1616,7 +1616,8 @@ export default function AdminOrders() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex flex-wrap justify-end gap-1.5 min-w-[240px]">
+                    <div className="flex flex-col items-end gap-1.5 min-w-[240px]">
+                      <div className="flex flex-wrap justify-end gap-1.5">
                       {/* Quick Edit Button */}
                       <Button
                         size="sm"
@@ -1627,81 +1628,6 @@ export default function AdminOrders() {
                       >
                         <Pencil className="h-3 w-3" /> Quick Edit
                       </Button>
-
-                      {o.status === "pending" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-[10px] px-2 bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-600 hover:text-white flex items-center gap-1 font-bold"
-                          onClick={() => {
-                            if (o.isPreOrder || o.status === "preorder") {
-                              router.push(`/admin/pre-order?edit=${o.id}`);
-                            } else {
-                              router.push(`/admin/manual-order?edit=${o.id}`);
-                            }
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      )}
-                      
-                      {/* Transfer Action Button for Pre-Orders with stock check gating */}
-                      {o.isPreOrder && (() => {
-                        const stockCheck = checkPreOrderStockAvailability(o);
-                        const isBusy = isTransferringId === o.id;
-                        return (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!stockCheck.available || isBusy}
-                            title={
-                              !stockCheck.available
-                                ? `Cannot transfer: ${stockCheck.reason}`
-                                : "Transfer this pre-order to a regular running order"
-                            }
-                            className={`h-7 text-[10px] px-2 flex items-center gap-1 font-bold ${
-                              stockCheck.available
-                                ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-600 hover:text-white"
-                                : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                            }`}
-                            onClick={() => handleTransferToRegularOrder(o)}
-                          >
-                            <ArrowRightLeft className={`size-3 ${isBusy ? "animate-spin" : ""}`} />
-                            {isBusy ? "Transferring..." : "Transfer"}
-                          </Button>
-                        );
-                      })()}
-
-                      {/* Transfer Action Button for Pending Regular Orders */}
-                      {!o.isPreOrder && o.status === "pending" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={isTransferringId === o.id}
-                          title="Transfer this pending order to Pre-Order"
-                          className="h-7 text-[10px] px-2 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-600 hover:text-white flex items-center gap-1 font-bold"
-                          onClick={() => handleTransferToPreOrder(o)}
-                        >
-                          <ArrowRightLeft className={`size-3 ${isTransferringId === o.id ? "animate-spin" : ""}`} />
-                          {isTransferringId === o.id ? "Transferring..." : "To Pre-Order"}
-                        </Button>
-                      )}
-
-                      {o.status === "pending" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-[10px] px-2 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white"
-                          onClick={() => setActiveNotesOrder(o)}
-                        >
-                          Notes
-                          {getOrderNoteCount(o) > 0 && (
-                            <span className="ml-1 px-1 py-0.2 rounded-full bg-blue-600 text-[9px] font-bold text-white leading-none">
-                              {getOrderNoteCount(o)}
-                            </span>
-                          )}
-                        </Button>
-                      )}
 
                       {/* PDF Invoice Button */}
                       <Button size="sm" variant="outline" className="h-7 text-[10px] px-2 bg-cyan-50 text-cyan-600 border-cyan-200 hover:bg-cyan-600 hover:text-white" onClick={() => setActiveInvoiceOrder(o)}>PDF</Button>
@@ -1801,6 +1727,83 @@ export default function AdminOrders() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      </div>
+
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                      {o.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[10px] px-2 bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-600 hover:text-white flex items-center gap-1 font-bold"
+                          onClick={() => {
+                            if (o.isPreOrder || o.status === "preorder") {
+                              router.push(`/admin/pre-order?edit=${o.id}`);
+                            } else {
+                              router.push(`/admin/manual-order?edit=${o.id}`);
+                            }
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      )}
+
+                      {/* Transfer Action Button for Pre-Orders with stock check gating */}
+                      {o.isPreOrder && (() => {
+                        const stockCheck = checkPreOrderStockAvailability(o);
+                        const isBusy = isTransferringId === o.id;
+                        return (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!stockCheck.available || isBusy}
+                            title={
+                              !stockCheck.available
+                                ? `Cannot transfer: ${stockCheck.reason}`
+                                : "Transfer this pre-order to a regular running order"
+                            }
+                            className={`h-7 text-[10px] px-2 flex items-center gap-1 font-bold ${
+                              stockCheck.available
+                                ? "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-600 hover:text-white"
+                                : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                            }`}
+                            onClick={() => handleTransferToRegularOrder(o)}
+                          >
+                            <ArrowRightLeft className={`size-3 ${isBusy ? "animate-spin" : ""}`} />
+                            {isBusy ? "Transferring..." : "Transfer"}
+                          </Button>
+                        );
+                      })()}
+
+                      {/* Transfer Action Button for Pending Regular Orders */}
+                      {!o.isPreOrder && o.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={isTransferringId === o.id}
+                          title="Transfer this pending order to Pre-Order"
+                          className="h-7 text-[10px] px-2 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-600 hover:text-white flex items-center gap-1 font-bold"
+                          onClick={() => handleTransferToPreOrder(o)}
+                        >
+                          <ArrowRightLeft className={`size-3 ${isTransferringId === o.id ? "animate-spin" : ""}`} />
+                          {isTransferringId === o.id ? "Transferring..." : "To Pre-Order"}
+                        </Button>
+                      )}
+
+                      {o.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[10px] px-2 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white"
+                          onClick={() => setActiveNotesOrder(o)}
+                        >
+                          Notes
+                          {getOrderNoteCount(o) > 0 && (
+                            <span className="ml-1 px-1 py-0.2 rounded-full bg-blue-600 text-[9px] font-bold text-white leading-none">
+                              {getOrderNoteCount(o)}
+                            </span>
+                          )}
+                        </Button>
+                      )}
 
                       {/* Delete Order Button — ONLY visible when order status is Cancelled */}
                       {o.status === "cancelled" && (
@@ -1814,6 +1817,7 @@ export default function AdminOrders() {
                           <Trash2 className="size-3" /> Delete
                         </Button>
                       )}
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>
