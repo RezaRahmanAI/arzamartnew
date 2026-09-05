@@ -261,6 +261,9 @@ export default function AdminManualOrder() {
         if (existing.paid !== undefined) setPaid(existing.paid);
         if (existing.discount !== undefined) setDiscount(existing.discount);
         if (existing.status) setExistingStatus(existing.status);
+        if (existing.sourcePageName) setSourcePage(existing.sourcePageName);
+        if (existing.socialMediaSourceName) setSocialSource(existing.socialMediaSourceName);
+        if (existing.courierName) setCourierName(existing.courierName);
         if (existing.items && existing.items.length > 0) {
           setLines(
             existing.items.map((it, idx) => {
@@ -899,6 +902,20 @@ export default function AdminManualOrder() {
                     <option value="SA Paribahan">SA Paribahan</option>
                     <option value="eCourier">eCourier</option>
                     <option value="Standard Courier">Standard Delivery</option>
+                    {courierName &&
+                      ![
+                        "",
+                        "Steadfast",
+                        "Pathao",
+                        "RedX",
+                        "Paperfly",
+                        "Sundarban",
+                        "SA Paribahan",
+                        "eCourier",
+                        "Standard Courier",
+                      ].includes(courierName) && (
+                        <option value={courierName}>{courierName}</option>
+                      )}
                   </select>
                 </div>
 
