@@ -414,6 +414,7 @@ export default function ProductPage() {
               <ProductSizeMeasurements
                 selectedSize={size}
                 measurements={product.sizeMeasurements?.[size]}
+                category={product.category || product.categoryName}
               />
             )}
           </div>

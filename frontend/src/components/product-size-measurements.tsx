@@ -14,12 +14,14 @@ interface ProductSizeMeasurementsProps {
   selectedSize: string;
   measurements?: SizeMeasurementInfo | null;
   className?: string;
+  category?: string | null;
 }
 
 export function ProductSizeMeasurements({
   selectedSize,
   measurements,
   className = "",
+  category = "",
 }: ProductSizeMeasurementsProps) {
   // If no measurements available at all for this size
   const hasAnyMeasurement = Boolean(
@@ -28,6 +30,22 @@ export function ProductSizeMeasurements({
         measurements.length?.trim() ||
         measurements.waist?.trim() ||
         measurements.sleeve?.trim())
+  );
+
+  // Detect if bottomwear based on category or pattern (e.g. waist present without chest, or category has pants/bottoms/denim)
+  const isBottom = Boolean(
+    (category &&
+      (category.toLowerCase().includes("pant") ||
+        category.toLowerCase().includes("bottom") ||
+        category.toLowerCase().includes("chino") ||
+        category.toLowerCase().includes("denim") ||
+        category.toLowerCase().includes("jeans") ||
+        category.toLowerCase().includes("trouser") ||
+        category.toLowerCase().includes("palazzo") ||
+        category.toLowerCase().includes("pajama") ||
+        category.toLowerCase().includes("jogger"))) ||
+      // Or if waist is set and chest is empty
+      (measurements?.waist && !measurements?.chest)
   );
 
   return (
@@ -48,48 +66,100 @@ export function ProductSizeMeasurements({
           </div>
 
           <div className="mt-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {measurements?.chest && (
-              <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
-                <span className="text-[11px] font-medium text-muted-foreground block">
-                  Chest (বুকে)
-                </span>
-                <span className="text-sm font-extrabold text-foreground mt-0.5">
-                  {measurements.chest}&quot;
-                </span>
-              </div>
-            )}
+            {isBottom ? (
+              // BOTTOMWEAR LABELS (Pants, Chinos, Jeans, Pajama)
+              <>
+                {measurements?.waist && (
+                  <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
+                    <span className="text-[11px] font-medium text-muted-foreground block">
+                      Waist (কোমর)
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground mt-0.5">
+                      {measurements.waist}&quot;
+                    </span>
+                  </div>
+                )}
 
-            {measurements?.length && (
-              <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
-                <span className="text-[11px] font-medium text-muted-foreground block">
-                  Length (দৈর্ঘ্য)
-                </span>
-                <span className="text-sm font-extrabold text-foreground mt-0.5">
-                  {measurements.length}&quot;
-                </span>
-              </div>
-            )}
+                {measurements?.length && (
+                  <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
+                    <span className="text-[11px] font-medium text-muted-foreground block">
+                      Length (দৈর্ঘ্য)
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground mt-0.5">
+                      {measurements.length}&quot;
+                    </span>
+                  </div>
+                )}
 
-            {measurements?.waist && (
-              <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
-                <span className="text-[11px] font-medium text-muted-foreground block">
-                  Waist (কোমর)
-                </span>
-                <span className="text-sm font-extrabold text-foreground mt-0.5">
-                  {measurements.waist}&quot;
-                </span>
-              </div>
-            )}
+                {measurements?.chest && (
+                  <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
+                    <span className="text-[11px] font-medium text-muted-foreground block">
+                      Hip / Thigh (হিপ/থাই)
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground mt-0.5">
+                      {measurements.chest}&quot;
+                    </span>
+                  </div>
+                )}
 
-            {measurements?.sleeve && (
-              <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
-                <span className="text-[11px] font-medium text-muted-foreground block">
-                  Sleeve (হাতা)
-                </span>
-                <span className="text-sm font-extrabold text-foreground mt-0.5">
-                  {measurements.sleeve}&quot;
-                </span>
-              </div>
+                {measurements?.sleeve && (
+                  <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
+                    <span className="text-[11px] font-medium text-muted-foreground block">
+                      Inseam / Mohori (পায়ের মোহরি)
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground mt-0.5">
+                      {measurements.sleeve}&quot;
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              // TOPWEAR LABELS (Shirts, T-Shirts, Panjabi)
+              <>
+                {measurements?.chest && (
+                  <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
+                    <span className="text-[11px] font-medium text-muted-foreground block">
+                      Chest (বুকে)
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground mt-0.5">
+                      {measurements.chest}&quot;
+                    </span>
+                  </div>
+                )}
+
+                {measurements?.length && (
+                  <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
+                    <span className="text-[11px] font-medium text-muted-foreground block">
+                      Length (দৈর্ঘ্য)
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground mt-0.5">
+                      {measurements.length}&quot;
+                    </span>
+                  </div>
+                )}
+
+                {measurements?.waist && (
+                  <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
+                    <span className="text-[11px] font-medium text-muted-foreground block">
+                      Waist (কোমর)
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground mt-0.5">
+                      {measurements.waist}&quot;
+                    </span>
+                  </div>
+                )}
+
+                {measurements?.sleeve && (
+                  <div className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center">
+                    <span className="text-[11px] font-medium text-muted-foreground block">
+                      Sleeve (হাতা)
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground mt-0.5">
+                      {measurements.sleeve}&quot;
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

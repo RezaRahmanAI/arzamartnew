@@ -5,6 +5,7 @@ import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw
 import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getSizeTemplatesAction, SizeTemplateDto } from "@/actions/size-templates.actions";
+import { isBottomwearCategory } from "@/components/admin/settings/size-templates-tab";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -1191,74 +1192,135 @@ export default function AdminProducts() {
             </div>
 
             {/* Size-Wise Measurements Table (Chest, Length, Waist) */}
-            {sizesArray.length > 0 && (
-              <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <Ruler className="size-3.5 text-primary" />
-                      Size-Wise Measurements (Inches &quot;)
-                    </Label>
-                    <p className="text-[11px] text-muted-foreground">
-                      Customer will see these exact dimensions when selecting a size on the product page.
-                    </p>
+            {sizesArray.length > 0 && (() => {
+              const currentTpl = sizeTemplates.find((t) => t.id === form.sizeTemplateId);
+              const isBottomwear =
+                isBottomwearCategory(form.category) ||
+                isBottomwearCategory(currentTpl?.category) ||
+                isBottomwearCategory(currentTpl?.name) ||
+                isBottomwearCategory(form.name);
+
+              return (
+                <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Ruler className="size-3.5 text-primary" />
+                        {isBottomwear ? "Pants / Bottomwear Measurements (Inches \")" : "Size-Wise Measurements (Inches \")"}
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        {isBottomwear
+                          ? "Enter Waist, Length, Hip/Thigh, and Inseam for pants."
+                          : "Customer will see these exact dimensions when selecting a size on the product page."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
+                      <div className="col-span-2">Size</div>
+                      {isBottomwear ? (
+                        <>
+                          <div className="col-span-3">Waist (&quot;)</div>
+                          <div className="col-span-3">Length (&quot;)</div>
+                          <div className="col-span-2">Hip/Thigh (&quot;)</div>
+                          <div className="col-span-2">Inseam (&quot;)</div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="col-span-3">Chest (&quot;)</div>
+                          <div className="col-span-3">Length (&quot;)</div>
+                          <div className="col-span-2">Waist (&quot;)</div>
+                          <div className="col-span-2">Sleeve (&quot;)</div>
+                        </>
+                      )}
+                    </div>
+
+                    {sizesArray.map((s) => {
+                      const meas = form.sizeMeasurements[s] || {};
+                      return (
+                        <div key={s} className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-2 font-mono text-xs font-bold text-foreground">
+                            {s}
+                          </div>
+                          {isBottomwear ? (
+                            <>
+                              <div className="col-span-3">
+                                <Input
+                                  placeholder='e.g. 32"'
+                                  value={meas.waist ?? ""}
+                                  onChange={(e) => setSizeMeasurementField(s, "waist", e.target.value)}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                              <div className="col-span-3">
+                                <Input
+                                  placeholder='e.g. 40"'
+                                  value={meas.length ?? ""}
+                                  onChange={(e) => setSizeMeasurementField(s, "length", e.target.value)}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Input
+                                  placeholder='e.g. 40"'
+                                  value={meas.chest ?? ""}
+                                  onChange={(e) => setSizeMeasurementField(s, "chest", e.target.value)}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Input
+                                  placeholder='e.g. 14"'
+                                  value={meas.sleeve ?? ""}
+                                  onChange={(e) => setSizeMeasurementField(s, "sleeve", e.target.value)}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="col-span-3">
+                                <Input
+                                  placeholder='e.g. 40"'
+                                  value={meas.chest ?? ""}
+                                  onChange={(e) => setSizeMeasurementField(s, "chest", e.target.value)}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                              <div className="col-span-3">
+                                <Input
+                                  placeholder='e.g. 28"'
+                                  value={meas.length ?? ""}
+                                  onChange={(e) => setSizeMeasurementField(s, "length", e.target.value)}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Input
+                                  placeholder='e.g. 32"'
+                                  value={meas.waist ?? ""}
+                                  onChange={(e) => setSizeMeasurementField(s, "waist", e.target.value)}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Input
+                                  placeholder='e.g. 8"'
+                                  value={meas.sleeve ?? ""}
+                                  onChange={(e) => setSizeMeasurementField(s, "sleeve", e.target.value)}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <div className="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
-                    <div className="col-span-2">Size</div>
-                    <div className="col-span-3">Chest (&quot;)</div>
-                    <div className="col-span-3">Length (&quot;)</div>
-                    <div className="col-span-2">Waist (&quot;)</div>
-                    <div className="col-span-2">Sleeve (&quot;)</div>
-                  </div>
-
-                  {sizesArray.map((s) => {
-                    const meas = form.sizeMeasurements[s] || {};
-                    return (
-                      <div key={s} className="grid grid-cols-12 gap-2 items-center">
-                        <div className="col-span-2 font-mono text-xs font-bold text-foreground">
-                          {s}
-                        </div>
-                        <div className="col-span-3">
-                          <Input
-                            placeholder='e.g. 40"'
-                            value={meas.chest ?? ""}
-                            onChange={(e) => setSizeMeasurementField(s, "chest", e.target.value)}
-                            className="h-8 text-xs bg-background"
-                          />
-                        </div>
-                        <div className="col-span-3">
-                          <Input
-                            placeholder='e.g. 28"'
-                            value={meas.length ?? ""}
-                            onChange={(e) => setSizeMeasurementField(s, "length", e.target.value)}
-                            className="h-8 text-xs bg-background"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            placeholder='e.g. 32"'
-                            value={meas.waist ?? ""}
-                            onChange={(e) => setSizeMeasurementField(s, "waist", e.target.value)}
-                            className="h-8 text-xs bg-background"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            placeholder='e.g. 8"'
-                            value={meas.sleeve ?? ""}
-                            onChange={(e) => setSizeMeasurementField(s, "sleeve", e.target.value)}
-                            className="h-8 text-xs bg-background"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Accept Pre-Order Toggle */}
             <div className="rounded-xl border border-border/60 bg-secondary/20 p-3.5 space-y-2">
