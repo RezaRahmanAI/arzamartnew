@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw, Search, Ruler, Sparkles } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw, Search, Ruler, Sparkles, RotateCcw } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getSizeTemplatesAction, SizeTemplateDto } from "@/actions/size-templates.actions";
@@ -1332,9 +1332,25 @@ export default function AdminProducts() {
 
             {sizesArray.length > 0 && (
               <div className="space-y-2">
-                <Label>Size-wise selling prices (৳)</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Size-wise selling prices (৳)</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-primary hover:text-primary"
+                    onClick={() => {
+                      // Clear all size overrides so BasePrice becomes the selling price for every size
+                      setForm((f) => ({ ...f, sizePrices: {} }));
+                      toast.info("Size overrides cleared. All sizes will sell at the base price.");
+                    }}
+                  >
+                    <RotateCcw className="mr-1 size-3" />
+                    Reset to base price
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Enter the selling price for each size.
+                  Leave blank to sell each size at the base price (৳{Number(form.price) || 0}). Enter a value here to override per size.
                 </p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {sizesArray.map((s) => (
@@ -1345,7 +1361,7 @@ export default function AdminProducts() {
                         min="0"
                         value={form.sizePrices[s] ?? ""}
                         onChange={(e) => setSizePrice(s, Number(e.target.value))}
-                        placeholder="790"
+                        placeholder={String(Number(form.price) || 0)}
                       />
                     </div>
                   ))}

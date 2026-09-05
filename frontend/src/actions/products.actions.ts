@@ -409,7 +409,16 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
 
         for (let i = 0; i < input.sizes.length; i++) {
           const sizeName = input.sizes[i];
-          const priceOverride = input.sizePrices?.[sizeName] ?? null;
+          const hasExplicitSizePricing =
+            input.sizePrices && Object.keys(input.sizePrices).length > 0;
+          const explicitPrice = input.sizePrices?.[sizeName];
+          // If size price equals the effective base price, treat as null so the
+          // variant falls back to BasePrice and updates to the base price are
+          // reflected immediately on the storefront.
+          const priceOverride =
+            hasExplicitSizePricing && explicitPrice !== undefined && explicitPrice !== null
+              ? (Number(explicitPrice) !== Number(basePrice) ? Number(explicitPrice) : null)
+              : null;
           const stockQuantity =
             input.sizeStock?.[sizeName] !== undefined
               ? input.sizeStock[sizeName]
