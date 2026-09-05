@@ -1774,21 +1774,6 @@ export default function AdminOrders() {
                         );
                       })()}
 
-                      {/* Transfer Action Button for Pending Regular Orders */}
-                      {!o.isPreOrder && o.status === "pending" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={isTransferringId === o.id}
-                          title="Transfer this pending order to Pre-Order"
-                          className="h-7 text-[10px] px-2 bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-600 hover:text-white flex items-center gap-1 font-bold"
-                          onClick={() => handleTransferToPreOrder(o)}
-                        >
-                          <ArrowRightLeft className={`size-3 ${isTransferringId === o.id ? "animate-spin" : ""}`} />
-                          {isTransferringId === o.id ? "Transferring..." : "To Pre-Order"}
-                        </Button>
-                      )}
-
                       {o.status === "pending" && (
                         <Button
                           size="sm"
