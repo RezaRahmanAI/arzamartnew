@@ -403,7 +403,7 @@ export default function AdminProducts() {
     });
   };
 
-  const save = (e: React.FormEvent) => {
+  const save = async (e: React.FormEvent) => {
     e.preventDefault();
     const slug = form.slug || slugify(form.name);
     if (!slug || !form.name) {
@@ -469,16 +469,20 @@ export default function AdminProducts() {
       acceptPreOrder: form.acceptPreOrder,
     };
 
-    if (editingSlug) {
-      updateProduct(editingSlug, product);
-    } else {
-      addProduct(product);
-    }
+    try {
+      if (editingSlug) {
+        await updateProduct(editingSlug, product);
+      } else {
+        await addProduct(product);
+      }
 
-    toast.success(editingSlug ? "Product updated" : "Product created", {
-      description: product.name,
-    });
-    setOpen(false);
+      toast.success(editingSlug ? "Product updated" : "Product created", {
+        description: product.name,
+      });
+      setOpen(false);
+    } catch (error) {
+      console.error("Product save failed:", error);
+    }
   };
 
   const addBundleProduct = (slug: string) => {

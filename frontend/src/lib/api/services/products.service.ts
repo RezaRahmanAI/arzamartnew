@@ -53,10 +53,14 @@ class ProductsService {
       bundleProducts: product.bundleProducts,
       offerRuleIds: product.offerRuleIds,
       isActive: product.isActive,
+      acceptPreOrder: product.acceptPreOrder,
     });
 
     if (!res.success) {
       throw new Error(res.error || "Failed to create product");
+    }
+    if (res.slug && res.slug !== product.slug) {
+      return { ...product, slug: res.slug };
     }
     return product;
   }
@@ -86,6 +90,7 @@ class ProductsService {
       bundleProducts: updated.bundleProducts,
       offerRuleIds: updated.offerRuleIds,
       isActive: updated.isActive,
+      acceptPreOrder: updated.acceptPreOrder,
     });
 
     if (!res.success) {

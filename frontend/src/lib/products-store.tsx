@@ -13,6 +13,7 @@ import { type Product, products as staticProducts } from "./shop-data";
 import { productsService } from "./api/services/products.service";
 import { useAppInit } from "@/context/app-init-context";
 import { logSystemAction } from "@/lib/audit-logger";
+import { toast } from "sonner";
 
 type ProductsContextValue = {
   products: Product[];
@@ -61,13 +62,26 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       details: `Product "${product.name}" created in category "${product.category}" with price ৳${product.price}.`,
     });
     try {
-      await productsService.create(product);
+      const result = await productsService.create(product);
+      if (!result || (result as any).success === false) {
+        throw new Error((result as any)?.error || "Failed to create product");
+      }
+      const fresh = await productsService.getAll();
+      if (fresh && fresh.length > 0) {
+        setProducts(fresh);
+      }
     } catch (error) {
       console.error("Failed to sync product creation with API:", error);
+      setProducts((prev) => prev.filter((p) => p.slug !== product.slug));
+      toast.error("Failed to save product to database", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
     }
   }, []);
 
   const updateProduct = useCallback(async (slug: string, updated: Product) => {
+    const previous = products.find((p) => p.slug === slug);
     setProducts((prev) => prev.map((p) => (p.slug === slug ? updated : p)));
     logSystemAction({
       category: "PRODUCT",
@@ -77,18 +91,28 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       details: `Product "${updated.name}" (${slug}) details/pricing updated. Price: ৳${updated.price}`,
     });
     try {
-      await productsService.update(slug, updated);
-      // Re-fetch to ensure single source of truth is synced
+      const result = await productsService.update(slug, updated);
+      if (!result || (result as any).success === false) {
+        throw new Error((result as any)?.error || "Failed to update product");
+      }
       const fresh = await productsService.getAll();
       if (fresh && fresh.length > 0) {
         setProducts(fresh);
       }
     } catch (error) {
       console.error("Failed to sync product update with API:", error);
+      if (previous) {
+        setProducts((prev) => prev.map((p) => (p.slug === slug ? previous : p)));
+      }
+      toast.error("Failed to update product in database", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
     }
-  }, []);
+  }, [products]);
 
   const deleteProduct = useCallback(async (slug: string) => {
+    const previous = products.find((p) => p.slug === slug);
     setProducts((prev) => prev.filter((p) => p.slug !== slug));
     logSystemAction({
       category: "PRODUCT",
@@ -100,8 +124,15 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       await productsService.delete(slug);
     } catch (error) {
       console.error("Failed to sync product deletion with API:", error);
+      if (previous) {
+        setProducts((prev) => [...prev, previous]);
+      }
+      toast.error("Failed to delete product from database", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
     }
-  }, []);
+  }, [products]);
 
   const deductStock = useCallback((items: { slug: string; size?: string; qty: number }[]) => {
     setProducts((prev) =>
