@@ -302,6 +302,38 @@ export default function AdminProducts() {
       }
     }
 
+    const editedSizeMeasurements = (() => {
+      const fromProduct = p.sizeMeasurements
+        ? Object.fromEntries(
+            Object.entries(p.sizeMeasurements).map(([s, m]) => [
+              s,
+              {
+                chest: m.chest || "",
+                length: m.length || "",
+                waist: m.waist || "",
+                sleeve: m.sleeve || "",
+              },
+            ])
+          )
+        : {};
+      if (Object.keys(fromProduct).length === 0 && p.sizeTemplateId) {
+        const template = sizeTemplates.find((t) => t.id === p.sizeTemplateId);
+        if (template) {
+          const filled: Record<string, { chest?: string; length?: string; waist?: string; sleeve?: string }> = {};
+          template.entries.forEach((e) => {
+            filled[e.size] = {
+              chest: e.chest || "",
+              length: e.length || "",
+              waist: e.waist || "",
+              sleeve: e.sleeve || "",
+            };
+          });
+          return filled;
+        }
+      }
+      return fromProduct;
+    })();
+
     setForm({
       slug: p.slug,
       name: p.name,
@@ -316,19 +348,7 @@ export default function AdminProducts() {
       offerRuleIds: p.offerRuleIds || [],
       badge: (p.badge ?? "").replace(/\|?PREORDER_ENABLED/g, "").trim(),
       sizePrices: p.sizePrices ?? {},
-      sizeMeasurements: p.sizeMeasurements
-        ? Object.fromEntries(
-            Object.entries(p.sizeMeasurements).map(([s, m]) => [
-              s,
-              {
-                chest: m.chest || "",
-                length: m.length || "",
-                waist: m.waist || "",
-                sleeve: m.sleeve || "",
-              },
-            ])
-          )
-        : {},
+      sizeMeasurements: editedSizeMeasurements,
       sizeTemplateId: p.sizeTemplateId || "",
       videoUrl: p.videoUrl ?? "",
       returnPolicy: p.returnPolicy ?? "",
