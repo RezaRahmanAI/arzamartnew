@@ -654,7 +654,7 @@ export default function CustomLandingPageRoute({
 
     if (!name && !phone) return;
 
-    const id = draftId || `INC-${Math.floor(10000 + Math.random() * 90000)}`;
+    const id = draftId || `${Math.floor(10000 + Math.random() * 90000)}`;
     if (!draftId) setDraftId(id);
 
     const zoneLabel = DELIVERY_ZONES[selectedDeliveryZone]?.label || "ঢাকার ভিতরে";
@@ -751,7 +751,7 @@ export default function CustomLandingPageRoute({
       };
 
       const res = await ordersService.createOrder(payload);
-      const orderId = res?.orderNumber || `ORD-${Date.now()}`;
+      const orderId = res?.orderNumber || `${Date.now()}`;
 
       // Clean up incomplete draft since order is completed
       if (draftId) {

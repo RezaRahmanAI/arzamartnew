@@ -128,7 +128,7 @@ export interface OrderSettings {
   enableCOD: boolean;
   enableOnlinePayment: boolean;
   defaultOrderStatus: string;
-  orderIdPrefix: string;
+  orderIdPrefix?: string;
   nextOrderNumber: number;
   incompleteOrderIdPrefix?: string;
   nextIncompleteOrderNumber?: number;
@@ -310,11 +310,11 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     enableCOD: true,
     enableOnlinePayment: true,
     defaultOrderStatus: "Pending",
-    orderIdPrefix: "ORD-",
+    orderIdPrefix: "",
     nextOrderNumber: 10001,
-    incompleteOrderIdPrefix: "INC-",
+    incompleteOrderIdPrefix: "",
     nextIncompleteOrderNumber: 5001,
-    preOrderIdPrefix: "PRE-",
+    preOrderIdPrefix: "",
     nextPreOrderNumber: 1001,
   },
   notifications: {

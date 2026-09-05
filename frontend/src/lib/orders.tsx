@@ -95,21 +95,18 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const generateNextOrderId = useCallback((): string => {
-    const prefix = settings?.orders?.orderIdPrefix ?? "ORD-";
     const nextNum = settings?.orders?.nextOrderNumber ?? 10001;
-    return `${prefix}${nextNum}`;
+    return `${nextNum}`;
   }, [settings]);
 
   const generateNextIncompleteOrderId = useCallback((): string => {
-    const prefix = settings?.orders?.incompleteOrderIdPrefix ?? "INC-";
     const nextNum = settings?.orders?.nextIncompleteOrderNumber ?? 5001;
-    return `${prefix}${nextNum}`;
+    return `${nextNum}`;
   }, [settings]);
 
   const generateNextPreOrderId = useCallback((): string => {
-    const prefix = settings?.orders?.preOrderIdPrefix ?? "PRE-";
     const nextNum = settings?.orders?.nextPreOrderNumber ?? 1001;
-    return `${prefix}${nextNum}`;
+    return `${nextNum}`;
   }, [settings]);
 
   const fetchOrdersData = useCallback(async () => {
@@ -149,20 +146,19 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       // immediately sees the confirmation / invoice screen without UI thread jank.
       setTimeout(() => {
         try {
-          const regPrefix = settings?.orders?.orderIdPrefix ?? "ORD-";
           const regCurrentNum = settings?.orders?.nextOrderNumber ?? 10001;
-          const prePrefix = settings?.orders?.preOrderIdPrefix ?? "PRE-";
           const preCurrentNum = settings?.orders?.nextPreOrderNumber ?? 1001;
+          const isPreOrder = order.isPreOrder || order.status === "preorder";
 
-          if (finalId.startsWith(regPrefix)) {
-            const extractedNum = parseInt(finalId.replace(regPrefix, ""), 10);
-            const nextNum = !isNaN(extractedNum) ? Math.max(regCurrentNum + 1, extractedNum + 1) : regCurrentNum + 1;
-            updateSection("orders", { nextOrderNumber: nextNum });
-            Promise.resolve().then(() => saveSettings({ silent: true })).catch(() => {});
-          } else if (finalId.startsWith(prePrefix)) {
-            const extractedNum = parseInt(finalId.replace(prePrefix, ""), 10);
+          const extractedNum = parseInt(finalId.replace(/\D/g, ""), 10);
+
+          if (isPreOrder) {
             const nextNum = !isNaN(extractedNum) ? Math.max(preCurrentNum + 1, extractedNum + 1) : preCurrentNum + 1;
             updateSection("orders", { nextPreOrderNumber: nextNum });
+            Promise.resolve().then(() => saveSettings({ silent: true })).catch(() => {});
+          } else {
+            const nextNum = !isNaN(extractedNum) ? Math.max(regCurrentNum + 1, extractedNum + 1) : regCurrentNum + 1;
+            updateSection("orders", { nextOrderNumber: nextNum });
             Promise.resolve().then(() => saveSettings({ silent: true })).catch(() => {});
           }
 
@@ -196,11 +192,10 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     });
 
     // Increment nextIncompleteOrderNumber if new incomplete order created
-    const incPrefix = settings?.orders?.incompleteOrderIdPrefix ?? "INC-";
     const currentIncNum = settings?.orders?.nextIncompleteOrderNumber ?? 5001;
-    if (order.id.startsWith(incPrefix)) {
-      const extractedNum = parseInt(order.id.replace(incPrefix, ""), 10);
-      const nextNum = !isNaN(extractedNum) ? Math.max(currentIncNum + 1, extractedNum + 1) : currentIncNum + 1;
+    const extractedNum = parseInt(order.id.replace(/\D/g, ""), 10);
+    if (!isNaN(extractedNum)) {
+      const nextNum = Math.max(currentIncNum + 1, extractedNum + 1);
       updateSection("orders", { nextIncompleteOrderNumber: nextNum });
       saveSettings({ silent: true });
     }

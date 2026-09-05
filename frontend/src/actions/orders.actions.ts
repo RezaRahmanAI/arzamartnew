@@ -94,10 +94,9 @@ async function getCachedWebsiteSettingsJson(): Promise<string | null> {
 }
 
 async function resolveNextOrderNumber(latestOrderNumber?: string | null, settingsJson?: string | null): Promise<string> {
-  let prefix = "ORD-";
   let nextNum = 10001;
 
-  // 1. Check WebsiteSettings for orderIdPrefix and nextOrderNumber
+  // 1. Check WebsiteSettings for nextOrderNumber
   const resolvedSettingsJson = settingsJson !== undefined
     ? settingsJson
     : await getCachedWebsiteSettingsJson();
@@ -105,9 +104,6 @@ async function resolveNextOrderNumber(latestOrderNumber?: string | null, setting
   if (resolvedSettingsJson) {
     try {
       const parsed = JSON.parse(resolvedSettingsJson);
-      if (parsed?.orders?.orderIdPrefix) {
-        prefix = parsed.orders.orderIdPrefix;
-      }
       if (parsed?.orders?.nextOrderNumber) {
         nextNum = Number(parsed.orders.nextOrderNumber);
       }
@@ -116,31 +112,30 @@ async function resolveNextOrderNumber(latestOrderNumber?: string | null, setting
     }
   }
 
-  // 2. Query highest orderNumber matching this regular prefix in database
+  // 2. Query highest orderNumber for regular orders in database
   const latestOrder = latestOrderNumber !== undefined
     ? (latestOrderNumber ? { orderNumber: latestOrderNumber } : null)
     : await prisma.order.findFirst({
-        where: { orderNumber: { startsWith: prefix } },
+        where: { isPreOrder: false },
         orderBy: { createdAtUtc: "desc" },
         select: { orderNumber: true },
       });
 
   if (latestOrder?.orderNumber) {
-    const rawNumStr = latestOrder.orderNumber.replace(prefix, "").replace(/\D/g, "");
+    const rawNumStr = latestOrder.orderNumber.replace(/\D/g, "");
     const numPart = parseInt(rawNumStr, 10);
     if (!isNaN(numPart) && numPart >= nextNum) {
       nextNum = numPart + 1;
     }
   }
 
-  return `${prefix}${nextNum}`;
+  return `${nextNum}`;
 }
 
 async function resolveNextPreOrderNumber(latestOrderNumber?: string | null, settingsJson?: string | null): Promise<string> {
-  let prefix = "PRE-";
   let nextNum = 1001;
 
-  // 1. Check WebsiteSettings for preOrderIdPrefix and nextPreOrderNumber
+  // 1. Check WebsiteSettings for nextPreOrderNumber
   const resolvedSettingsJson = settingsJson !== undefined
     ? settingsJson
     : await getCachedWebsiteSettingsJson();
@@ -148,9 +143,6 @@ async function resolveNextPreOrderNumber(latestOrderNumber?: string | null, sett
   if (resolvedSettingsJson) {
     try {
       const parsed = JSON.parse(resolvedSettingsJson);
-      if (parsed?.orders?.preOrderIdPrefix) {
-        prefix = parsed.orders.preOrderIdPrefix;
-      }
       if (parsed?.orders?.nextPreOrderNumber) {
         nextNum = Number(parsed.orders.nextPreOrderNumber);
       }
@@ -159,24 +151,24 @@ async function resolveNextPreOrderNumber(latestOrderNumber?: string | null, sett
     }
   }
 
-  // 2. Query highest pre-order number matching this prefix in database
+  // 2. Query highest orderNumber for pre-orders in database
   const latestPreOrder = latestOrderNumber !== undefined
     ? (latestOrderNumber ? { orderNumber: latestOrderNumber } : null)
     : await prisma.order.findFirst({
-        where: { orderNumber: { startsWith: prefix } },
+        where: { isPreOrder: true },
         orderBy: { createdAtUtc: "desc" },
         select: { orderNumber: true },
       });
 
   if (latestPreOrder?.orderNumber) {
-    const rawNumStr = latestPreOrder.orderNumber.replace(prefix, "").replace(/\D/g, "");
+    const rawNumStr = latestPreOrder.orderNumber.replace(/\D/g, "");
     const numPart = parseInt(rawNumStr, 10);
     if (!isNaN(numPart) && numPart >= nextNum) {
       nextNum = numPart + 1;
     }
   }
 
-  return `${prefix}${nextNum}`;
+  return `${nextNum}`;
 }
 
 export async function getOrdersAction(options?: { type?: "all" | "regular" | "preorder"; includePreOrders?: boolean }): Promise<{ orders: Order[]; incomplete: Order[] }> {
@@ -334,12 +326,12 @@ export async function createOrderAction(input: CreateOrderInput): Promise<{
     const [cachedSettings, latestRegOrder, latestPreOrder, rawLoadedProducts] = await Promise.all([
       getCachedWebsiteSettingsJson(),
       prisma.order.findFirst({
-        where: { orderNumber: { startsWith: "ORD-" } },
+        where: { isPreOrder: false },
         orderBy: { createdAtUtc: "desc" },
         select: { orderNumber: true },
       }),
       prisma.order.findFirst({
-        where: { orderNumber: { startsWith: "PRE-" } },
+        where: { isPreOrder: true },
         orderBy: { createdAtUtc: "desc" },
         select: { orderNumber: true },
       }),
@@ -800,7 +792,7 @@ export async function updateOrderAction(
 
 export async function saveIncompleteOrderAction(order: Order): Promise<{ success: boolean }> {
   try {
-    const orderId = (order.id || `INC-${Date.now()}`).trim();
+    const orderId = (order.id || `${Date.now()}`).trim();
     const phone = (order.phone || "").trim() || orderId;
     const orderJson = JSON.stringify(order);
 

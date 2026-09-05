@@ -290,7 +290,7 @@ export default function CheckoutPage() {
 
       // CLP direct submission call: no client-side customer lookup
       const res = await ordersService.createOrder(payload);
-      const finalOrderId = res?.orderNumber || `ORD-${Date.now()}`;
+      const finalOrderId = res?.orderNumber || `${Date.now()}`;
 
       // Clean up incomplete draft if order is placed
       if (draftId) {

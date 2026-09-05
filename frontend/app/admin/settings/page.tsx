@@ -1711,17 +1711,7 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-border/60 pb-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold">Standard Order ID Prefix</Label>
-                    <Input
-                      value={draftSettings.orders.orderIdPrefix ?? "ORD-"}
-                      onChange={(e) => updateSection("orders", { orderIdPrefix: e.target.value })}
-                      placeholder="e.g. ORD-, ALZ-"
-                      className="h-9 text-xs font-mono"
-                    />
-                    <p className="text-[11px] text-muted-foreground">Prefix added before confirmed/placed order numbers</p>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-border/60 pb-4">
                   <div className="space-y-1">
                     <Label className="text-xs font-semibold">Next Standard Order Number</Label>
                     <Input
@@ -1730,20 +1720,7 @@ export default function AdminSettingsPage() {
                       onChange={(e) => updateSection("orders", { nextOrderNumber: Math.max(1, Number(e.target.value)) })}
                       className="h-9 text-xs font-mono"
                     />
-                    <p className="text-[11px] text-muted-foreground">Next standard order ID will be: <span className="font-bold text-primary">{draftSettings.orders.orderIdPrefix ?? "ORD-"}{draftSettings.orders.nextOrderNumber ?? 10001}</span></p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-border/60 pb-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold">Incomplete Order ID Prefix</Label>
-                    <Input
-                      value={draftSettings.orders.incompleteOrderIdPrefix ?? "INC-"}
-                      onChange={(e) => updateSection("orders", { incompleteOrderIdPrefix: e.target.value })}
-                      placeholder="e.g. INC-, DRAFT-"
-                      className="h-9 text-xs font-mono"
-                    />
-                    <p className="text-[11px] text-muted-foreground">Prefix added before abandoned/incomplete order numbers</p>
+                    <p className="text-[11px] text-muted-foreground">Next standard order ID: <span className="font-bold text-primary">{draftSettings.orders.nextOrderNumber ?? 10001}</span></p>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs font-semibold">Next Incomplete Order Number</Label>
@@ -1753,20 +1730,7 @@ export default function AdminSettingsPage() {
                       onChange={(e) => updateSection("orders", { nextIncompleteOrderNumber: Math.max(1, Number(e.target.value)) })}
                       className="h-9 text-xs font-mono"
                     />
-                    <p className="text-[11px] text-muted-foreground">Next incomplete order ID will be: <span className="font-bold text-amber-600 dark:text-amber-400">{draftSettings.orders.incompleteOrderIdPrefix ?? "INC-"}{draftSettings.orders.nextIncompleteOrderNumber ?? 5001}</span></p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-border/60 pb-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold">Pre-Order ID Prefix</Label>
-                    <Input
-                      value={draftSettings.orders.preOrderIdPrefix ?? "PRE-"}
-                      onChange={(e) => updateSection("orders", { preOrderIdPrefix: e.target.value })}
-                      placeholder="e.g. PRE-"
-                      className="h-9 text-xs font-mono"
-                    />
-                    <p className="text-[11px] text-muted-foreground">Independent prefix for all pre-order numbers</p>
+                    <p className="text-[11px] text-muted-foreground">Next incomplete order ID: <span className="font-bold text-amber-600 dark:text-amber-400">{draftSettings.orders.nextIncompleteOrderNumber ?? 5001}</span></p>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs font-semibold">Next Pre-Order Number</Label>
@@ -1776,7 +1740,7 @@ export default function AdminSettingsPage() {
                       onChange={(e) => updateSection("orders", { nextPreOrderNumber: Math.max(1, Number(e.target.value)) })}
                       className="h-9 text-xs font-mono"
                     />
-                    <p className="text-[11px] text-muted-foreground">Next pre-order ID will be: <span className="font-bold text-indigo-600 dark:text-indigo-400">{draftSettings.orders.preOrderIdPrefix ?? "PRE-"}{draftSettings.orders.nextPreOrderNumber ?? 1001}</span></p>
+                    <p className="text-[11px] text-muted-foreground">Next pre-order ID: <span className="font-bold text-indigo-600 dark:text-indigo-400">{draftSettings.orders.nextPreOrderNumber ?? 1001}</span></p>
                   </div>
                 </div>
 
