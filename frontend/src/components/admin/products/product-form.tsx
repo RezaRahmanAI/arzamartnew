@@ -197,6 +197,23 @@ export function ProductForm({ initialProduct = null, backHref = "/admin/products
     });
   };
 
+  const setExtrasMeasurementField = (size: string, columnName: string, value: string) => {
+    setForm((f) => {
+      const prevMeas = f.sizeMeasurements[size] || {};
+      const prevExtras = prevMeas.extras || {};
+      return {
+        ...f,
+        sizeMeasurements: {
+          ...f.sizeMeasurements,
+          [size]: {
+            ...prevMeas,
+            extras: { ...prevExtras, [columnName]: value },
+          },
+        },
+      };
+    });
+  };
+
   const handleApplySizeTemplate = (templateId: string) => {
     if (!templateId) {
       update("sizeTemplateId", "");
@@ -698,120 +715,179 @@ export function ProductForm({ initialProduct = null, backHref = "/admin/products
             isBottomwearCategory(currentTpl?.name) ||
             isBottomwearCategory(form.name);
 
+          const KNOWN_SLOTS: Record<string, "chest" | "length" | "waist" | "sleeve"> = {
+            chest: "chest",
+            length: "length",
+            waist: "waist",
+            sleeve: "sleeve",
+          };
+
+          const templateColumns = currentTpl?.columns ?? [];
+          const hasTemplateColumns = templateColumns.length > 0;
+
+          const columnCount = hasTemplateColumns ? templateColumns.length : 4;
+          const colSpan = Math.floor(10 / columnCount);
+          const sizeSpan = 12 - colSpan * columnCount;
+
+          const renderMeasuredValue = (meas: Record<string, unknown>, colName: string) => {
+            const key = colName.trim().toLowerCase();
+            if (key in KNOWN_SLOTS) {
+              const slot = KNOWN_SLOTS[key];
+              return (meas as Record<string, string>)[slot] ?? "";
+            }
+            return ((meas as Record<string, unknown>).extras as Record<string, string>)?.[colName] ?? "";
+          };
+
           return (
             <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                     <Ruler className="size-3.5 text-primary" />
-                    {isBottomwear
-                      ? "Pants / Bottomwear Measurements (Inches \")"
-                      : "Size-Wise Measurements (Inches \")"}
+                    {hasTemplateColumns
+                      ? `Measurements from "${currentTpl!.name}" (Inches ")`
+                      : isBottomwear
+                        ? "Pants / Bottomwear Measurements (Inches \")"
+                        : "Size-Wise Measurements (Inches \")"}
                   </Label>
                   <p className="text-[11px] text-muted-foreground">
-                    {isBottomwear
-                      ? "Enter Waist, Length, Hip/Thigh, and Inseam for pants."
-                      : "Customer will see these exact dimensions when selecting a size on the product page."}
+                    {hasTemplateColumns
+                      ? `Columns from template: ${templateColumns.map((c) => c.name).join(", ")}`
+                      : isBottomwear
+                        ? "Enter Waist, Length, Hip/Thigh, and Inseam for pants."
+                        : "Customer will see these exact dimensions when selecting a size on the product page."}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">
-                  <div className="col-span-2">Size</div>
-                  {isBottomwear ? (
-                    <>
-                      <div className="col-span-3">Waist (&quot;)</div>
-                      <div className="col-span-3">Length (&quot;)</div>
-                      <div className="col-span-2">Hip/Thigh (&quot;)</div>
-                      <div className="col-span-2">Inseam (&quot;)</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="col-span-3">Chest (&quot;)</div>
-                      <div className="col-span-3">Length (&quot;)</div>
-                      <div className="col-span-2">Waist (&quot;)</div>
-                      <div className="col-span-2">Sleeve (&quot;)</div>
-                    </>
-                  )}
+                  <div style={{ gridColumn: `span ${sizeSpan}` }}>Size</div>
+                  {hasTemplateColumns
+                    ? templateColumns.map((col) => (
+                        <div key={col.id} style={{ gridColumn: `span ${colSpan}` }}>
+                          {col.name} (&quot;)
+                        </div>
+                      ))
+                    : isBottomwear ? (
+                      <>
+                        <div style={{ gridColumn: `span ${colSpan}` }}>Waist (&quot;)</div>
+                        <div style={{ gridColumn: `span ${colSpan}` }}>Length (&quot;)</div>
+                        <div style={{ gridColumn: `span ${colSpan}` }}>Hip/Thigh (&quot;)</div>
+                        <div style={{ gridColumn: `span ${colSpan}` }}>Inseam (&quot;)</div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ gridColumn: `span ${colSpan}` }}>Chest (&quot;)</div>
+                        <div style={{ gridColumn: `span ${colSpan}` }}>Length (&quot;)</div>
+                        <div style={{ gridColumn: `span ${colSpan}` }}>Waist (&quot;)</div>
+                        <div style={{ gridColumn: `span ${colSpan}` }}>Sleeve (&quot;)</div>
+                      </>
+                    )}
                 </div>
 
                 {sizesArray.map((s) => {
                   const meas = form.sizeMeasurements[s] || {};
                   return (
                     <div key={s} className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-2 font-mono text-xs font-bold text-foreground">{s}</div>
-                      {isBottomwear ? (
-                        <>
-                          <div className="col-span-3">
-                            <Input
-                              placeholder='e.g. 32"'
-                              value={meas.waist ?? ""}
-                              onChange={(e) => setSizeMeasurementField(s, "waist", e.target.value)}
-                              className="h-8 text-xs bg-background"
-                            />
-                          </div>
-                          <div className="col-span-3">
-                            <Input
-                              placeholder='e.g. 40"'
-                              value={meas.length ?? ""}
-                              onChange={(e) => setSizeMeasurementField(s, "length", e.target.value)}
-                              className="h-8 text-xs bg-background"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <Input
-                              placeholder='e.g. 40"'
-                              value={meas.chest ?? ""}
-                              onChange={(e) => setSizeMeasurementField(s, "chest", e.target.value)}
-                              className="h-8 text-xs bg-background"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <Input
-                              placeholder='e.g. 14"'
-                              value={meas.sleeve ?? ""}
-                              onChange={(e) => setSizeMeasurementField(s, "sleeve", e.target.value)}
-                              className="h-8 text-xs bg-background"
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="col-span-3">
-                            <Input
-                              placeholder='e.g. 40"'
-                              value={meas.chest ?? ""}
-                              onChange={(e) => setSizeMeasurementField(s, "chest", e.target.value)}
-                              className="h-8 text-xs bg-background"
-                            />
-                          </div>
-                          <div className="col-span-3">
-                            <Input
-                              placeholder='e.g. 28"'
-                              value={meas.length ?? ""}
-                              onChange={(e) => setSizeMeasurementField(s, "length", e.target.value)}
-                              className="h-8 text-xs bg-background"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <Input
-                              placeholder='e.g. 32"'
-                              value={meas.waist ?? ""}
-                              onChange={(e) => setSizeMeasurementField(s, "waist", e.target.value)}
-                              className="h-8 text-xs bg-background"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <Input
-                              placeholder='e.g. 8"'
-                              value={meas.sleeve ?? ""}
-                              onChange={(e) => setSizeMeasurementField(s, "sleeve", e.target.value)}
-                              className="h-8 text-xs bg-background"
-                            />
-                          </div>
-                        </>
-                      )}
+                      <div style={{ gridColumn: `span ${sizeSpan}` }} className="font-mono text-xs font-bold text-foreground">{s}</div>
+                      {hasTemplateColumns
+                        ? templateColumns.map((col) => {
+                            const key = col.name.trim().toLowerCase();
+                            if (key in KNOWN_SLOTS) {
+                              return (
+                                <div key={col.id} style={{ gridColumn: `span ${colSpan}` }}>
+                                  <Input
+                                    placeholder='e.g. 40"'
+                                    value={renderMeasuredValue(meas, col.name)}
+                                    onChange={(e) => setSizeMeasurementField(s, KNOWN_SLOTS[key], e.target.value)}
+                                    className="h-8 text-xs bg-background"
+                                  />
+                                </div>
+                              );
+                            }
+                            return (
+                              <div key={col.id} style={{ gridColumn: `span ${colSpan}` }}>
+                                <Input
+                                  placeholder='e.g. 40"'
+                                  value={renderMeasuredValue(meas, col.name)}
+                                  onChange={(e) => setExtrasMeasurementField(s, col.name, e.target.value)}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                            );
+                          })
+                        : isBottomwear ? (
+                          <>
+                            <div style={{ gridColumn: `span ${colSpan}` }}>
+                              <Input
+                                placeholder='e.g. 32"'
+                                value={meas.waist ?? ""}
+                                onChange={(e) => setSizeMeasurementField(s, "waist", e.target.value)}
+                                className="h-8 text-xs bg-background"
+                              />
+                            </div>
+                            <div style={{ gridColumn: `span ${colSpan}` }}>
+                              <Input
+                                placeholder='e.g. 40"'
+                                value={meas.length ?? ""}
+                                onChange={(e) => setSizeMeasurementField(s, "length", e.target.value)}
+                                className="h-8 text-xs bg-background"
+                              />
+                            </div>
+                            <div style={{ gridColumn: `span ${colSpan}` }}>
+                              <Input
+                                placeholder='e.g. 40"'
+                                value={meas.chest ?? ""}
+                                onChange={(e) => setSizeMeasurementField(s, "chest", e.target.value)}
+                                className="h-8 text-xs bg-background"
+                              />
+                            </div>
+                            <div style={{ gridColumn: `span ${colSpan}` }}>
+                              <Input
+                                placeholder='e.g. 14"'
+                                value={meas.sleeve ?? ""}
+                                onChange={(e) => setSizeMeasurementField(s, "sleeve", e.target.value)}
+                                className="h-8 text-xs bg-background"
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ gridColumn: `span ${colSpan}` }}>
+                              <Input
+                                placeholder='e.g. 40"'
+                                value={meas.chest ?? ""}
+                                onChange={(e) => setSizeMeasurementField(s, "chest", e.target.value)}
+                                className="h-8 text-xs bg-background"
+                              />
+                            </div>
+                            <div style={{ gridColumn: `span ${colSpan}` }}>
+                              <Input
+                                placeholder='e.g. 28"'
+                                value={meas.length ?? ""}
+                                onChange={(e) => setSizeMeasurementField(s, "length", e.target.value)}
+                                className="h-8 text-xs bg-background"
+                              />
+                            </div>
+                            <div style={{ gridColumn: `span ${colSpan}` }}>
+                              <Input
+                                placeholder='e.g. 32"'
+                                value={meas.waist ?? ""}
+                                onChange={(e) => setSizeMeasurementField(s, "waist", e.target.value)}
+                                className="h-8 text-xs bg-background"
+                              />
+                            </div>
+                            <div style={{ gridColumn: `span ${colSpan}` }}>
+                              <Input
+                                placeholder='e.g. 8"'
+                                value={meas.sleeve ?? ""}
+                                onChange={(e) => setSizeMeasurementField(s, "sleeve", e.target.value)}
+                                className="h-8 text-xs bg-background"
+                              />
+                            </div>
+                          </>
+                        )}
                     </div>
                   );
                 })}
