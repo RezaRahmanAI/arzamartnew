@@ -270,10 +270,12 @@ export function SiteHeader() {
           >
             <Search className="size-5" />
           </Link>
+
           <Link
-            href="/cart"
-            aria-label="Cart"
+            href="/checkout"
+            aria-label="Cart & Checkout"
             className="relative rounded-md p-2 text-foreground transition-colors hover:bg-secondary hidden sm:inline-flex"
+            title="Cart & Checkout"
           >
             <ShoppingCart className="size-5" />
             {mounted && count > 0 && (
@@ -282,6 +284,7 @@ export function SiteHeader() {
               </span>
             )}
           </Link>
+
           <Link
             href="/account?tab=wishlist"
             aria-label="Wishlist"

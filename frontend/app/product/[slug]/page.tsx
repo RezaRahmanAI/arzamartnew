@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, notFound } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { Minus, Plus, RotateCcw, ShoppingBag, Truck, Star, ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -126,9 +126,16 @@ export default function ProductPage() {
     setRevComment("");
   };
 
+  const router = useRouter();
+
   const addToCart = () => {
     add({ slug: product.slug, size, qty });
     toast.success(`${product.name} added to cart`, { description: `Size ${size}` });
+  };
+
+  const handleBuyNow = () => {
+    add({ slug: product.slug, size, qty });
+    router.push("/checkout");
   };
 
   return (
@@ -411,14 +418,23 @@ export default function ProductPage() {
                     Out of Stock
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={addToCart}
-                    className="flex h-11 flex-1 min-w-[160px] items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 cursor-pointer"
-                  >
-                    <ShoppingBag className="size-4" />
-                    Add to cart
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={addToCart}
+                      className="flex h-11 flex-1 min-w-[130px] items-center justify-center gap-2 rounded-lg border border-primary bg-primary/10 px-4 text-sm font-bold text-primary shadow-xs transition-all hover:bg-primary/20 cursor-pointer"
+                    >
+                      <ShoppingBag className="size-4" />
+                      Add to cart
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBuyNow}
+                      className="flex h-11 flex-1 min-w-[130px] items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 cursor-pointer"
+                    >
+                      Buy Now
+                    </button>
+                  </>
                 )}
 
                 <button

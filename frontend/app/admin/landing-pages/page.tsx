@@ -287,7 +287,7 @@ export default function AdminLandingPagesPage() {
                           </button>
                         ) : (
                           <span className="text-muted-foreground text-[10px] italic">
-                            Auto (Standard)
+                            Not Configured
                           </span>
                         )}
                       </td>

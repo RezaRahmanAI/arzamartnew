@@ -763,17 +763,6 @@ export default function AdminProducts() {
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end items-center gap-1.5 whitespace-nowrap">
-                      {/* Standard Landing Page */}
-                      <a
-                        href={`/clp/${p.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-slate-100/90 px-2 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-700 hover:text-white dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer shadow-2xs"
-                        title="Open Public Landing Page (New Tab)"
-                      >
-                        Std LP
-                      </a>
-
                       {/* Custom Landing Page Designer */}
                       <Link
                         href={`/admin/landing-page-design?productId=${p.id || p.slug}&slug=${p.slug}`}
