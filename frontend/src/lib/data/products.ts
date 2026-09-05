@@ -33,6 +33,7 @@ export function mapPrismaProduct(p: {
     length?: string | null;
     waist?: string | null;
     sleeve?: string | null;
+    extrasJson?: string | null;
     isActive: boolean;
   }[];
 }): Product {
@@ -61,19 +62,35 @@ export function mapPrismaProduct(p: {
 
   const sizePrices: Record<string, number> = {};
   const sizeStock: Record<string, number> = {};
-  const sizeMeasurements: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }> = {};
+  const sizeMeasurements: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null; extras?: Record<string, string> }> = {};
 
   variants.forEach((v) => {
     const cleanSize = cleanSizeLabel(v.name);
     sizePrices[cleanSize] = v.priceOverride !== null && v.priceOverride !== undefined ? Number(v.priceOverride) : activePrice;
     sizeStock[cleanSize] = v.stockQuantity;
 
-    if (v.chest || v.length || v.waist || v.sleeve) {
+    let parsedExtras: Record<string, string> | undefined;
+    if (v.extrasJson) {
+      try {
+        const parsed = JSON.parse(v.extrasJson);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          parsedExtras = {};
+          for (const [k, val] of Object.entries(parsed)) {
+            parsedExtras[k] = val === null || val === undefined ? "" : String(val);
+          }
+        }
+      } catch {
+        parsedExtras = undefined;
+      }
+    }
+
+    if (v.chest || v.length || v.waist || v.sleeve || (parsedExtras && Object.keys(parsedExtras).length > 0)) {
       sizeMeasurements[cleanSize] = {
         chest: v.chest || null,
         length: v.length || null,
         waist: v.waist || null,
         sleeve: v.sleeve || null,
+        extras: parsedExtras,
       };
     }
   });

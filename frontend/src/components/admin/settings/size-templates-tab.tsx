@@ -8,10 +8,12 @@ import {
   Trash2,
   RefreshCw,
   Search,
-  Check,
   X,
   AlertCircle,
   PackageCheck,
+  ChevronUp,
+  ChevronDown,
+  Columns3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,30 +41,40 @@ import {
   updateSizeTemplateAction,
   deleteSizeTemplateAction,
   SizeTemplateDto,
-  SizeTemplateEntryDto,
+  SizeTemplateColumnDto,
 } from "@/actions/size-templates.actions";
+
+interface ColumnForm {
+  key: string; // local UI key (for React keys)
+  id?: string; // server-side id when editing existing columns
+  name: string;
+}
 
 interface TemplateRowForm {
   size: string;
-  chest: string;
-  length: string;
-  waist: string;
-  sleeve: string;
+  measurements: Record<string, string>; // key = column id (when known) or column name (lower-cased)
 }
 
-const TOPWEAR_DEFAULTS: TemplateRowForm[] = [
-  { size: "M", chest: "38", length: "27", waist: "", sleeve: "8" },
-  { size: "L", chest: "40", length: "28", waist: "", sleeve: "8.5" },
-  { size: "XL", chest: "42", length: "29", waist: "", sleeve: "9" },
-  { size: "XXL", chest: "44", length: "30", waist: "", sleeve: "9.5" },
+function genKey() {
+  return `c_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
+}
+
+const TOPWEAR_PRESET_COLUMNS: string[] = ["Chest", "Length", "Waist", "Sleeve"];
+const BOTTOMWEAR_PRESET_COLUMNS: string[] = ["Waist", "Length", "Hip", "Inseam"];
+
+const TOPWEAR_DEFAULT_ROWS: TemplateRowForm[] = [
+  { size: "M", measurements: { Chest: "38", Length: "27", Waist: "", Sleeve: "8" } },
+  { size: "L", measurements: { Chest: "40", Length: "28", Waist: "", Sleeve: "8.5" } },
+  { size: "XL", measurements: { Chest: "42", Length: "29", Waist: "", Sleeve: "9" } },
+  { size: "XXL", measurements: { Chest: "44", Length: "30", Waist: "", Sleeve: "9.5" } },
 ];
 
-const BOTTOMWEAR_DEFAULTS: TemplateRowForm[] = [
-  { size: "28", waist: "28", length: "38", chest: "36", sleeve: "12" },
-  { size: "30", waist: "30", length: "39", chest: "38", sleeve: "13" },
-  { size: "32", waist: "32", length: "40", chest: "40", sleeve: "14" },
-  { size: "34", waist: "34", length: "41", chest: "42", sleeve: "14.5" },
-  { size: "36", waist: "36", length: "42", chest: "44", sleeve: "15" },
+const BOTTOMWEAR_DEFAULT_ROWS: TemplateRowForm[] = [
+  { size: "28", measurements: { Waist: "28", Length: "38", Hip: "36", Inseam: "12" } },
+  { size: "30", measurements: { Waist: "30", Length: "39", Hip: "38", Inseam: "13" } },
+  { size: "32", measurements: { Waist: "32", Length: "40", Hip: "40", Inseam: "14" } },
+  { size: "34", measurements: { Waist: "34", Length: "41", Hip: "42", Inseam: "14.5" } },
+  { size: "36", measurements: { Waist: "36", Length: "42", Hip: "44", Inseam: "15" } },
 ];
 
 export function isBottomwearCategory(nameOrCategory?: string | null): boolean {
@@ -86,9 +98,6 @@ export function isBottomwearCategory(nameOrCategory?: string | null): boolean {
 export function isBottomwearTemplate(template: SizeTemplateDto | null | undefined): boolean {
   if (!template) return false;
   if (isBottomwearCategory(template.name)) return true;
-  // If waist is populated on entries but chest is absent or smaller, or pants sizes like numeric 28, 30, 32
-  const firstEntry = template.entries?.[0];
-  if (firstEntry?.waist && !firstEntry?.chest) return true;
   return false;
 }
 
@@ -102,7 +111,8 @@ export function SizeTemplatesTab() {
   const [editingTemplate, setEditingTemplate] = useState<SizeTemplateDto | null>(null);
   const [templateType, setTemplateType] = useState<"topwear" | "bottomwear">("topwear");
   const [name, setName] = useState<string>("");
-  const [rows, setRows] = useState<TemplateRowForm[]>(TOPWEAR_DEFAULTS);
+  const [columns, setColumns] = useState<ColumnForm[]>([]);
+  const [rows, setRows] = useState<TemplateRowForm[]>([]);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Delete State
@@ -132,11 +142,18 @@ export function SizeTemplatesTab() {
     return templates.filter((t) => t.name.toLowerCase().includes(q));
   }, [templates, searchQuery]);
 
+  const initColumns = (presetNames: string[]): ColumnForm[] =>
+    presetNames.map((n) => ({ key: genKey(), name: n }));
+
+  const initRows = (defaults: TemplateRowForm[]): TemplateRowForm[] =>
+    defaults.map((r) => ({ size: r.size, measurements: { ...r.measurements } }));
+
   const openCreateModal = () => {
     setEditingTemplate(null);
     setTemplateType("topwear");
     setName("");
-    setRows(TOPWEAR_DEFAULTS);
+    setColumns(initColumns(TOPWEAR_PRESET_COLUMNS));
+    setRows(initRows(TOPWEAR_DEFAULT_ROWS));
     setIsModalOpen(true);
   };
 
@@ -145,9 +162,11 @@ export function SizeTemplatesTab() {
     setTemplateType(newType);
     if (!editingTemplate) {
       if (newType === "bottomwear") {
-        setRows(BOTTOMWEAR_DEFAULTS);
+        setColumns(initColumns(BOTTOMWEAR_PRESET_COLUMNS));
+        setRows(initRows(BOTTOMWEAR_DEFAULT_ROWS));
       } else {
-        setRows(TOPWEAR_DEFAULTS);
+        setColumns(initColumns(TOPWEAR_PRESET_COLUMNS));
+        setRows(initRows(TOPWEAR_DEFAULT_ROWS));
       }
     }
   };
@@ -157,29 +176,133 @@ export function SizeTemplatesTab() {
     const isBottom = isBottomwearTemplate(t);
     setTemplateType(isBottom ? "bottomwear" : "topwear");
     setName(t.name);
-    const mappedRows: TemplateRowForm[] = (t.entries || []).map((e) => ({
-      size: e.size,
-      chest: e.chest || "",
-      length: e.length || "",
-      waist: e.waist || "",
-      sleeve: e.sleeve || "",
-    }));
-    setRows(mappedRows.length > 0 ? mappedRows : isBottom ? BOTTOMWEAR_DEFAULTS : TOPWEAR_DEFAULTS);
+
+    const loadedColumns: ColumnForm[] =
+      t.columns && t.columns.length > 0
+        ? t.columns.map((c: SizeTemplateColumnDto) => ({
+            key: c.id || genKey(),
+            id: c.id,
+            name: c.name,
+          }))
+        : initColumns(isBottom ? BOTTOMWEAR_PRESET_COLUMNS : TOPWEAR_PRESET_COLUMNS);
+
+    setColumns(loadedColumns);
+
+    const columnNameKeys = loadedColumns.map((c) => c.name.toLowerCase());
+
+    const loadedRows: TemplateRowForm[] =
+      t.entries && t.entries.length > 0
+        ? t.entries.map((e) => {
+            // Map server measurements keyed by column id back to column name keys for editing UI
+            const idToName = new Map<string, string>();
+            for (const c of t.columns) {
+              if (c.id) idToName.set(c.id, c.name);
+            }
+            const measurements: Record<string, string> = {};
+            for (const [k, v] of Object.entries(e.measurements || {})) {
+              const name = idToName.get(k) || k;
+              measurements[name] = v;
+            }
+            // Ensure all current columns have at least an empty entry for display
+            for (const cname of columnNameKeys) {
+              if (!(cname in measurements)) measurements[cname] = "";
+            }
+            return { size: e.size, measurements };
+          })
+        : initRows(isBottom ? BOTTOMWEAR_DEFAULT_ROWS : TOPWEAR_DEFAULT_ROWS);
+
+    setRows(loadedRows);
     setIsModalOpen(true);
   };
 
+  // ---- Column handlers ----
+  const handleAddColumn = () => {
+    setColumns((prev) => [...prev, { key: genKey(), name: "" }]);
+  };
+
+  const handleRemoveColumn = (key: string) => {
+    setColumns((prev) => {
+      if (prev.length <= 1) return prev;
+      const removed = prev.find((c) => c.key === key);
+      const next = prev.filter((c) => c.key !== key);
+      // Remove this column's measurement value from every row
+      if (removed?.name) {
+        const removedKey = removed.name.toLowerCase();
+        setRows((rprev) =>
+          rprev.map((r) => {
+            const m = { ...r.measurements };
+            delete m[removedKey];
+            return { ...r, measurements: m };
+          }),
+        );
+      }
+      return next;
+    });
+  };
+
+  const handleColumnRename = (key: string, newName: string) => {
+    setColumns((prev) => {
+      const next = prev.map((c) => (c.key === key ? { ...c, name: newName } : c));
+      // Rename measurement key in all rows to follow column rename
+      const old = prev.find((c) => c.key === key);
+      if (old && old.name.toLowerCase() !== newName.toLowerCase()) {
+        const oldKey = old.name.toLowerCase();
+        setRows((rprev) =>
+          rprev.map((r) => {
+            const m = { ...r.measurements };
+            if (oldKey in m) {
+              const value = m[oldKey];
+              delete m[oldKey];
+              m[newName.toLowerCase()] = value;
+            }
+            return { ...r, measurements: m };
+          }),
+        );
+      }
+      return next;
+    });
+  };
+
+  const moveColumn = (key: string, dir: -1 | 1) => {
+    setColumns((prev) => {
+      const idx = prev.findIndex((c) => c.key === key);
+      const nextIdx = idx + dir;
+      if (idx < 0 || nextIdx < 0 || nextIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[nextIdx]] = [next[nextIdx], next[idx]];
+      return next;
+    });
+  };
+
+  // ---- Row handlers ----
   const handleAddRow = () => {
-    setRows((prev) => [...prev, { size: "", chest: "", length: "", waist: "", sleeve: "" }]);
+    setRows((prev) => {
+      const empty: TemplateRowForm = { size: "", measurements: {} };
+      for (const c of columns) empty.measurements[c.name.toLowerCase()] = "";
+      return [...prev, empty];
+    });
   };
 
   const handleRemoveRow = (index: number) => {
     setRows((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleRowChange = (index: number, field: keyof TemplateRowForm, value: string) => {
+  const handleRowSizeChange = (index: number, value: string) => {
     setRows((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [field]: value };
+      next[index] = { ...next[index], size: value };
+      return next;
+    });
+  };
+
+  const handleCellChange = (rowIndex: number, columnName: string, value: string) => {
+    const key = columnName.toLowerCase();
+    setRows((prev) => {
+      const next = [...prev];
+      next[rowIndex] = {
+        ...next[rowIndex],
+        measurements: { ...next[rowIndex].measurements, [key]: value },
+      };
       return next;
     });
   };
@@ -191,28 +314,55 @@ export function SizeTemplatesTab() {
       return;
     }
 
-    const validEntries = rows
-      .filter((r) => r.size.trim().length > 0)
-      .map((r, idx) => ({
-        size: r.size.trim(),
-        chest: r.chest.trim() || undefined,
-        length: r.length.trim() || undefined,
-        waist: r.waist.trim() || undefined,
-        sleeve: r.sleeve.trim() || undefined,
-        displayOrder: idx,
-      }));
+    const validColumns = columns.filter((c) => c.name.trim().length > 0);
+    if (validColumns.length === 0) {
+      toast.error("Please add at least one measurement column with a name");
+      return;
+    }
 
+    const validEntries = rows.filter((r) => r.size.trim().length > 0);
     if (validEntries.length === 0) {
       toast.error("Please add at least one size row with a valid size name (e.g. M, L)");
       return;
     }
+
+    const columnPayload: SizeTemplateColumnDto[] = validColumns.map((c, idx) => ({
+      id: c.id,
+      name: c.name.trim(),
+      displayOrder: idx,
+    }));
+
+    // Build name->newColumnId mapping locally for client measurement keys
+    const nameToIdMap = new Map<string, string>();
+    validColumns.forEach((c, idx) => {
+      // Use a stable temporary id derived from index for new (unsaved) columns
+      const tempId = c.id || `__new_${idx}`;
+      nameToIdMap.set(c.name.toLowerCase(), tempId);
+    });
+
+    const entryPayload = validEntries.map((r, idx) => {
+      const measurements: Record<string, string> = {};
+      for (const [key, v] of Object.entries(r.measurements)) {
+        const trimmed = (v ?? "").toString().trim();
+        if (!trimmed) continue;
+        const mappedId = nameToIdMap.get(key.toLowerCase());
+        if (!mappedId) continue;
+        measurements[mappedId] = trimmed;
+      }
+      return {
+        size: r.size.trim(),
+        measurements,
+        displayOrder: idx,
+      };
+    });
 
     try {
       setIsSaving(true);
       if (editingTemplate) {
         const res = await updateSizeTemplateAction(editingTemplate.id, {
           name: name.trim(),
-          entries: validEntries,
+          columns: columnPayload,
+          entries: entryPayload,
         });
         if (res.success) {
           toast.success(`Template "${name}" updated successfully!`);
@@ -224,7 +374,8 @@ export function SizeTemplatesTab() {
       } else {
         const res = await createSizeTemplateAction({
           name: name.trim(),
-          entries: validEntries,
+          columns: columnPayload,
+          entries: entryPayload,
         });
         if (res.success) {
           toast.success(`Template "${name}" created successfully!`);
@@ -271,7 +422,7 @@ export function SizeTemplatesTab() {
           <div>
             <h3 className="text-base font-bold text-foreground">Size Measurement Templates</h3>
             <p className="text-xs text-muted-foreground">
-              Create and manage standard size measurement templates (Chest, Length, Waist) by category.
+              Create and manage size measurement templates. Add, rename, reorder, or remove columns as needed.
             </p>
           </div>
         </div>
@@ -352,6 +503,11 @@ export function SizeTemplatesTab() {
                 <TableRow key={t.id} className="hover:bg-muted/30">
                   <TableCell className="font-semibold text-xs text-foreground">
                     <span className="font-bold text-foreground block">{t.name}</span>
+                    {t.columns.length > 0 && (
+                      <span className="text-[10px] text-muted-foreground">
+                        Columns: {t.columns.map((c) => c.name).join(" · ")}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
@@ -367,23 +523,20 @@ export function SizeTemplatesTab() {
                   </TableCell>
                   <TableCell>
                     <div className="text-[11px] text-muted-foreground space-y-0.5 font-mono">
-                      {(() => {
-                        const isBottom = isBottomwearTemplate(t);
-                        return t.entries.slice(0, 3).map((e, idx) => (
+                      {t.entries.slice(0, 3).map((e, idx) => {
+                        const parts = t.columns
+                          .map((c) => {
+                            const v = e.measurements?.[c.id || ""];
+                            return v ? `${c.name} ${v}"` : null;
+                          })
+                          .filter(Boolean);
+                        return (
                           <span key={idx} className="block truncate">
                             <strong className="text-foreground">{e.size}:</strong>{" "}
-                            {isBottom ? (
-                              <>
-                                {e.waist ? `Waist ${e.waist}"` : ""} {e.length ? `Len ${e.length}"` : ""} {e.chest ? `Hip ${e.chest}"` : ""}
-                              </>
-                            ) : (
-                              <>
-                                {e.chest ? `Chest ${e.chest}"` : ""} {e.length ? `Len ${e.length}"` : ""} {e.waist ? `Waist ${e.waist}"` : ""}
-                              </>
-                            )}
+                            {parts.length > 0 ? parts.join(" · ") : <em className="opacity-60">no measurements</em>}
                           </span>
-                        ));
-                      })()}
+                        );
+                      })}
                       {t.entries.length > 3 && (
                         <span className="text-[10px] text-muted-foreground/70 italic">
                           +{t.entries.length - 3} more sizes...
@@ -430,53 +583,53 @@ export function SizeTemplatesTab() {
 
       {/* Create / Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={(open) => !open && setIsModalOpen(false)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2">
               <Ruler className="size-5 text-primary" />
               <span>{editingTemplate ? "Edit Size Template" : "Create New Size Template"}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Define standard chest, length, waist, and sleeve measurements (in inches) for each size in this category.
+              Define size measurements (in inches) for this category. You can rename, add, remove, or reorder columns freely.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSaveTemplate} className="space-y-4 pt-2">
             {/* Template Type / Garment Preset Selector */}
-            <div className="space-y-1.5 p-3 rounded-lg border border-border bg-secondary/30">
-              <Label className="text-xs font-bold text-foreground">Garment Type / Preset</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleTypeChange("topwear")}
-                  className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                    templateType === "topwear"
-                      ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                      : "bg-background text-muted-foreground border-border hover:bg-muted"
-                  }`}
-                >
-                  <span>👕 Topwear</span>
-                  <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Shirt, T-Shirt, Panjabi)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTypeChange("bottomwear")}
-                  className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                    templateType === "bottomwear"
-                      ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                      : "bg-background text-muted-foreground border-border hover:bg-muted"
-                  }`}
-                >
-                  <span>👖 Bottomwear (Pants)</span>
-                  <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Chinos, Jeans, Pajama)</span>
-                </button>
+            {!editingTemplate && (
+              <div className="space-y-1.5 p-3 rounded-lg border border-border bg-secondary/30">
+                <Label className="text-xs font-bold text-foreground">Garment Type / Preset</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleTypeChange("topwear")}
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                      templateType === "topwear"
+                        ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                        : "bg-background text-muted-foreground border-border hover:bg-muted"
+                    }`}
+                  >
+                    <span>👕 Topwear</span>
+                    <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Shirt, T-Shirt, Panjabi)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTypeChange("bottomwear")}
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                      templateType === "bottomwear"
+                        ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                        : "bg-background text-muted-foreground border-border hover:bg-muted"
+                    }`}
+                  >
+                    <span>👖 Bottomwear (Pants)</span>
+                    <span className="text-[10px] font-normal opacity-85 hidden sm:inline">(Chinos, Jeans, Pajama)</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  The preset only seeds defaults — you can rename, add, or remove columns below.
+                </p>
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                {templateType === "topwear"
-                  ? "Topwear uses: Chest, Length, Waist, Sleeve measurements."
-                  : "Bottomwear uses: Waist, Length, Hip / Thigh, and Inseam / Mohori measurements."}
-              </p>
-            </div>
+            )}
 
             <div className="space-y-1">
               <Label htmlFor="template-name" className="text-xs font-bold">
@@ -496,17 +649,82 @@ export function SizeTemplatesTab() {
               />
             </div>
 
+            {/* Editable Columns Header Row */}
+            <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Columns3 className="size-3.5" /> Measurement Columns
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Click a column header to rename. Use the arrows to reorder, and the trash icon to remove.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddColumn}
+                  className="h-7 text-xs font-semibold"
+                >
+                  <Plus className="size-3 mr-1" /> Add Column
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 p-2 rounded-md bg-background/60 border border-dashed">
+                {columns.map((col, idx) => (
+                  <div
+                    key={col.key}
+                    className="flex items-center gap-1 px-2 py-1 rounded-md border border-border bg-card shadow-xs"
+                  >
+                    <span className="text-[10px] text-muted-foreground font-mono">{idx + 1}.</span>
+                    <Input
+                      value={col.name}
+                      onChange={(e) => handleColumnRename(col.key, e.target.value)}
+                      placeholder="Column name"
+                      className="h-7 w-32 text-xs font-bold border-0 bg-transparent px-1 focus-visible:ring-1"
+                    />
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => moveColumn(col.key, -1)}
+                        disabled={idx === 0}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move left"
+                      >
+                        <ChevronUp className="size-3.5 rotate-[-90deg]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveColumn(col.key, 1)}
+                        disabled={idx === columns.length - 1}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move right"
+                      >
+                        <ChevronDown className="size-3.5 rotate-[-90deg]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveColumn(col.key)}
+                        disabled={columns.length <= 1}
+                        className="p-1 rounded text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Remove column"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Dynamic Sizes Table */}
             <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-xs font-bold text-foreground">
-                    {templateType === "topwear" ? "Topwear Measurements (Inches)" : "Pants / Bottomwear Measurements (Inches)"}
-                  </Label>
+                  <Label className="text-xs font-bold text-foreground">Sizes</Label>
                   <p className="text-[11px] text-muted-foreground">
-                    {templateType === "topwear"
-                      ? "Specify Chest, Length, Waist, and Sleeve for each size."
-                      : "Specify Waist, Length, Hip / Thigh, and Inseam / Mohori for each size."}
+                    Enter the value (in inches) for each measurement column per size.
                   </p>
                 </div>
                 <Button
@@ -520,110 +738,49 @@ export function SizeTemplatesTab() {
                 </Button>
               </div>
 
-              <div className="space-y-2 mt-2">
-                <div className="grid grid-cols-12 gap-2 text-[11px] font-bold text-muted-foreground px-1">
-                  <div className="col-span-2">Size *</div>
-                  {templateType === "topwear" ? (
-                    <>
-                      <div className="col-span-2">Chest (&quot;)</div>
-                      <div className="col-span-2">Length (&quot;)</div>
-                      <div className="col-span-2">Waist (&quot;)</div>
-                      <div className="col-span-2">Sleeve (&quot;)</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="col-span-2">Waist (&quot;)</div>
-                      <div className="col-span-2">Length (&quot;)</div>
-                      <div className="col-span-2">Hip/Thigh (&quot;)</div>
-                      <div className="col-span-2">Inseam (&quot;)</div>
-                    </>
-                  )}
-                  <div className="col-span-2 text-right">Action</div>
+              <div className="overflow-x-auto">
+                <div
+                  className="grid gap-2 items-center text-[11px] font-bold text-muted-foreground px-1 min-w-max"
+                  style={{
+                    gridTemplateColumns: `120px repeat(${columns.length}, minmax(100px, 1fr)) 40px`,
+                  }}
+                >
+                  <div>Size *</div>
+                  {columns.map((col) => (
+                    <div key={`hdr-${col.key}`}>{col.name.trim() || <em className="opacity-50">Unnamed</em>}</div>
+                  ))}
+                  <div className="text-right">Action</div>
                 </div>
 
-                {rows.map((row, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-2">
+                <div className="space-y-2 mt-2">
+                  {rows.map((row, idx) => (
+                    <div
+                      key={`row-${idx}`}
+                      className="grid gap-2 items-center min-w-max"
+                      style={{
+                        gridTemplateColumns: `120px repeat(${columns.length}, minmax(100px, 1fr)) 40px`,
+                      }}
+                    >
                       <Input
                         placeholder={templateType === "topwear" ? "M" : "32"}
                         value={row.size}
-                        onChange={(e) => handleRowChange(idx, "size", e.target.value)}
+                        onChange={(e) => handleRowSizeChange(idx, e.target.value)}
                         className="h-8 text-xs font-bold"
                         required
                       />
-                    </div>
-                    {templateType === "topwear" ? (
-                      <>
-                        <div className="col-span-2">
+                      {columns.map((col) => {
+                        const key = col.name.toLowerCase();
+                        return (
                           <Input
-                            placeholder='38'
-                            value={row.chest}
-                            onChange={(e) => handleRowChange(idx, "chest", e.target.value)}
+                            key={`cell-${idx}-${col.key}`}
+                            placeholder=""
+                            value={row.measurements[key] ?? ""}
+                            onChange={(e) => handleCellChange(idx, col.name, e.target.value)}
                             className="h-8 text-xs"
+                            disabled={!col.name.trim()}
                           />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            placeholder='27'
-                            value={row.length}
-                            onChange={(e) => handleRowChange(idx, "length", e.target.value)}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            placeholder='32'
-                            value={row.waist}
-                            onChange={(e) => handleRowChange(idx, "waist", e.target.value)}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            placeholder='8'
-                            value={row.sleeve}
-                            onChange={(e) => handleRowChange(idx, "sleeve", e.target.value)}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="col-span-2">
-                          <Input
-                            placeholder='32'
-                            value={row.waist}
-                            onChange={(e) => handleRowChange(idx, "waist", e.target.value)}
-                            className="h-8 text-xs font-semibold"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            placeholder='40'
-                            value={row.length}
-                            onChange={(e) => handleRowChange(idx, "length", e.target.value)}
-                            className="h-8 text-xs font-semibold"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            placeholder='40'
-                            value={row.chest}
-                            onChange={(e) => handleRowChange(idx, "chest", e.target.value)}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Input
-                            placeholder='14'
-                            value={row.sleeve}
-                            onChange={(e) => handleRowChange(idx, "sleeve", e.target.value)}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                      </>
-                    )}
-                    <div className="col-span-2 text-right">
+                        );
+                      })}
                       <Button
                         type="button"
                         variant="ghost"
@@ -636,8 +793,8 @@ export function SizeTemplatesTab() {
                         <X className="size-3.5" />
                       </Button>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 

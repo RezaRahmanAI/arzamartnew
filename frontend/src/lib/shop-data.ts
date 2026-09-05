@@ -71,6 +71,7 @@ export type Product = {
       length?: string | null;
       waist?: string | null;
       sleeve?: string | null;
+      extras?: Record<string, string>;
     }
   >;
 };

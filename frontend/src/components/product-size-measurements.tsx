@@ -8,6 +8,7 @@ export interface SizeMeasurementInfo {
   length?: string | null;
   waist?: string | null;
   sleeve?: string | null;
+  extras?: Record<string, string>;
 }
 
 interface ProductSizeMeasurementsProps {
@@ -23,13 +24,16 @@ export function ProductSizeMeasurements({
   className = "",
   category = "",
 }: ProductSizeMeasurementsProps) {
+  const extrasEntries = Object.entries(measurements?.extras || {}).filter(([, v]) => v && String(v).trim());
+
   // If no measurements available at all for this size
   const hasAnyMeasurement = Boolean(
     measurements &&
       (measurements.chest?.trim() ||
         measurements.length?.trim() ||
         measurements.waist?.trim() ||
-        measurements.sleeve?.trim())
+        measurements.sleeve?.trim() ||
+        extrasEntries.length > 0)
   );
 
   // Detect if bottomwear based on category or pattern (e.g. waist present without chest, or category has pants/bottoms/denim)
@@ -161,6 +165,20 @@ export function ProductSizeMeasurements({
                 )}
               </>
             )}
+
+            {extrasEntries.map(([name, value]) => (
+              <div
+                key={`extra-${name}`}
+                className="rounded-lg bg-background/90 p-2 border border-border/40 shadow-xs flex flex-col justify-center"
+              >
+                <span className="text-[11px] font-medium text-muted-foreground block">
+                  {name}
+                </span>
+                <span className="text-sm font-extrabold text-foreground mt-0.5">
+                  {value}&quot;
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       ) : (

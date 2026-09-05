@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Pencil, Plus, Trash2, X, Upload, Boxes, PackageCheck, Layers, RefreshCw, Search, Ruler, Sparkles, RotateCcw } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
-import { getSizeTemplatesAction, SizeTemplateDto } from "@/actions/size-templates.actions";
+import { getSizeTemplatesAction, SizeTemplateDto, SizeTemplateColumnDto } from "@/actions/size-templates.actions";
 import { isBottomwearCategory } from "@/components/admin/settings/size-templates-tab";
 
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ type FormState = {
   offerRuleIds: string[];
   badge: string;
   sizePrices: Record<string, number>;
-  sizeMeasurements: Record<string, { chest?: string; length?: string; waist?: string; sleeve?: string }>;
+  sizeMeasurements: Record<string, { chest?: string; length?: string; waist?: string; sleeve?: string; extras?: Record<string, string> }>;
   sizeTemplateId: string;
   videoUrl: string;
   returnPolicy: string;
@@ -92,6 +92,42 @@ function slugify(s: string) {
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
+}
+
+// Map a template entry (measurements keyed by column id) to the form-shape
+// (chest/length/waist/sleeve slots + extras for everything else).
+function mapTemplateMeasurementsToForm(
+  measurements: Record<string, string>,
+  columns: SizeTemplateColumnDto[]
+): { chest: string; length: string; waist: string; sleeve: string; extras: Record<string, string> } {
+  const result: { chest: string; length: string; waist: string; sleeve: string; extras: Record<string, string> } = {
+    chest: "",
+    length: "",
+    waist: "",
+    sleeve: "",
+    extras: {},
+  };
+
+  const knownSlots: Record<string, keyof typeof result> = {
+    chest: "chest",
+    length: "length",
+    waist: "waist",
+    sleeve: "sleeve",
+  };
+
+  for (const col of columns) {
+    if (!col.id) continue;
+    const value = measurements[col.id];
+    if (!value) continue;
+    const key = col.name.trim().toLowerCase();
+    if (key in knownSlots) {
+      (result as Record<string, unknown>)[knownSlots[key]] = value;
+    } else {
+      result.extras[col.name] = value;
+    }
+  }
+
+  return result;
 }
 
 export default function AdminProducts() {
@@ -313,6 +349,7 @@ export default function AdminProducts() {
                 length: m.length || "",
                 waist: m.waist || "",
                 sleeve: m.sleeve || "",
+                extras: m.extras || {},
               },
             ])
           )
@@ -320,14 +357,10 @@ export default function AdminProducts() {
       if (Object.keys(fromProduct).length === 0 && p.sizeTemplateId) {
         const template = sizeTemplates.find((t) => t.id === p.sizeTemplateId);
         if (template) {
-          const filled: Record<string, { chest?: string; length?: string; waist?: string; sleeve?: string }> = {};
+          const filled: Record<string, { chest?: string; length?: string; waist?: string; sleeve?: string; extras?: Record<string, string> }> = {};
           template.entries.forEach((e) => {
-            filled[e.size] = {
-              chest: e.chest || "",
-              length: e.length || "",
-              waist: e.waist || "",
-              sleeve: e.sleeve || "",
-            };
+            const mapped = mapTemplateMeasurementsToForm(e.measurements || {}, template.columns);
+            filled[e.size] = mapped;
           });
           return filled;
         }
@@ -385,6 +418,28 @@ export default function AdminProducts() {
     });
   };
 
+  const setSizeMeasurementExtra = (size: string, name: string, value: string) => {
+    setForm((f) => {
+      const prevMeas = f.sizeMeasurements[size] || { chest: "", length: "", waist: "", sleeve: "", extras: {} };
+      const nextExtras = { ...(prevMeas.extras || {}) };
+      if (value) {
+        nextExtras[name] = value;
+      } else {
+        delete nextExtras[name];
+      }
+      return {
+        ...f,
+        sizeMeasurements: {
+          ...f.sizeMeasurements,
+          [size]: {
+            ...prevMeas,
+            extras: nextExtras,
+          },
+        },
+      };
+    });
+  };
+
   const handleApplySizeTemplate = (templateId: string) => {
     if (!templateId) {
       update("sizeTemplateId", "");
@@ -403,14 +458,9 @@ export default function AdminProducts() {
     const newSizesStr = templateSizes.join(", ");
 
     // 2. Copy measurements onto form state (COPY behavior)
-    const copiedMeasurements: Record<string, { chest?: string; length?: string; waist?: string; sleeve?: string }> = {};
+    const copiedMeasurements: Record<string, { chest?: string; length?: string; waist?: string; sleeve?: string; extras?: Record<string, string> }> = {};
     template.entries.forEach((e) => {
-      copiedMeasurements[e.size] = {
-        chest: e.chest || "",
-        length: e.length || "",
-        waist: e.waist || "",
-        sleeve: e.sleeve || "",
-      };
+      copiedMeasurements[e.size] = mapTemplateMeasurementsToForm(e.measurements || {}, template.columns);
     });
 
     setForm((f) => ({

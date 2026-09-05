@@ -24,8 +24,8 @@ export interface RawApiInitProduct {
   bundleProducts?: string[];
   offerRuleIds?: string[];
   sizeTemplateId?: string | null;
-  sizeMeasurements?: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }>;
-  variants?: { id?: string; name: string; sku?: string; priceOverride?: number; stockQuantity?: number; chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }[];
+  sizeMeasurements?: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null; extras?: Record<string, string> }>;
+  variants?: { id?: string; name: string; sku?: string; priceOverride?: number; stockQuantity?: number; chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null; extrasJson?: string | null }[];
   sizes?: string[];
   sizePrices?: Record<string, number>;
   sizeStock?: Record<string, number>;
@@ -125,16 +125,33 @@ class InitService {
       sizeMeasurements: p.variants && Array.isArray(p.variants) && p.variants.length > 0
         ? Object.fromEntries(
             p.variants
-              .filter((v) => v.chest || v.length || v.waist || v.sleeve)
-              .map((v) => [
-                v.name.replace("Size: ", ""),
-                {
-                  chest: v.chest ?? null,
-                  length: v.length ?? null,
-                  waist: v.waist ?? null,
-                  sleeve: v.sleeve ?? null,
-                },
-              ])
+              .filter((v) => v.chest || v.length || v.waist || v.sleeve || v.extrasJson)
+              .map((v) => {
+                let extras: Record<string, string> | undefined;
+                if (v.extrasJson) {
+                  try {
+                    const parsed = JSON.parse(v.extrasJson);
+                    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                      extras = {};
+                      for (const [k, val] of Object.entries(parsed)) {
+                        extras[k] = val === null || val === undefined ? "" : String(val);
+                      }
+                    }
+                  } catch {
+                    extras = undefined;
+                  }
+                }
+                return [
+                  v.name.replace("Size: ", ""),
+                  {
+                    chest: v.chest ?? null,
+                    length: v.length ?? null,
+                    waist: v.waist ?? null,
+                    sleeve: v.sleeve ?? null,
+                    extras,
+                  },
+                ];
+              })
           )
         : p.sizeMeasurements || {},
       images: Array.isArray(p.images) && p.images.length > 0

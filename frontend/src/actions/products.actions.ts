@@ -26,7 +26,7 @@ export interface CreateProductInput {
   sizes?: string[];
   sizePrices?: Record<string, number>;
   sizeStock?: Record<string, number>;
-  sizeMeasurements?: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }>;
+  sizeMeasurements?: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null; extras?: Record<string, string> }>;
   sizeTemplateId?: string | null;
   description?: string;
   shortDescription?: string;
@@ -53,7 +53,7 @@ export interface UpdateProductInput {
   sizes?: string[];
   sizePrices?: Record<string, number>;
   sizeStock?: Record<string, number>;
-  sizeMeasurements?: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }>;
+  sizeMeasurements?: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null; extras?: Record<string, string> }>;
   sizeTemplateId?: string | null;
   description?: string;
   shortDescription?: string;
@@ -266,6 +266,10 @@ export async function createProductAction(input: CreateProductInput): Promise<{ 
             length: measurement?.length || null,
             waist: measurement?.waist || null,
             sleeve: measurement?.sleeve || null,
+            extrasJson:
+              measurement?.extras && Object.keys(measurement.extras).length > 0
+                ? JSON.stringify(measurement.extras)
+                : null,
             isActive: true,
           },
         });
@@ -415,15 +419,30 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
       if (input.sizes && input.sizes.length > 0) {
         // Map existing variant stocks and measurements by clean size name
         const existingStockMap: Record<string, number> = {};
-        const existingMeasurementsMap: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }> = {};
+        const existingMeasurementsMap: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null; extras?: Record<string, string> }> = {};
         (existing.variants || []).forEach((v) => {
           const clean = v.name.replace(/^Size:\s*/i, "").trim();
           existingStockMap[clean] = v.stockQuantity;
+          let parsedExtras: Record<string, string> | undefined;
+          if (v.extrasJson) {
+            try {
+              const parsed = JSON.parse(v.extrasJson);
+              if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                parsedExtras = {};
+                for (const [k, val] of Object.entries(parsed)) {
+                  parsedExtras[k] = val === null || val === undefined ? "" : String(val);
+                }
+              }
+            } catch {
+              parsedExtras = undefined;
+            }
+          }
           existingMeasurementsMap[clean] = {
             chest: v.chest,
             length: v.length,
             waist: v.waist,
             sleeve: v.sleeve,
+            extras: parsedExtras,
           };
         });
 
@@ -450,6 +469,12 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
           const inputMeas = input.sizeMeasurements?.[sizeName];
           const fallbackMeas = existingMeasurementsMap[sizeName];
 
+          const resolvedExtras = inputMeas?.extras !== undefined ? inputMeas.extras : fallbackMeas?.extras;
+          const extrasJson =
+            resolvedExtras && Object.keys(resolvedExtras).length > 0
+              ? JSON.stringify(resolvedExtras)
+              : null;
+
           await tx.productVariant.create({
             data: {
               productId: existing.id,
@@ -461,6 +486,7 @@ export async function updateProductAction(slug: string, input: UpdateProductInpu
               length: inputMeas?.length !== undefined ? (inputMeas.length || null) : (fallbackMeas?.length || null),
               waist: inputMeas?.waist !== undefined ? (inputMeas.waist || null) : (fallbackMeas?.waist || null),
               sleeve: inputMeas?.sleeve !== undefined ? (inputMeas.sleeve || null) : (fallbackMeas?.sleeve || null),
+              extrasJson,
               isActive: true,
             },
           });

@@ -128,19 +128,20 @@ model Product {
 }
 
 model ProductVariant {
-  id            String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
-  productId     String    @map("ProductId") @db.UniqueIdentifier
-  name          String    @map("Name") @db.NVarChar(Max)
-  sku           String    @map("SKU") @db.NVarChar(Max)
-  priceOverride Decimal?  @map("PriceOverride") @db.Decimal(18, 2)
-  stockQuantity Int       @default(0) @map("StockQuantity")
-  chest         String?   @map("Chest") @db.NVarChar(50)
-  length        String?   @map("Length") @db.NVarChar(50)
-  waist         String?   @map("Waist") @db.NVarChar(50)
-  sleeve        String?   @map("Sleeve") @db.NVarChar(50)
-  isActive      Boolean   @default(true) @map("IsActive")
-  createdAtUtc  DateTime  @default(now()) @map("CreatedAtUtc")
-  updatedAtUtc  DateTime? @updatedAt @map("UpdatedAtUtc")
+  id             String    @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  productId      String    @map("ProductId") @db.UniqueIdentifier
+  name           String    @map("Name") @db.NVarChar(Max)
+  sku            String    @map("SKU") @db.NVarChar(Max)
+  priceOverride  Decimal?  @map("PriceOverride") @db.Decimal(18, 2)
+  stockQuantity  Int       @default(0) @map("StockQuantity")
+  chest          String?   @map("Chest") @db.NVarChar(50)
+  length         String?   @map("Length") @db.NVarChar(50)
+  waist          String?   @map("Waist") @db.NVarChar(50)
+  sleeve         String?   @map("Sleeve") @db.NVarChar(50)
+  extrasJson     String?   @map("ExtrasJson") @db.NVarChar(Max)
+  isActive       Boolean   @default(true) @map("IsActive")
+  createdAtUtc   DateTime  @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc   DateTime? @updatedAt @map("UpdatedAtUtc")
 
   product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   inventories Inventory[]
@@ -505,23 +506,35 @@ model SizeTemplate {
   createdAtUtc DateTime            @default(now()) @map("CreatedAtUtc")
   updatedAtUtc DateTime?           @updatedAt @map("UpdatedAtUtc")
 
+  columns  SizeTemplateColumn[]
   entries  SizeTemplateEntry[]
   products Product[]
 
   @@map("SizeTemplates")
 }
 
-model SizeTemplateEntry {
+model SizeTemplateColumn {
   id             String       @id @default(uuid()) @map("Id") @db.UniqueIdentifier
   sizeTemplateId String       @map("SizeTemplateId") @db.UniqueIdentifier
-  size           String       @map("Size") @db.NVarChar(50)
-  chest          String?      @map("Chest") @db.NVarChar(50)
-  length         String?      @map("Length") @db.NVarChar(50)
-  waist          String?      @map("Waist") @db.NVarChar(50)
-  sleeve         String?      @map("Sleeve") @db.NVarChar(50)
+  name           String       @map("Name") @db.NVarChar(100)
   displayOrder   Int          @default(0) @map("DisplayOrder")
   createdAtUtc   DateTime     @default(now()) @map("CreatedAtUtc")
   updatedAtUtc   DateTime?    @updatedAt @map("UpdatedAtUtc")
+
+  template SizeTemplate @relation(fields: [sizeTemplateId], references: [id], onDelete: Cascade)
+
+  @@index([sizeTemplateId, displayOrder], map: "IX_SizeTemplateColumns_Template_Order")
+  @@map("SizeTemplateColumns")
+}
+
+model SizeTemplateEntry {
+  id                String   @id @default(uuid()) @map("Id") @db.UniqueIdentifier
+  sizeTemplateId    String   @map("SizeTemplateId") @db.UniqueIdentifier
+  size              String   @map("Size") @db.NVarChar(50)
+  measurementsJson  String   @default("{}") @map("MeasurementsJson") @db.NVarChar(Max)
+  displayOrder      Int      @default(0) @map("DisplayOrder")
+  createdAtUtc      DateTime @default(now()) @map("CreatedAtUtc")
+  updatedAtUtc      DateTime? @updatedAt @map("UpdatedAtUtc")
 
   template SizeTemplate @relation(fields: [sizeTemplateId], references: [id], onDelete: Cascade)
 
