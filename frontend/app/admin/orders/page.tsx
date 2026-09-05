@@ -1261,11 +1261,12 @@ export default function AdminOrders() {
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead className="text-right">Paid</TableHead>
+              <TableHead>Courier</TableHead>
               <TableHead>Social Media</TableHead>
               <TableHead>Page Name</TableHead>
               <TableHead className="text-right">Due</TableHead>
               <TableHead className="text-right">Actions</TableHead>
-              <TableHead>Courier</TableHead>
+              
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1475,6 +1476,40 @@ export default function AdminOrders() {
                         </Button>
                       </PopoverContent>
                     </Popover>
+                  </TableCell>
+                  <TableCell>
+                    {o.courierName ? (
+                      <div className="space-y-0.5 max-w-[140px]">
+                        <div className="flex items-center gap-1">
+                          <Link
+                            href={o.shipmentBatchId ? `/admin/bulk-shipment/${o.shipmentBatchId}` : "/admin/bulk-shipment"}
+                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1 truncate"
+                            title={`View Shipment Batch: ${o.courierName}`}
+                          >
+                            <Truck className="size-3 shrink-0 text-primary" />
+                            <span className="truncate">{o.courierName}</span>
+                          </Link>
+                        </div>
+                        {o.courierTrackingNumber ? (
+                          <span
+                            onClick={() => {
+                              navigator.clipboard.writeText(o.courierTrackingNumber!);
+                              toast.success(`Copied Tracking: ${o.courierTrackingNumber}`);
+                            }}
+                            className="font-mono text-[10px] text-muted-foreground hover:text-foreground cursor-pointer bg-muted/60 px-1.5 py-0.5 rounded inline-block"
+                            title="Click to copy tracking number"
+                          >
+                            {o.courierTrackingNumber}
+                          </span>
+                        ) : o.shipmentStatus ? (
+                          <span className="text-[10px] capitalize text-muted-foreground block">
+                            ({o.shipmentStatus.replace(/_/g, " ")})
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground font-mono">-</span>
+                    )}
                   </TableCell>
 
                   <TableCell>
@@ -1772,40 +1807,7 @@ export default function AdminOrders() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {o.courierName ? (
-                      <div className="space-y-0.5 max-w-[140px]">
-                        <div className="flex items-center gap-1">
-                          <Link
-                            href={o.shipmentBatchId ? `/admin/bulk-shipment/${o.shipmentBatchId}` : "/admin/bulk-shipment"}
-                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1 truncate"
-                            title={`View Shipment Batch: ${o.courierName}`}
-                          >
-                            <Truck className="size-3 shrink-0 text-primary" />
-                            <span className="truncate">{o.courierName}</span>
-                          </Link>
-                        </div>
-                        {o.courierTrackingNumber ? (
-                          <span
-                            onClick={() => {
-                              navigator.clipboard.writeText(o.courierTrackingNumber!);
-                              toast.success(`Copied Tracking: ${o.courierTrackingNumber}`);
-                            }}
-                            className="font-mono text-[10px] text-muted-foreground hover:text-foreground cursor-pointer bg-muted/60 px-1.5 py-0.5 rounded inline-block"
-                            title="Click to copy tracking number"
-                          >
-                            {o.courierTrackingNumber}
-                          </span>
-                        ) : o.shipmentStatus ? (
-                          <span className="text-[10px] capitalize text-muted-foreground block">
-                            ({o.shipmentStatus.replace(/_/g, " ")})
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground font-mono">-</span>
-                    )}
-                  </TableCell>
+                  
                 </TableRow>
               );
             })}
