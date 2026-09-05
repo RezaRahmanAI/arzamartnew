@@ -24,7 +24,8 @@ export interface RawApiInitProduct {
   bundleProducts?: string[];
   offerRuleIds?: string[];
   sizeTemplateId?: string | null;
-  variants?: { id?: string; name: string; sku?: string; priceOverride?: number; stockQuantity?: number }[];
+  sizeMeasurements?: Record<string, { chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }>;
+  variants?: { id?: string; name: string; sku?: string; priceOverride?: number; stockQuantity?: number; chest?: string | null; length?: string | null; waist?: string | null; sleeve?: string | null }[];
   sizes?: string[];
   sizePrices?: Record<string, number>;
   sizeStock?: Record<string, number>;
@@ -85,7 +86,7 @@ export interface AppInitData {
   timestamp: number;
 }
 
-export const APP_INIT_STORAGE_KEY = "arzamart_app_init_cache_v5";
+export const APP_INIT_STORAGE_KEY = "arzamart_app_init_cache_v6";
 
 class InitService {
   private mapRawProductToFrontend(p: RawApiInitProduct): Product {
@@ -121,6 +122,21 @@ class InitService {
       sizeStock: p.variants && Array.isArray(p.variants) && p.variants.length > 0
         ? Object.fromEntries(p.variants.map((v) => [v.name.replace("Size: ", ""), v.stockQuantity ?? 15]))
         : p.sizeStock || {},
+      sizeMeasurements: p.variants && Array.isArray(p.variants) && p.variants.length > 0
+        ? Object.fromEntries(
+            p.variants
+              .filter((v) => v.chest || v.length || v.waist || v.sleeve)
+              .map((v) => [
+                v.name.replace("Size: ", ""),
+                {
+                  chest: v.chest ?? null,
+                  length: v.length ?? null,
+                  waist: v.waist ?? null,
+                  sleeve: v.sleeve ?? null,
+                },
+              ])
+          )
+        : p.sizeMeasurements || {},
       images: Array.isArray(p.images) && p.images.length > 0
         ? p.images.map((img) => getImageUrl(img)).filter(Boolean)
         : [mainImg]
